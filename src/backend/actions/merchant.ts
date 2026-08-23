@@ -38,7 +38,16 @@ async function opportunitiesForMerchant(merchantId: string): Promise<Opportunity
   const maxBudget = policy.CAMPAIGN_BUDGET_LIMIT ?? 0
   const opportunities: Opportunity[] = []
   if (carts.length > 0) {
-    const estimatedImpact = carts.length * 450000
+    let estimatedImpact = 0
+    for (const cart of carts) {
+      for (const item of cart.items) {
+        const product = products.find((p) => p.id === item.productId)
+        if (product) {
+          estimatedImpact += product.price * item.quantity
+        }
+      }
+    }
+    
     opportunities.push({
       id: 'abandoned-cart', title: 'Abandoned-cart recovery', type: 'RECOVERY', estimatedImpact,
       reason: `${carts.length} cart${carts.length === 1 ? '' : 's'} have been inactive for over 30 minutes. Offer a policy-safe follow-up incentive.`,
@@ -50,8 +59,9 @@ async function opportunitiesForMerchant(merchantId: string): Promise<Opportunity
   const mouse = products.find((product) => product.category.toLowerCase().includes('mouse'))
   if (keyboard && mouse) {
     const discountPercent = Math.min(10, policy.MAX_DISCOUNT_PERCENTAGE ?? 0)
+    const estimatedImpact = keyboard.price + mouse.price
     opportunities.push({
-      id: 'cross-sell', title: 'Keyboard + mouse bundle', type: 'BUNDLE', estimatedImpact: 1720000,
+      id: 'cross-sell', title: 'Keyboard + mouse bundle', type: 'BUNDLE', estimatedImpact,
       reason: 'The catalog contains complementary keyboard and mouse products. Present this as an optional bundle, never as a forced upsell.',
       configuration: { productIds: [keyboard.id, mouse.id], discountPercent },
       policy: { allowed: discountPercent <= (policy.MAX_DISCOUNT_PERCENTAGE ?? 0), reason: `Bundle discount is within the ${policy.MAX_DISCOUNT_PERCENTAGE ?? 0}% limit.` },
@@ -60,8 +70,9 @@ async function opportunitiesForMerchant(merchantId: string): Promise<Opportunity
   const overstock = products.filter((product) => product.inventory >= 50)
   if (overstock.length) {
     const discountPercent = Math.min(8, policy.MAX_DISCOUNT_PERCENTAGE ?? 0)
+    const estimatedImpact = overstock.reduce((sum, product) => sum + (product.price * product.inventory), 0)
     opportunities.push({
-      id: 'clearance', title: 'Inventory-clearance campaign', type: 'CLEARANCE', estimatedImpact: overstock.length * 250000,
+      id: 'clearance', title: 'Inventory-clearance campaign', type: 'CLEARANCE', estimatedImpact,
       reason: `${overstock.length} product${overstock.length === 1 ? '' : 's'} have high stock. Recommend an explainable, margin-safe clearance offer.`,
       configuration: { productIds: overstock.map((product) => product.id), discountPercent },
       policy: { allowed: discountPercent <= (policy.MAX_DISCOUNT_PERCENTAGE ?? 0), reason: `Clearance discount is within the ${policy.MAX_DISCOUNT_PERCENTAGE ?? 0}% limit.` },
@@ -72,14 +83,15 @@ async function opportunitiesForMerchant(merchantId: string): Promise<Opportunity
 
 export async function getMerchantDashboardData() {
   const { merchant } = await requireMerchant()
-  const [orders, auditLogs, products, campaigns, opportunities, merchantPolicies] = await Promise.all([
-    prisma.order.findMany({ where: { merchantId: merchant.id }, include: { items: true }, orderBy: { createdAt: 'desc' }, take: 25 }),
-    prisma.auditLog.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: 'desc' }, take: 50 }),
-    prisma.product.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: 'desc' } }),
-    prisma.campaign.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: 'desc' }, take: 20 }),
-    opportunitiesForMerchant(merchant.id),
-    prisma.merchantPolicy.findMany({ where: { merchantId: merchant.id } }),
-  ])
+  
+  // Execute sequentially to avoid saturating the pg connection pool
+  const orders = await prisma.order.findMany({ where: { merchantId: merchant.id }, include: { items: true }, orderBy: { createdAt: 'desc' }, take: 25 })
+  const auditLogs = await prisma.auditLog.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: 'desc' }, take: 50 })
+  const products = await prisma.product.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: 'desc' } })
+  const campaigns = await prisma.campaign.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: 'desc' }, take: 20 })
+  const merchantPolicies = await prisma.merchantPolicy.findMany({ where: { merchantId: merchant.id } })
+  const opportunities = await opportunitiesForMerchant(merchant.id)
+  
   const paidOrders = orders.filter((order) => order.status === 'PAID')
   const policies = Object.fromEntries(merchantPolicies.map((entry) => [entry.key, entry.value])) as Record<string, number>
   return {

@@ -2,7 +2,20 @@
   "permissions": {
     "allow": [
       "Bash(git add *)",
-      "Bash(git commit -m 'Add local AI-tooling skill packs and scratch debug scripts' -m '- Vendored Prisma skill docs under .agents/skills, mirrored via relative *)"
+      "Bash(git commit -m 'Add local AI-tooling skill packs and scratch debug scripts' -m '- Vendored Prisma skill docs under .agents/skills, mirrored via relative *)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"TSC_EXIT=$?\")",
+      "Bash(echo \"REAL_TSC_EXIT=$?\")",
+      "Read(//Users/vatsalmittal7904/Downloads/files \\\\\\(2\\\\\\)/**)",
+      "Bash(echo \"PRISMA_GEN_EXIT=$?\")",
+      "Read(//tmp/claude/**)",
+      "Bash(node -e 'try{const {PrismaClient}=require\\('\\\\''@prisma/client'\\\\''\\); const c=new PrismaClient\\(\\); console.log\\('\\\\''user:'\\\\'',typeof c.user,'\\\\''| session:'\\\\'',typeof c.session,'\\\\''| $connect:'\\\\'',typeof c.$connect\\)}catch\\(e\\){console.log\\('\\\\''CONSTRUCT ERROR:'\\\\'',e.message\\)}')",
+      "Bash(node -e \"const {PrismaClient}=require\\('@prisma/client'\\); const {PrismaPg}=require\\('@prisma/adapter-pg'\\); const a=new PrismaPg\\({connectionString:'postgresql://u:p@localhost:5432/db'}\\); const c=new PrismaClient\\({adapter:a}\\); console.log\\('user:',typeof c.user,'| session:',typeof c.session,'| merchant:',typeof c.merchant\\)\")",
+      "Bash(npx tsx *)",
+      "Bash(node -e ' *)",
+      "Bash(git check-ignore *)",
+      "Bash(git checkout *)"
     ]
   }
 }
