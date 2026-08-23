@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -m 'Add local AI-tooling skill packs and scratch debug scripts' -m '- Vendored Prisma skill docs under .agents/skills, mirrored via relative *)"
+    ]
+  }
+}
