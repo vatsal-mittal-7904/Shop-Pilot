@@ -31,7 +31,7 @@ type Opportunity = {
 async function opportunitiesForMerchant(merchantId: string): Promise<Opportunity[]> {
   const [products, carts, policies] = await Promise.all([
     prisma.product.findMany({ where: { merchantId } }),
-    prisma.cart.findMany({ where: { merchantId, status: 'ACTIVE', updatedAt: { lt: new Date(Date.now() - 30 * 60 * 1000) } }, include: { items: true } }),
+    prisma.cart.findMany({ where: { merchantId, status: 'ABANDONED', updatedAt: { lt: new Date(Date.now() - 30 * 60 * 1000) } }, include: { items: true } }),
     prisma.merchantPolicy.findMany({ where: { merchantId } }),
   ])
   const policy = Object.fromEntries(policies.map((entry) => [entry.key, entry.value]))
@@ -72,20 +72,23 @@ async function opportunitiesForMerchant(merchantId: string): Promise<Opportunity
 
 export async function getMerchantDashboardData() {
   const { merchant } = await requireMerchant()
-  const [orders, auditLogs, products, campaigns, opportunities] = await Promise.all([
+  const [orders, auditLogs, products, campaigns, opportunities, merchantPolicies] = await Promise.all([
     prisma.order.findMany({ where: { merchantId: merchant.id }, include: { items: true }, orderBy: { createdAt: 'desc' }, take: 25 }),
     prisma.auditLog.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: 'desc' }, take: 50 }),
     prisma.product.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: 'desc' } }),
     prisma.campaign.findMany({ where: { merchantId: merchant.id }, orderBy: { createdAt: 'desc' }, take: 20 }),
     opportunitiesForMerchant(merchant.id),
+    prisma.merchantPolicy.findMany({ where: { merchantId: merchant.id } }),
   ])
   const paidOrders = orders.filter((order) => order.status === 'PAID')
+  const policies = Object.fromEntries(merchantPolicies.map((entry) => [entry.key, entry.value])) as Record<string, number>
   return {
     overview: { totalRevenue: paidOrders.reduce((sum, order) => sum + order.totalAmount, 0), paidOrders: paidOrders.length, totalOrders: orders.length, aiRecoveredRevenue: merchant.aiRecoveredRevenue },
     opportunities,
     products,
     orders,
     campaigns,
+    policies,
     auditLogs,
   }
 }
@@ -118,4 +121,134 @@ export async function approveOpportunity(opportunityId: Opportunity['id']) {
     prisma.auditLog.create({ data: { merchantId: merchant.id, actorUserId: user.id, action: 'CAMPAIGN_APPROVED', status: 'EXECUTED', reason: opportunity.reason, details: { campaignId: campaign.id, opportunityId } } }),
   ])
   return campaign
+}
+
+async function merchantPolicyMap(merchantId: string) {
+  const policies = await prisma.merchantPolicy.findMany({ where: { merchantId } })
+  return Object.fromEntries(policies.map((entry) => [entry.key, entry.value])) as Record<string, number>
+}
+
+// Persists the current in-memory opportunities as PROPOSED campaigns so they can be
+// reviewed (approved / rejected / modified) from the Campaigns list, rather than
+// executed immediately the way approveOpportunity does.
+export async function generateCampaigns() {
+  const { user, merchant } = await requireMerchant()
+  const opportunities = await opportunitiesForMerchant(merchant.id)
+
+  const existingProposed = await prisma.campaign.findMany({
+    where: { merchantId: merchant.id, status: 'PROPOSED' },
+    select: { type: true },
+  })
+  const proposedTypes = new Set(existingProposed.map((entry) => entry.type))
+  const toCreate = opportunities.filter((opportunity) => !proposedTypes.has(opportunity.type))
+
+  if (toCreate.length === 0) return []
+
+  const created = await prisma.$transaction(
+    toCreate.map((opportunity) =>
+      prisma.campaign.create({
+        data: {
+          merchantId: merchant.id,
+          type: opportunity.type,
+          title: opportunity.title,
+          rationale: opportunity.reason,
+          estimatedImpact: opportunity.estimatedImpact,
+          discountPercent: Number(opportunity.configuration.discountPercent || 0),
+          status: 'PROPOSED',
+          configuration: opportunity.configuration as Prisma.InputJsonValue,
+        },
+      }),
+    ),
+  )
+
+  await prisma.auditLog.create({
+    data: {
+      merchantId: merchant.id,
+      actorUserId: user.id,
+      action: 'CAMPAIGNS_GENERATED',
+      status: 'EXECUTED',
+      reason: `Generated ${created.length} campaign proposal${created.length === 1 ? '' : 's'}.`,
+      details: { campaignIds: created.map((campaign) => campaign.id) },
+    },
+  })
+
+  return created
+}
+
+export async function approveCampaign(campaignId: string) {
+  const { user, merchant } = await requireMerchant()
+  const campaign = await prisma.campaign.findFirst({ where: { id: campaignId, merchantId: merchant.id } })
+  if (!campaign) throw new Error('This campaign is no longer available')
+  if (campaign.status !== 'PROPOSED') throw new Error('Only proposed campaigns can be approved')
+
+  const policy = await merchantPolicyMap(merchant.id)
+  const maxDiscount = policy.MAX_DISCOUNT_PERCENTAGE ?? 0
+  if ((campaign.discountPercent ?? 0) > maxDiscount) {
+    throw new Error(`Discount of ${campaign.discountPercent}% exceeds the ${maxDiscount}% merchant policy limit.`)
+  }
+
+  const updated = await prisma.campaign.update({ where: { id: campaign.id }, data: { status: 'APPROVED' } })
+  await prisma.$transaction([
+    prisma.agentAction.create({
+      data: {
+        merchantId: merchant.id,
+        type: campaign.type,
+        reason: campaign.rationale,
+        input: campaign.configuration as Prisma.InputJsonValue,
+        policyResult: { allowed: true, reason: `Discount is within the ${maxDiscount}% limit.` } as Prisma.InputJsonValue,
+        expectedImpact: campaign.estimatedImpact,
+        status: 'EXECUTED',
+        campaignId: campaign.id,
+      },
+    }),
+    prisma.auditLog.create({
+      data: { merchantId: merchant.id, actorUserId: user.id, action: 'CAMPAIGN_APPROVED', status: 'EXECUTED', reason: campaign.rationale, details: { campaignId: campaign.id } },
+    }),
+  ])
+  return updated
+}
+
+export async function rejectCampaign(campaignId: string) {
+  const { user, merchant } = await requireMerchant()
+  const campaign = await prisma.campaign.findFirst({ where: { id: campaignId, merchantId: merchant.id } })
+  if (!campaign) throw new Error('This campaign is no longer available')
+  if (campaign.status !== 'PROPOSED') throw new Error('Only proposed campaigns can be rejected')
+
+  const updated = await prisma.campaign.update({ where: { id: campaign.id }, data: { status: 'REJECTED' } })
+  await prisma.auditLog.create({
+    data: { merchantId: merchant.id, actorUserId: user.id, action: 'CAMPAIGN_REJECTED', status: 'REJECTED', reason: campaign.rationale, details: { campaignId: campaign.id } },
+  })
+  return updated
+}
+
+const modifyCampaignSchema = z.object({
+  discountPercent: z.number().min(0).max(100),
+})
+
+export async function modifyCampaign(campaignId: string, discountPercent: number) {
+  const { user, merchant } = await requireMerchant()
+  const { discountPercent: nextDiscount } = modifyCampaignSchema.parse({ discountPercent })
+
+  const campaign = await prisma.campaign.findFirst({ where: { id: campaignId, merchantId: merchant.id } })
+  if (!campaign) throw new Error('This campaign is no longer available')
+  if (campaign.status !== 'PROPOSED') throw new Error('Only proposed campaigns can be modified')
+
+  const policy = await merchantPolicyMap(merchant.id)
+  const maxDiscount = policy.MAX_DISCOUNT_PERCENTAGE ?? 0
+  if (nextDiscount > maxDiscount) {
+    throw new Error(`Discount of ${nextDiscount}% exceeds the ${maxDiscount}% merchant policy limit.`)
+  }
+
+  const updated = await prisma.campaign.update({ where: { id: campaign.id }, data: { discountPercent: nextDiscount } })
+  await prisma.auditLog.create({
+    data: {
+      merchantId: merchant.id,
+      actorUserId: user.id,
+      action: 'CAMPAIGN_MODIFIED',
+      status: 'EXECUTED',
+      reason: `Discount updated to ${nextDiscount}%`,
+      details: { campaignId: campaign.id, discountPercent: nextDiscount },
+    },
+  })
+  return updated
 }

@@ -1,15 +1,36 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { approveOpportunity, getMerchantDashboardData } from '@/backend/actions/merchant'
+import {
+  approveOpportunity,
+  getMerchantDashboardData,
+  approveCampaign,
+  rejectCampaign,
+  modifyCampaign,
+  generateCampaigns,
+} from '@/backend/actions/merchant'
 
 type DashboardData = Awaited<ReturnType<typeof getMerchantDashboardData>>
 type Opportunity = DashboardData['opportunities'][number]
+type CampaignItem = DashboardData['campaigns'][number]
+
+const CAMPAIGN_STATUS_STYLES: Record<string, string> = {
+  PROPOSED: 'bg-amber-100 text-amber-700',
+  APPROVED: 'bg-emerald-100 text-emerald-700',
+  REJECTED: 'bg-rose-100 text-rose-700',
+  COMPLETED: 'bg-slate-200 text-slate-700',
+}
 
 export default function MerchantDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [executing, setExecuting] = useState<string | null>(null)
+
+  const [actingCampaignId, setActingCampaignId] = useState<string | null>(null)
+  const [modifyingId, setModifyingId] = useState<string | null>(null)
+  const [draftDiscount, setDraftDiscount] = useState<string>('')
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
 
   const refreshData = async () => {
     const res = await getMerchantDashboardData()
@@ -26,6 +47,49 @@ export default function MerchantDashboard() {
     await approveOpportunity(opp.id)
     await refreshData()
     setExecuting(null)
+  }
+
+  const maxDiscount = data?.policies?.MAX_DISCOUNT_PERCENTAGE ?? null
+
+  const openModify = (campaign: CampaignItem) => {
+    setModifyingId(campaign.id)
+    setDraftDiscount(campaign.discountPercent != null ? String(campaign.discountPercent) : '')
+  }
+
+  const cancelModify = () => {
+    setModifyingId(null)
+    setDraftDiscount('')
+  }
+
+  const handleApproveCampaign = async (campaign: CampaignItem) => {
+    setActingCampaignId(campaign.id)
+    await approveCampaign(campaign.id)
+    await refreshData()
+    setActingCampaignId(null)
+  }
+
+  const handleRejectCampaign = async (campaign: CampaignItem) => {
+    setActingCampaignId(campaign.id)
+    await rejectCampaign(campaign.id)
+    await refreshData()
+    setActingCampaignId(null)
+  }
+
+  const handleSaveModify = async (campaign: CampaignItem) => {
+    const value = Number(draftDiscount)
+    if (!Number.isFinite(value) || value < 0 || (maxDiscount != null && value > maxDiscount)) return
+    setSavingId(campaign.id)
+    await modifyCampaign(campaign.id, value)
+    await refreshData()
+    setSavingId(null)
+    setModifyingId(null)
+  }
+
+  const handleGenerate = async () => {
+    setGenerating(true)
+    await generateCampaigns()
+    await refreshData()
+    setGenerating(false)
   }
 
   if (loading || !data) return <div className="p-8 text-center text-slate-500">Loading MerchantOS AI...</div>
@@ -101,6 +165,129 @@ export default function MerchantDashboard() {
                   No pending growth opportunities. Your AI Agent is fully optimized.
                 </div>
               )}
+            </div>
+
+            <div className="mt-8 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <h2 className="text-xl font-bold text-slate-900">AI Campaigns</h2>
+                </div>
+                <button
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                >
+                  {generating ? 'Generating…' : 'Generate opportunities'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {data.campaigns.map((campaign) => {
+                  const isModifying = modifyingId === campaign.id
+                  const draftNumber = Number(draftDiscount)
+                  const exceedsPolicy =
+                    maxDiscount != null &&
+                    draftDiscount !== '' &&
+                    Number.isFinite(draftNumber) &&
+                    draftNumber > maxDiscount
+                  const saveDisabled =
+                    draftDiscount === '' ||
+                    !Number.isFinite(draftNumber) ||
+                    draftNumber < 0 ||
+                    exceedsPolicy ||
+                    savingId === campaign.id
+
+                  return (
+                    <div key={campaign.id} className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100 hover:border-indigo-300 transition-colors">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-bold text-slate-900">{campaign.title}</h3>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${CAMPAIGN_STATUS_STYLES[campaign.status] ?? 'bg-slate-100 text-slate-600'}`}>
+                              {campaign.status}
+                            </span>
+                          </div>
+                          <p className="text-slate-600 mt-1">{campaign.rationale}</p>
+                        </div>
+                        <div className="text-right shrink-0 ml-4">
+                          <div className="text-sm text-emerald-600 font-semibold uppercase">Est. Impact</div>
+                          <div className="text-xl font-bold text-emerald-600">+{(campaign.estimatedImpact / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            Discount: {campaign.discountPercent != null ? `${campaign.discountPercent}%` : '—'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isModifying && (
+                        <div className="mb-4 rounded-xl bg-slate-50 border border-slate-200 p-4">
+                          <label className="block text-sm font-medium text-slate-700 mb-2">New discount (%)</label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.5}
+                              value={draftDiscount}
+                              onChange={(event) => setDraftDiscount(event.target.value)}
+                              className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            />
+                            <button
+                              onClick={() => handleSaveModify(campaign)}
+                              disabled={saveDisabled}
+                              className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:text-slate-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              {savingId === campaign.id ? 'Saving…' : 'Save'}
+                            </button>
+                            <button onClick={cancelModify} className="text-sm font-medium text-slate-500 hover:text-slate-700">
+                              Cancel
+                            </button>
+                          </div>
+                          {exceedsPolicy && (
+                            <p className="mt-2 text-sm text-rose-600">
+                              Exceeds merchant policy — maximum discount is {maxDiscount}%.
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <span className="text-sm text-slate-500">Type: {campaign.type}</span>
+                        {campaign.status === 'PROPOSED' && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleApproveCampaign(campaign)}
+                              disabled={actingCampaignId === campaign.id}
+                              className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                            >
+                              {actingCampaignId === campaign.id ? 'Working…' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => handleRejectCampaign(campaign)}
+                              disabled={actingCampaignId === campaign.id}
+                              className="bg-rose-50 hover:bg-rose-100 disabled:bg-rose-50 disabled:text-rose-300 text-rose-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              Reject
+                            </button>
+                            <button
+                              onClick={() => (isModifying ? cancelModify() : openModify(campaign))}
+                              className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              {isModifying ? 'Close' : 'Modify'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+                {data.campaigns.length === 0 && (
+                  <div className="p-8 text-center bg-white border border-dashed border-slate-300 rounded-2xl text-slate-500">
+                    No campaigns yet. Generate opportunities to get AI-proposed campaigns.
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mt-8">
