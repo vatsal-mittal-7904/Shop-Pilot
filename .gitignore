@@ -54,3 +54,12 @@ next-env.d.ts
 /scratch/
 /graphify-out/
 .claude/settings.local.json
+
+# playwright. /playwright/.auth holds a live merchantos_session cookie for the
+# seeded merchant admin -- a real credential, never commit it. The rest is run
+# output (reports, traces, videos), regenerated on every run.
+/playwright/.auth/
+/playwright/.cache/
+/test-results/
+/playwright-report/
+/blob-report/
