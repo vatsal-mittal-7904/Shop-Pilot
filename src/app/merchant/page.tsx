@@ -121,19 +121,29 @@ export default function MerchantDashboard() {
       <main className="p-8 max-w-[1600px] mx-auto space-y-8">
         
         {/* Overview Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-2">Total Revenue</h3>
-            <div className="text-3xl font-bold text-slate-900">{(data.overview.totalRevenue / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</div>
+            <div className="text-2xl font-bold text-slate-900">{(data.overview.totalRevenue / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</div>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-2">Paid Orders</h3>
-            <div className="text-3xl font-bold text-slate-900">{data.overview.paidOrders} / {data.overview.totalOrders}</div>
+            <div className="text-2xl font-bold text-slate-900">{data.overview.paidOrders} / {data.overview.totalOrders}</div>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 bg-gradient-to-br from-indigo-50 to-white">
-            <h3 className="text-sm font-medium text-indigo-600 uppercase tracking-wider mb-2">AI-Recovered Revenue</h3>
-            <div className="text-3xl font-bold text-indigo-900">{(data.overview.aiRecoveredRevenue / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</div>
+            <h3 className="text-sm font-medium text-indigo-600 uppercase tracking-wider mb-2">AI-Recovered</h3>
+            <div className="text-2xl font-bold text-indigo-900">{(data.overview.aiRecoveredRevenue / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</div>
             <div className="text-xs text-indigo-500 mt-1">From automated campaigns</div>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-200 bg-emerald-50">
+            <h3 className="text-sm font-medium text-emerald-700 uppercase tracking-wider mb-2">Bundle Offers</h3>
+            <div className="text-2xl font-bold text-emerald-900">{(data.overview.roi.bundle.conversionRate * 100).toFixed(1)}%</div>
+            <div className="text-xs text-emerald-600 mt-1">{data.overview.roi.bundle.paid} / {data.overview.roi.bundle.total} paid</div>
+          </div>
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-sky-200 bg-sky-50">
+            <h3 className="text-sm font-medium text-sky-700 uppercase tracking-wider mb-2">Intent Offers</h3>
+            <div className="text-2xl font-bold text-sky-900">{(data.overview.roi.intent.conversionRate * 100).toFixed(1)}%</div>
+            <div className="text-xs text-sky-600 mt-1">{data.overview.roi.intent.paid} / {data.overview.roi.intent.total} paid</div>
           </div>
         </div>
 

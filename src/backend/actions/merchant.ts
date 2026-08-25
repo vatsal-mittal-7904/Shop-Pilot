@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/backend/db/prisma'
 import { requireMerchant } from '@/backend/auth/session'
+import { getMerchantROI } from '@/backend/actions/analytics'
 
 const productSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -103,12 +104,15 @@ export async function getMerchantDashboardData() {
     _count: true,
   })
   const policies = Object.fromEntries(merchantPolicies.map((entry) => [entry.key, entry.value])) as Record<string, number>
+  const roi = await getMerchantROI(merchant.id)
+  
   return {
     overview: { 
       totalRevenue: paidAgg._sum.totalAmount || 0, 
       paidOrders: paidAgg._count, 
       totalOrders: totalOrdersCount, 
-      aiRecoveredRevenue: merchant.aiRecoveredRevenue 
+      aiRecoveredRevenue: merchant.aiRecoveredRevenue,
+      roi
     },
     opportunities,
     products,
