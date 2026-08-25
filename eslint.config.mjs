@@ -14,6 +14,11 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "test-*.js",
     "test-*.ts",
+    // One-off codemod scripts left in the repo root (patch_inventory.js,
+    // patch_payment.js, ...). They are plain CommonJS node scripts whose
+    // edits are already applied to src/, so linting them as project TypeScript
+    // only fails the build on `require()`. Same rationale as test-* above.
+    "patch_*.js",
   ]),
 ]);
 

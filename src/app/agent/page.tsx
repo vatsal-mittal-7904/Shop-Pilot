@@ -5,13 +5,67 @@ import { useRef, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { addProductToCart } from '@/backend/actions/commerce'
 import { startCheckout } from '@/backend/actions/payment'
+import { ProductCards } from './_components/ProductCards'
+import { BundleOfferCard } from './_components/BundleOfferCard'
+import { CheckoutButton } from './_components/CheckoutButton'
+import PolicyBadge from './_components/PolicyBadge'
+import { useAgentSession } from './_components/AgentSessionProvider'
+// Type-only import: erased at compile time, so this does NOT create a server
+// reference to the 'use server' module and nothing from it ships to the browser.
+import type { AgentActionSummary } from '@/backend/actions/explainability'
 
-type ProductCard = { id: string; name: string; price: number; inventory: number; imageUrl?: string | null; warrantyYears: number; deliveryDays: number; attributes: Record<string, unknown> }
+// `category` and `tags` were added so this type also satisfies ProductCardData,
+// letting search_catalog results feed ProductCards without a second cast. Both
+// tools that return products (search_catalog, propose_products) now include them.
+type ProductCard = { id: string; name: string; category: string; price: number; inventory: number; imageUrl?: string | null; warrantyYears: number; deliveryDays: number; tags?: string[]; attributes: Record<string, unknown> }
 type CheckoutOffer = { items: Array<{ id: string; unitPrice: number; product: ProductCard }>; subtotal: number; discount: number; total: number }
-type ToolInvocationView = { toolCallId: string; state: string; toolName: string; args?: { query?: string }; result?: { products?: ProductCard[]; offer?: CheckoutOffer; offerId?: string; error?: string } | ProductCard[] }
+type BuyerIntentUsed = { category: string[]; maximumAmount: number | null }
+type BundleAddon = { id: string; name: string; price: number; imageUrl?: string | null; category?: string }
+// What evaluateDiscount() (policyEngine.ts) returns, and what the chat route hands
+// back on every policy-gated path -- refused (route.ts:316, :366) and approved
+// (route.ts:334, :371) alike. PolicyBadge re-parses it with zod at the boundary
+// rather than trusting this declaration.
+type PolicyResult = { checked: string[]; passed: boolean; limit: number; requested: number; reason: string }
+// One flat optional-field bag covering every tool's result shape; `skipped`
+// through `bundleTotal` are the propose_bundle_addon fields, and `orderId`
+// through `currency` are generate_checkout_link's.
+type ToolInvocationView = { toolCallId: string; state: string; toolName: string; args?: { query?: string; category?: string; maximumAmount?: number }; result?: { products?: ProductCard[]; intentUsed?: BuyerIntentUsed; offer?: CheckoutOffer; offerId?: string; error?: string; skipped?: boolean; reason?: string; cartId?: string; addonProductId?: string; addon?: BundleAddon; pairedWith?: string; discountPercent?: number; bundleSubtotal?: number; bundleDiscount?: number; bundleTotal?: number; orderId?: string; razorpayOrderId?: string; amount?: number; currency?: string; policyResult?: PolicyResult } | ProductCard[] }
 type RazorpayOptions = { key: string; amount: number; currency: string; name: string; description: string; order_id: string; handler: (response: { razorpay_payment_id: string }) => void; prefill: { name: string; email: string } }
 
+// The AgentAction.type each policy-gated tool persists its decision under,
+// mirroring the chat route exactly (propose_bundle_addon route.ts:305,
+// generate_checkout_offer route.ts:354). Any other tool name yields no badge
+// rather than a guessed label.
+const POLICY_ACTION_TYPE: Record<string, string> = {
+  propose_bundle_addon: 'BUNDLE_ADDON_OFFER',
+  generate_checkout_offer: 'DISCOUNT_OFFER',
+}
+
+/**
+ * Builds the AgentActionSummary PolicyBadge renders from the policyResult the
+ * chat route already returns with each tool result.
+ *
+ * Deliberately NOT sourced from getRecentAgentActions() (explainability.ts),
+ * even though that fetcher exists: AgentAction has no conversationId or
+ * customerId column, so it can only query merchant-wide. That means (a) its rows
+ * carry no key that would attribute one to a specific message, and (b) rendering
+ * them here would show this shopper other customers' discount negotiations --
+ * which is precisely what that function's own KNOWN LIMITATION docblock forbids.
+ * The tool result, by contrast, is conversation-scoped by construction and is
+ * attached to the exact response that produced it.
+ *
+ * `status` uses the same expression the server used when writing the row
+ * (route.ts:309, :358), so the badge reflects the persisted AgentAction rather
+ * than a second, independently re-derived client-side verdict.
+ */
+function toPolicyBadgeAction(toolCallId: string, toolName: string, policyResult: PolicyResult | undefined): AgentActionSummary | null {
+  const type = POLICY_ACTION_TYPE[toolName]
+  if (!type || !policyResult) return null
+  return { id: toolCallId, type, status: policyResult.passed ? 'APPROVED' : 'BLOCKED', policyResult }
+}
+
 export default function AgentSimulation() {
+  const { customerId, merchantId } = useAgentSession()
   const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
     api: '/api/chat',
     maxSteps: 5, // Allow the agent to call tools automatically in a loop
@@ -129,14 +183,35 @@ export default function AgentSimulation() {
                     )
                   }
 
-                  // Render search_catalog result text
+                  // Render search_catalog results as selectable sliding cards.
+                  // The tool now returns { intentUsed, products }, not a bare
+                  // array, so the count comes off result.products.
                   if (toolInvocation.toolName === 'search_catalog') {
+                    const products = result?.products ?? []
+                    const searchedFor =
+                      toolInvocation.args?.query ??
+                      toolInvocation.args?.category ??
+                      result?.intentUsed?.category.join(', ')
+
                     return (
-                      <div key={toolInvocation.toolCallId} className="mt-2 text-xs font-mono text-emerald-600 flex items-center gap-2">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Searched catalog for &ldquo;{toolInvocation.args?.query}&rdquo;. Found {Array.isArray(toolInvocation.result) ? toolInvocation.result.length : 0} items.
+                      <div key={toolInvocation.toolCallId} className="mt-2">
+                        <div className="text-xs font-mono text-emerald-600 flex items-center gap-2">
+                          <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>
+                            {searchedFor ? <>Searched catalog for &ldquo;{searchedFor}&rdquo;. </> : 'Searched catalog. '}
+                            Found {products.length} items.
+                            {result?.intentUsed?.maximumAmount != null && (
+                              <> Budget: {(result.intentUsed.maximumAmount / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}.</>
+                            )}
+                          </span>
+                        </div>
+                        {products.length > 0 && (
+                          <div className="mt-3">
+                            <ProductCards products={products} customerId={customerId} merchantId={merchantId} />
+                          </div>
+                        )}
                       </div>
                     )
                   }
@@ -177,9 +252,67 @@ export default function AgentSimulation() {
                     )
                   }
 
+                  // Render the interactive cross-sell card for propose_bundle_addon.
+                  if (toolInvocation.toolName === 'propose_bundle_addon') {
+                    // Nothing eligible to pitch (empty cart, or every candidate
+                    // already proposed earlier in this conversation). Stay
+                    // silent rather than surfacing plumbing to the shopper.
+                    if (result?.skipped) return null
+
+                    const badgeAction = toPolicyBadgeAction(toolInvocation.toolCallId, toolInvocation.toolName, result?.policyResult)
+
+                    if (result?.error) {
+                      // This tool's only error return is the policy refusal at
+                      // route.ts:316, where error === policyResult.reason. So when
+                      // the policyResult came through, the badge supersedes the
+                      // hand-rolled notice: same sentence, plus the Details
+                      // expander showing the raw checked/limit/requested/passed
+                      // evaluation. The div stays as the fallback for an error
+                      // arriving without one.
+                      if (badgeAction) {
+                        return <div key={toolInvocation.toolCallId} className="mt-4"><PolicyBadge action={badgeAction} /></div>
+                      }
+                      return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-lg text-sm border border-amber-200">Bundle blocked by policy: {result.error}</div>
+                    }
+
+                    const { cartId, addonProductId, addon, pairedWith, discountPercent, bundleSubtotal, bundleDiscount, bundleTotal } = result ?? {}
+                    if (!cartId || !addonProductId || !addon || !pairedWith || discountPercent == null || bundleSubtotal == null || bundleDiscount == null || bundleTotal == null) return null
+
+                    return (
+                      <div key={toolInvocation.toolCallId} className="mt-4">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Frequently bought together</p>
+                        <BundleOfferCard
+                          cartId={cartId}
+                          addonProductId={addonProductId}
+                          addon={addon}
+                          pairedWith={pairedWith}
+                          discountPercent={discountPercent}
+                          bundleSubtotal={bundleSubtotal}
+                          bundleDiscount={bundleDiscount}
+                          bundleTotal={bundleTotal}
+                          onDismiss={() => setMessages(prev => [...prev, { id: `${Date.now()}-bundle-declined`, role: 'assistant', content: `No problem, I will leave the ${addon.name} out. Shall I put together your final offer?` }])}
+                        />
+                        {/* Shows which policy cleared this bundle's discount, and to what limit. */}
+                        {badgeAction && <div className="mt-3"><PolicyBadge action={badgeAction} /></div>}
+                      </div>
+                    )
+                  }
+
                   // Render Checkout Button for a policy-checked checkout offer.
                   if (toolInvocation.toolName === 'generate_checkout_offer') {
+                    const badgeAction = toPolicyBadgeAction(toolInvocation.toolCallId, toolInvocation.toolName, result?.policyResult)
+
                     if (result?.error) {
+                      // Two unrelated failures land here. route.ts:366 is a policy
+                      // refusal -- not a system error, despite the label below -- and
+                      // the badge states it precisely, naming the limit it breached.
+                      // route.ts:373 is a genuine exception out of
+                      // createOfferForCustomer, and on that path policyResult *passed*;
+                      // a green "Policy Check Passed" beside a red failure would read
+                      // as reassurance, so that case keeps the plain error notice.
+                      if (badgeAction?.status === 'BLOCKED') {
+                        return <div key={toolInvocation.toolCallId} className="mt-4"><PolicyBadge action={badgeAction} /></div>
+                      }
                       return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">System Error: {result.error}</div>
                     }
 
@@ -188,42 +321,68 @@ export default function AgentSimulation() {
                     if (!offer || !offerId) return null
 
                     return (
-                      <div key={toolInvocation.toolCallId} className="mt-6 border border-emerald-200 bg-emerald-50 rounded-xl p-5 shadow-sm">
-                        <div className="flex items-center gap-2 text-emerald-800 font-bold mb-4">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Final Offer Generated
-                        </div>
-                        <div className="space-y-2 mb-4">
-                          {offer.items.map((i) => (
-                            <div key={i.id} className="flex justify-between text-sm text-emerald-900">
-                              <span>{i.product.name}</span>
-                              <span>{(i.unitPrice / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
-                            </div>
-                          ))}
-                          <div className="border-t border-emerald-200 pt-2 flex justify-between text-sm font-semibold text-emerald-900">
-                            <span>Subtotal</span>
-                            <span>{(offer.subtotal / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
+                      <div key={toolInvocation.toolCallId} className="mt-6">
+                        <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-5 shadow-sm">
+                          <div className="flex items-center gap-2 text-emerald-800 font-bold mb-4">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Final Offer Generated
                           </div>
-                          {offer.discount > 0 && (
-                            <div className="flex justify-between text-sm font-semibold text-red-600">
-                              <span>Discount</span>
-                              <span>-{(offer.discount / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
+                          <div className="space-y-2 mb-4">
+                            {offer.items.map((i) => (
+                              <div key={i.id} className="flex justify-between text-sm text-emerald-900">
+                                <span>{i.product.name}</span>
+                                <span>{(i.unitPrice / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
+                              </div>
+                            ))}
+                            <div className="border-t border-emerald-200 pt-2 flex justify-between text-sm font-semibold text-emerald-900">
+                              <span>Subtotal</span>
+                              <span>{(offer.subtotal / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
                             </div>
-                          )}
-                          <div className="border-t border-emerald-200 pt-2 flex justify-between text-lg font-bold text-emerald-900">
-                            <span>Total</span>
-                            <span>{(offer.total / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
+                            {offer.discount > 0 && (
+                              <div className="flex justify-between text-sm font-semibold text-red-600">
+                                <span>Discount</span>
+                                <span>-{(offer.discount / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
+                              </div>
+                            )}
+                            <div className="border-t border-emerald-200 pt-2 flex justify-between text-lg font-bold text-emerald-900">
+                              <span>Total</span>
+                              <span>{(offer.total / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
+                            </div>
                           </div>
+                          <button
+                            onClick={() => handleCheckout(offerId)}
+                            disabled={checkingOut}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                          >
+                            {checkingOut ? 'Processing...' : `Pay ${(offer.total / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })} with Razorpay`}
+                          </button>
                         </div>
-                        <button 
-                          onClick={() => handleCheckout(offerId)}
-                          disabled={checkingOut}
-                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                        >
-                          {checkingOut ? 'Processing...' : `Pay ${(offer.total / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })} with Razorpay`}
-                        </button>
+                        {/* Sits outside the emerald card so an emerald-tinted badge keeps
+                            its contrast, and so the policy verdict reads as a statement
+                            about the offer rather than part of the offer's own pitch. */}
+                        {badgeAction && <div className="mt-3"><PolicyBadge action={badgeAction} /></div>}
+                      </div>
+                    )
+                  }
+
+                  // Render the Razorpay checkout button once the server has
+                  // created a real Razorpay order. Only the internal order id,
+                  // Razorpay's order id, and the amount cross the boundary --
+                  // the secret key stays server-side in the chat route.
+                  if (toolInvocation.toolName === 'generate_checkout_link') {
+                    if (result?.error) {
+                      return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">{result.error}</div>
+                    }
+
+                    const { orderId, razorpayOrderId, amount, currency } = result ?? {}
+                    if (!orderId || !razorpayOrderId || amount == null) return null
+
+                    return (
+                      <div key={toolInvocation.toolCallId} className="mt-4">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Secure checkout</p>
+                        <CheckoutButton orderId={orderId} razorpayOrderId={razorpayOrderId} amount={amount} currency={currency} />
                       </div>
                     )
                   }

@@ -13,7 +13,7 @@ const offerInputSchema = z.object({
 
 type PolicyMap = Record<string, number>
 
-async function policyMap(merchantId: string): Promise<PolicyMap> {
+export async function policyMap(merchantId: string): Promise<PolicyMap> {
   const policies = await prisma.merchantPolicy.findMany({ where: { merchantId } })
   return Object.fromEntries(policies.map((policy) => [policy.key, policy.value]))
 }
@@ -104,21 +104,22 @@ export async function createOfferForCustomer(input: z.infer<typeof offerInputSch
   const { user, customer } = await requireCustomer()
   const data = offerInputSchema.parse(input)
   const products = await prisma.product.findMany({ where: { id: { in: data.productIds } } })
-  if (products.length !== new Set(data.productIds).size) throw new Error('One or more selected products do not exist')
+  const counts = data.productIds.reduce((acc, id) => { acc[id] = (acc[id] || 0) + 1; return acc; }, {} as Record<string, number>)
+  if (products.length !== Object.keys(counts).length) throw new Error('One or more selected products do not exist')
   const merchantId = products[0]?.merchantId
   if (!merchantId || products.some((product) => product.merchantId !== merchantId)) {
     throw new Error('An offer can contain products from only one merchant')
   }
-  if (products.some((product) => product.inventory < 1)) throw new Error('An item is out of stock')
+  if (products.some((product) => product.inventory < counts[product.id])) throw new Error('An item is out of stock')
 
   const policies = await policyMap(merchantId)
   const maxDiscount = policies.MAX_DISCOUNT_PERCENTAGE ?? 0
   if (data.discountPercentage > maxDiscount) throw new Error(`Discount exceeds the ${maxDiscount}% merchant limit`)
 
-  const subtotal = products.reduce((sum, product) => sum + product.price, 0)
+  const subtotal = products.reduce((sum, product) => sum + product.price * counts[product.id], 0)
   const discount = Math.floor(subtotal * (data.discountPercentage / 100))
   const total = subtotal - discount
-  const cost = products.reduce((sum, product) => sum + product.cost, 0)
+  const cost = products.reduce((sum, product) => sum + product.cost * counts[product.id], 0)
   const marginPercent = total > 0 ? ((total - cost) / total) * 100 : -Infinity
   if (marginPercent < (policies.MIN_MARGIN_PERCENTAGE ?? 0)) {
     throw new Error('Offer would violate the minimum merchant margin')
@@ -144,7 +145,7 @@ export async function createOfferForCustomer(input: z.infer<typeof offerInputSch
       total,
       discountPercent: data.discountPercentage,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      items: { create: products.map((product) => ({ productId: product.id, quantity: 1, unitPrice: product.price - Math.floor(product.price * (data.discountPercentage / 100)) })) },
+      items: { create: products.map((product) => ({ productId: product.id, quantity: counts[product.id], unitPrice: product.price - Math.floor(product.price * (data.discountPercentage / 100)) })) },
     },
     include: { items: { include: { product: true } } },
   })
@@ -191,7 +192,22 @@ export async function createOrderFromOffer(offerId: string) {
       },
     })
     await tx.offer.update({ where: { id: offer.id }, data: { status: 'ACCEPTED' } })
-    if (offer.cartId) await tx.cart.update({ where: { id: offer.cartId }, data: { status: 'CONVERTED' } })
+    if (offer.cartId) {
+      for (const offerItem of offer.items) {
+        const cartItem = await tx.cartItem.findUnique({ where: { cartId_productId: { cartId: offer.cartId, productId: offerItem.productId } } })
+        if (cartItem) {
+          if (cartItem.quantity <= offerItem.quantity) {
+            await tx.cartItem.delete({ where: { id: cartItem.id } })
+          } else {
+            await tx.cartItem.update({ where: { id: cartItem.id }, data: { quantity: { decrement: offerItem.quantity } } })
+          }
+        }
+      }
+      const remainingItems = await tx.cartItem.count({ where: { cartId: offer.cartId } })
+      if (remainingItems === 0) {
+        await tx.cart.update({ where: { id: offer.cartId }, data: { status: 'CONVERTED' } })
+      }
+    }
     await tx.auditLog.create({ data: { merchantId: offer.merchantId, orderId: order.id, actorUserId: user.id, action: 'ORDER_ACCEPTED', status: 'APPROVED', reason: 'Offer revalidated before payment', details: { offerId: offer.id } } })
     return order
   }, { isolationLevel: 'Serializable' })

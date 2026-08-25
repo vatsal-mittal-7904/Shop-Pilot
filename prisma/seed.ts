@@ -32,6 +32,14 @@ async function main() {
     ['MIN_MARGIN_PERCENTAGE', 8],
     ['MAX_AUTONOMOUS_SPEND', 100000],
     ['CAMPAIGN_BUDGET_LIMIT', 2500000],
+    // Default bundle/campaign discount, read by propose_bundle_addon
+    // (api/chat/route.ts) when the model doesn't request a specific percentage.
+    // Without this row the tool falls back to 0 and pitches a 0% bundle.
+    ['DEFAULT_CAMPAIGN_DISCOUNT', 10],
+    // Minutes a cart may sit untouched before markAbandonedCarts (cartSweeper.ts)
+    // flips it to ABANDONED. Without this row the sweeper silently falls back to
+    // its own 30-minute default, so the policy looks configurable but isn't.
+    ['ABANDONED_CART_MINUTES', 30],
   ] as const) {
     await prisma.merchantPolicy.upsert({
       where: { merchantId_key: { merchantId: merchant.id, key: policy[0] } },

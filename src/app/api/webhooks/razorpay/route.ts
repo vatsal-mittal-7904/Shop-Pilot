@@ -1,79 +1,97 @@
-import { NextResponse } from 'next/server'
-import { timingSafeEqual, createHmac } from 'node:crypto'
-import { Prisma } from '@prisma/client'
+import crypto from 'node:crypto'
 import { prisma } from '@/backend/db/prisma'
+import { processRazorpayEvent } from '@/backend/actions/webhookProcessor'
 
-type RazorpayEvent = {
-  id?: string
-  event?: string
-  payload?: { payment?: { entity?: { id?: string; order_id?: string; amount?: number; currency?: string } } }
-}
+/**
+ * Razorpay signs webhooks with an X-Razorpay-Signature header: an
+ * HMAC-SHA256 hex digest computed over the exact raw request bytes, keyed
+ * with the dashboard-configured webhook secret. The event id used for
+ * idempotency (X-Razorpay-Event-Id) is also a header, not a payload field.
+ */
 
-function isValidSignature(body: string, signature: string) {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET
-  if (!secret) return false
-  const expected = createHmac('sha256', secret).update(body).digest('hex')
-  const expectedBuffer = Buffer.from(expected, 'utf8')
-  const signatureBuffer = Buffer.from(signature, 'utf8')
-  return expectedBuffer.length === signatureBuffer.length && timingSafeEqual(expectedBuffer, signatureBuffer)
+function isValidSignature(rawBody: string, signatureHeader: string, secret: string): boolean {
+  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
+
+  const expectedBuffer = Buffer.from(expected, 'hex')
+  const providedBuffer = Buffer.from(signatureHeader, 'hex')
+  if (expectedBuffer.length !== providedBuffer.length) return false
+
+  return crypto.timingSafeEqual(expectedBuffer, providedBuffer)
 }
 
 export async function POST(req: Request) {
-  const body = await req.text()
-  const signature = req.headers.get('x-razorpay-signature')
-  if (!signature || !isValidSignature(body, signature)) {
-    return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 400 })
+  // --- 1. Signature verification -------------------------------------------
+  // Read the body as raw text before anything else touches it. Parsing to
+  // JSON and re-serializing (JSON.stringify(parsed)) does not reliably
+  // reproduce the exact bytes Razorpay signed -- key order, spacing, and
+  // number formatting can all shift -- so the HMAC must run over this raw
+  // string, never a reconstruction of it.
+  const rawBody = await req.text()
+  const signatureHeader = req.headers.get('x-razorpay-signature')
+
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET
+  if (!secret) {
+    console.error('RAZORPAY_WEBHOOK_SECRET is not configured')
+    return Response.json({ error: 'Webhook is not configured' }, { status: 400 })
+  }
+  if (!signatureHeader) {
+    return Response.json({ error: 'Missing signature' }, { status: 400 })
+  }
+  if (!isValidSignature(rawBody, signatureHeader, secret)) {
+    // Signature mismatch: stop here. No database read or write of any kind
+    // for a request we can't authenticate as genuinely from Razorpay.
+    return Response.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  let event: RazorpayEvent
+  // --- 2. Idempotency check --------------------------------------------------
+  // Only now, with the signature verified, is it safe to parse and act on
+  // the body.
+  let payload: Record<string, unknown>
   try {
-    event = JSON.parse(body) as RazorpayEvent
+    payload = JSON.parse(rawBody)
   } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    return Response.json({ error: 'Malformed JSON payload' }, { status: 400 })
   }
-  if (!event.id || !event.event) return NextResponse.json({ error: 'Invalid webhook event' }, { status: 400 })
 
-  const payment = event.payload?.payment?.entity
+  const razorpayEventId = req.headers.get('x-razorpay-event-id')
+  if (!razorpayEventId) {
+    return Response.json({ error: 'Missing x-razorpay-event-id header' }, { status: 400 })
+  }
+
+  const eventType = typeof payload.event === 'string' ? payload.event : 'unknown'
+
+  // Cheap fast path so a redelivery doesn't pay for a Serializable
+  // transaction. processRazorpayEvent repeats this check inside its own
+  // transaction, which is the authoritative one -- and because it writes the
+  // WebhookEvent row and sets processedAt in the same commit, any row visible
+  // here is one that was fully processed.
+  const existing = await prisma.webhookEvent.findUnique({ where: { razorpayEventId } })
+  if (existing) {
+    // Razorpay retries deliver the same event id. We've already recorded
+    // this one, so acknowledge without reprocessing.
+    return Response.json({ status: 'already_processed' }, { status: 200 })
+  }
+
+  // --- 3. Handoff -------------------------------------------------------------
+  // The per-delivery event id arrives as a header, but the processor validates
+  // it as a payload field, so it is merged in here.
+  //
+  // The processor owns the WebhookEvent ledger row: it inserts the row, applies
+  // the state mutation, and stamps processedAt inside a single Serializable
+  // transaction. That is why this route does not write the row itself. Writing
+  // it here after the fact would both collide with the processor's insert
+  // (razorpayEventId is @unique -- a guaranteed P2002 on every success) and
+  // sit outside any transaction, so a crash in between would leave an event
+  // that was fully applied with no ledger row to prove it. Keeping the insert
+  // inside the processor's transaction means a failed attempt leaves no record
+  // at all, so Razorpay's retry of the same event id naturally re-attempts it.
   try {
-    await prisma.$transaction(async (tx) => {
-      await tx.webhookEvent.create({ data: { razorpayEventId: event.id!, eventType: event.event!, payload: event as Prisma.InputJsonValue } })
-      if (!payment?.order_id) return
-      const order = await tx.order.findUnique({
-        where: { razorpayOrderId: payment.order_id },
-        include: { items: true, payment: true },
-      })
-      if (!order) return
-      if (payment.amount !== order.totalAmount || payment.currency !== order.currency) {
-        throw new Error('Webhook payment amount or currency does not match the internal order')
-      }
-
-      const paidEvent = event.event === 'payment.captured' || event.event === 'order.paid'
-      if (paidEvent) {
-        if (order.status !== 'PAID') {
-          for (const item of order.items) {
-            const result = await tx.product.updateMany({
-              where: { id: item.productId, inventory: { gte: item.quantity } },
-              data: { inventory: { decrement: item.quantity } },
-            })
-            if (result.count !== 1) throw new Error('Inventory became unavailable while processing payment')
-          }
-          await tx.order.update({ where: { id: order.id }, data: { status: 'PAID', razorpayPaymentId: payment.id } })
-          await tx.payment.update({ where: { orderId: order.id }, data: { status: 'CAPTURED', razorpayPaymentId: payment.id } })
-          await tx.auditLog.create({ data: { orderId: order.id, merchantId: order.merchantId, action: 'PAYMENT_CAPTURED', status: 'EXECUTED', reason: 'Verified Razorpay webhook marked order paid and reserved stock once', details: { razorpayEventId: event.id } } })
-        }
-      } else if (event.event === 'payment.failed' && order.status !== 'PAID') {
-        await tx.order.update({ where: { id: order.id }, data: { status: 'PAYMENT_FAILED' } })
-        await tx.payment.update({ where: { orderId: order.id }, data: { status: 'FAILED', razorpayPaymentId: payment.id } })
-        await tx.auditLog.create({ data: { orderId: order.id, merchantId: order.merchantId, action: 'PAYMENT_FAILED', status: 'EXECUTED', reason: 'Verified Razorpay webhook reported payment failure', details: { razorpayEventId: event.id } } })
-      }
-      await tx.webhookEvent.update({ where: { razorpayEventId: event.id! }, data: { orderId: order.id, processedAt: new Date() } })
-    }, { isolationLevel: 'Serializable' })
+    await processRazorpayEvent({ ...payload, razorpayEventId })
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return NextResponse.json({ received: true, duplicate: true })
-    }
-    console.error('Razorpay webhook processing failed', error)
-    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
+    console.error('processRazorpayEvent failed', { razorpayEventId, eventType, error })
+    // Non-2xx tells Razorpay to retry this delivery later.
+    return Response.json({ error: 'Processing failed' }, { status: 500 })
   }
-  return NextResponse.json({ received: true })
+
+  return Response.json({ status: 'ok' }, { status: 200 })
 }

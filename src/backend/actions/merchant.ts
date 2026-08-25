@@ -55,15 +55,19 @@ async function opportunitiesForMerchant(merchantId: string): Promise<Opportunity
       policy: { allowed: estimatedImpact <= maxBudget, reason: estimatedImpact <= maxBudget ? 'Campaign estimate is within the merchant budget.' : 'Campaign estimate exceeds the merchant budget.' },
     })
   }
-  const keyboard = products.find((product) => product.category.toLowerCase().includes('keyboard'))
-  const mouse = products.find((product) => product.category.toLowerCase().includes('mouse'))
-  if (keyboard && mouse) {
+  const categoryMap = new Map()
+  for (const product of products) {
+    if (!categoryMap.has(product.category)) categoryMap.set(product.category, product)
+  }
+  const uniqueCategories = Array.from(categoryMap.values())
+  if (uniqueCategories.length >= 2) {
+    const bundleProducts = [uniqueCategories[0], uniqueCategories[1]]
     const discountPercent = Math.min(10, policy.MAX_DISCOUNT_PERCENTAGE ?? 0)
-    const estimatedImpact = keyboard.price + mouse.price
+    const estimatedImpact = bundleProducts[0].price + bundleProducts[1].price
     opportunities.push({
-      id: 'cross-sell', title: 'Keyboard + mouse bundle', type: 'BUNDLE', estimatedImpact,
-      reason: 'The catalog contains complementary keyboard and mouse products. Present this as an optional bundle, never as a forced upsell.',
-      configuration: { productIds: [keyboard.id, mouse.id], discountPercent },
+      id: 'cross-sell', title: `${bundleProducts[0].category} + ${bundleProducts[1].category} bundle`, type: 'BUNDLE', estimatedImpact,
+      reason: `The catalog contains ${bundleProducts[0].category} and ${bundleProducts[1].category} products. Present this as an optional bundle, never as a forced upsell.`,
+      configuration: { productIds: [bundleProducts[0].id, bundleProducts[1].id], discountPercent },
       policy: { allowed: discountPercent <= (policy.MAX_DISCOUNT_PERCENTAGE ?? 0), reason: `Bundle discount is within the ${policy.MAX_DISCOUNT_PERCENTAGE ?? 0}% limit.` },
     })
   }
@@ -92,10 +96,20 @@ export async function getMerchantDashboardData() {
   const merchantPolicies = await prisma.merchantPolicy.findMany({ where: { merchantId: merchant.id } })
   const opportunities = await opportunitiesForMerchant(merchant.id)
   
-  const paidOrders = orders.filter((order) => order.status === 'PAID')
+  const totalOrdersCount = await prisma.order.count({ where: { merchantId: merchant.id } })
+  const paidAgg = await prisma.order.aggregate({
+    where: { merchantId: merchant.id, status: 'PAID' },
+    _sum: { totalAmount: true },
+    _count: true,
+  })
   const policies = Object.fromEntries(merchantPolicies.map((entry) => [entry.key, entry.value])) as Record<string, number>
   return {
-    overview: { totalRevenue: paidOrders.reduce((sum, order) => sum + order.totalAmount, 0), paidOrders: paidOrders.length, totalOrders: orders.length, aiRecoveredRevenue: merchant.aiRecoveredRevenue },
+    overview: { 
+      totalRevenue: paidAgg._sum.totalAmount || 0, 
+      paidOrders: paidAgg._count, 
+      totalOrders: totalOrdersCount, 
+      aiRecoveredRevenue: merchant.aiRecoveredRevenue 
+    },
     opportunities,
     products,
     orders,
@@ -198,9 +212,13 @@ export async function approveCampaign(campaignId: string) {
   if ((campaign.discountPercent ?? 0) > maxDiscount) {
     throw new Error(`Discount of ${campaign.discountPercent}% exceeds the ${maxDiscount}% merchant policy limit.`)
   }
+  const maxBudget = policy.CAMPAIGN_BUDGET_LIMIT ?? 0
+  if ((campaign.estimatedImpact ?? 0) > maxBudget) {
+    throw new Error(`Campaign budget estimate of ${campaign.estimatedImpact} exceeds the ${maxBudget} merchant policy limit.`)
+  }
 
-  const updated = await prisma.campaign.update({ where: { id: campaign.id }, data: { status: 'APPROVED' } })
-  await prisma.$transaction([
+  const [updated] = await prisma.$transaction([
+    prisma.campaign.update({ where: { id: campaign.id }, data: { status: 'APPROVED' } }),
     prisma.agentAction.create({
       data: {
         merchantId: merchant.id,
@@ -226,10 +244,12 @@ export async function rejectCampaign(campaignId: string) {
   if (!campaign) throw new Error('This campaign is no longer available')
   if (campaign.status !== 'PROPOSED') throw new Error('Only proposed campaigns can be rejected')
 
-  const updated = await prisma.campaign.update({ where: { id: campaign.id }, data: { status: 'REJECTED' } })
-  await prisma.auditLog.create({
-    data: { merchantId: merchant.id, actorUserId: user.id, action: 'CAMPAIGN_REJECTED', status: 'REJECTED', reason: campaign.rationale, details: { campaignId: campaign.id } },
-  })
+  const [updated] = await prisma.$transaction([
+    prisma.campaign.update({ where: { id: campaign.id }, data: { status: 'REJECTED' } }),
+    prisma.auditLog.create({
+      data: { merchantId: merchant.id, actorUserId: user.id, action: 'CAMPAIGN_REJECTED', status: 'REJECTED', reason: campaign.rationale, details: { campaignId: campaign.id } },
+    })
+  ])
   return updated
 }
 
@@ -251,16 +271,44 @@ export async function modifyCampaign(campaignId: string, discountPercent: number
     throw new Error(`Discount of ${nextDiscount}% exceeds the ${maxDiscount}% merchant policy limit.`)
   }
 
-  const updated = await prisma.campaign.update({ where: { id: campaign.id }, data: { discountPercent: nextDiscount } })
+  const [updated] = await prisma.$transaction([
+    prisma.campaign.update({ where: { id: campaign.id }, data: { discountPercent: nextDiscount } }),
+    prisma.auditLog.create({
+      data: {
+        merchantId: merchant.id,
+        actorUserId: user.id,
+        action: 'CAMPAIGN_MODIFIED',
+        status: 'EXECUTED',
+        reason: `Discount updated to ${nextDiscount}%`,
+        details: { campaignId: campaign.id, discountPercent: nextDiscount },
+      },
+    })
+  ])
+  return updated
+}
+
+// markAbandonedCarts (cartSweeper.ts) is deliberately not 'use server' and
+// takes merchantId as a bare argument with no session check -- by its own
+// doc comment it's for server-side callers only (the cron route). This
+// wrapper is the sanctioned way to expose it to the client: it resolves
+// merchantId from the authenticated session via requireMerchant() and never
+// from a client-supplied argument, so a tampered request can't sweep another
+// merchant's carts.
+import { markAbandonedCarts } from '@/backend/actions/cartSweeper'
+export async function runCartSweeper() {
+  const { user, merchant } = await requireMerchant()
+  const result = await markAbandonedCarts(merchant.id)
+
   await prisma.auditLog.create({
     data: {
       merchantId: merchant.id,
       actorUserId: user.id,
-      action: 'CAMPAIGN_MODIFIED',
+      action: 'CART_SWEEP_TRIGGERED',
       status: 'EXECUTED',
-      reason: `Discount updated to ${nextDiscount}%`,
-      details: { campaignId: campaign.id, discountPercent: nextDiscount },
+      reason: `Manually swept carts: ${result.updatedCount} marked abandoned (inactive past ${result.thresholdMinutes} minutes).`,
+      details: { thresholdMinutes: result.thresholdMinutes, cutoff: result.cutoff.toISOString(), updatedCount: result.updatedCount },
     },
   })
-  return updated
+
+  return result
 }

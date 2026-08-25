@@ -8,6 +8,7 @@ import {
   rejectCampaign,
   modifyCampaign,
   generateCampaigns,
+  runCartSweeper,
 } from '@/backend/actions/merchant'
 
 type DashboardData = Awaited<ReturnType<typeof getMerchantDashboardData>>
@@ -31,6 +32,7 @@ export default function MerchantDashboard() {
   const [draftDiscount, setDraftDiscount] = useState<string>('')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
+  const [sweeping, setSweeping] = useState(false)
 
   const refreshData = async () => {
     const res = await getMerchantDashboardData()
@@ -90,6 +92,16 @@ export default function MerchantDashboard() {
     await generateCampaigns()
     await refreshData()
     setGenerating(false)
+  }
+
+  // getMerchantDashboardData() doesn't expose a top-level merchantId, but
+  // runCartSweeper() doesn't need one from the client -- it resolves the
+  // merchant from the authenticated session itself.
+  const handleRunSweeper = async () => {
+    setSweeping(true)
+    await runCartSweeper()
+    await refreshData()
+    setSweeping(false)
   }
 
   if (loading || !data) return <div className="p-8 text-center text-slate-500">Loading MerchantOS AI...</div>
@@ -175,13 +187,23 @@ export default function MerchantDashboard() {
                   </svg>
                   <h2 className="text-xl font-bold text-slate-900">AI Campaigns</h2>
                 </div>
-                <button
-                  onClick={handleGenerate}
-                  disabled={generating}
-                  className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
-                >
-                  {generating ? 'Generating…' : 'Generate opportunities'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRunSweeper}
+                    disabled={sweeping}
+                    title="Demo utility: immediately marks stale active carts as abandoned instead of waiting out the ABANDONED_CART_MINUTES policy window."
+                    className="border border-indigo-300 bg-white hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed text-indigo-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    {sweeping ? 'Sweeping…' : 'Run Cart Sweeper'}
+                  </button>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={generating}
+                    className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                  >
+                    {generating ? 'Generating…' : 'Generate opportunities'}
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4">

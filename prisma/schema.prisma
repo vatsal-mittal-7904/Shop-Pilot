@@ -162,6 +162,7 @@ model Conversation {
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   messages   Json
+  agentActions AgentAction[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -330,6 +331,8 @@ model AgentAction {
   expectedImpact Int?
   status         AgentActionStatus @default(PROPOSED)
   campaignId     String?
+  conversationId String?
+  conversation   Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 }
