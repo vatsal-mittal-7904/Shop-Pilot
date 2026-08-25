@@ -84,6 +84,7 @@ export default function AgentSimulation() {
   const { customerId, merchantId } = useAgentSession()
   const [rateLimited, setRateLimited] = useState(false)
   const rateLimitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastUserMessageRef = useRef<string>('')
 
   const triggerRateLimitCooldown = () => {
     setRateLimited(true)
@@ -99,7 +100,7 @@ export default function AgentSimulation() {
     }
   }, [])
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
+  const { messages, input, setInput, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
     api: '/api/chat',
     maxSteps: 5, // Allow the agent to call tools automatically in a loop
     // Inspecting the raw Response here (before the hook checks response.ok
@@ -108,6 +109,7 @@ export default function AgentSimulation() {
     onResponse: (response) => {
       if (response.status === 429) {
         triggerRateLimitCooldown()
+        setInput(lastUserMessageRef.current)
       }
     },
     // The hook still turns the non-ok response into a thrown Error after
@@ -129,6 +131,7 @@ export default function AgentSimulation() {
       event.preventDefault()
       return
     }
+    lastUserMessageRef.current = input
     handleSubmit(event)
   }
 

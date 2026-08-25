@@ -123,8 +123,8 @@ export async function POST(req: Request) {
   // the buckets separate as intended. Raise MAX_REQUESTS_PER_WINDOW or drop
   // the ip check if a local multi-user demo needs headroom.
   const clientIp = getClientIp(req)
-  const ipLimit = checkRateLimit(`ip:${clientIp}`)
-  if (!ipLimit.allowed) {
+  const ipLimit = clientIp === 'unknown' ? null : checkRateLimit(`ip:${clientIp}`)
+  if (ipLimit && !ipLimit.allowed) {
     return Response.json(
       { error: 'Rate limit exceeded. Please wait a moment.' },
       {
