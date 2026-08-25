@@ -23,20 +23,23 @@ export async function getMerchantROI(merchantId: string) {
   // 3. Bundle Upsell Conversion Rate
   // We exclude ACTIVE offers entirely rather than counting them as failures,
   // so merchants with a healthy in-flight pipeline don't see an artificially depressed rate.
-  const bundleOffers = await prisma.offer.findMany({
+  const bundleTotal = await prisma.offer.count({
     where: {
       merchantId,
       cartId: { not: null },
       status: { not: 'ACTIVE' },
-    },
-    include: {
-      order: true,
-    },
+    }
   })
 
-  const bundleTotal = bundleOffers.length
-  // Accepted and paid is judged via the linked Order.status, not Offer.status.
-  const bundlePaid = bundleOffers.filter((o) => o.order?.status === 'PAID').length
+  // Count how many of those bundle offers resulted in a PAID order
+  const bundlePaid = await prisma.offer.count({
+    where: {
+      merchantId,
+      cartId: { not: null },
+      status: { not: 'ACTIVE' },
+      order: { status: 'PAID' }
+    }
+  })
   const bundleUpsellConversionRate = bundleTotal > 0 ? (bundlePaid / bundleTotal) * 100 : 0
 
   // 4. Profit Margins Protected (Number of blocked policy violations)
