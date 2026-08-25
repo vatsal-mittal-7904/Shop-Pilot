@@ -53,8 +53,8 @@ export default async function MerchantAnalyticsPage() {
 
           <MetricCard 
             title="Bundle Upsell Conversion" 
-            value={`${roiData.bundleUpsellConversionRate.toFixed(1)}%`}
-            description="Acceptance rate of AI bundles"
+            value={roiData.bundleTotal === 0 ? "—" : `${roiData.bundleUpsellConversionRate.toFixed(1)}%`}
+            description={roiData.bundleTotal === 0 ? "No bundles proposed yet" : "Acceptance rate of AI bundles"}
             accentColor="indigo"
             icon={
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

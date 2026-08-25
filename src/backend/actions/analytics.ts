@@ -58,6 +58,7 @@ export async function getMerchantROI(merchantId: string) {
     totalRevenueGenerated,
     abandonedCartsRecovered,
     bundleUpsellConversionRate,
+    bundleTotal,
     blockedPolicyViolations,
     aiRecoveredRevenue,
   }
