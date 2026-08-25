@@ -208,15 +208,26 @@ export async function processRazorpayEvent(payload: unknown) {
               amount: order.totalAmount,
               notes: { reason: 'Inventory unavailable at time of capture' }
             })
-          } catch (error: any) {
-            // If Razorpay says it's already refunded, this is likely a retry after a previous 
+          } catch (error) {
+            // If Razorpay says it's already refunded, this is likely a retry after a previous
             // successful refund where the DB commit failed. We can safely ignore it and proceed
             // to commit the INVENTORY_FAILED state.
-            const isAlreadyRefunded = error?.statusCode === 400 && error?.error?.description?.includes('already been fully refunded')
+            //
+            // The SDK throws untyped errors, so narrow to just the fields this
+            // handler reads instead of widening to `any`. Still optional-chained
+            // throughout: a thrown null must not turn this into a TypeError and
+            // mask the refund failure. `message` is read off the cast rather than
+            // via `instanceof Error` (the idiom elsewhere in this repo) because
+            // Razorpay's SDK rejects with plain objects, which that check would
+            // treat as messageless.
+            const rzpError = error as { statusCode?: number; message?: string; error?: { description?: string } } | null | undefined
+            const isAlreadyRefunded =
+              rzpError?.statusCode === 400 &&
+              (rzpError?.error?.description?.includes('already been fully refunded') ?? false)
             if (!isAlreadyRefunded) {
               // Any other error (network, rate limit, etc) MUST throw to roll back the transaction
               // and return 500, so Razorpay will retry the webhook.
-              throw new Error(`Failed to refund payment ${razorpayPaymentId}: ${error?.message || 'Unknown error'}`)
+              throw new Error(`Failed to refund payment ${razorpayPaymentId}: ${rzpError?.message || 'Unknown error'}`)
             }
           }
         }

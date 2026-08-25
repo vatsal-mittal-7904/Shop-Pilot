@@ -41,3 +41,15 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# One-off codemod scripts left in the repo root. Their edits are already applied to
+# src/, so they are spent scratch -- kept on disk for reference, never committed.
+# Same set the eslint config ignores.
+/patch_*.js
+/fix_*.js
+/check_edges.js
+
+# Local scratch: ad-hoc debug scripts, and graphify's generated knowledge graph
+# (rebuildable from source, ~1k nodes of JSON + HTML).
+/scratch/
+/graphify-out/

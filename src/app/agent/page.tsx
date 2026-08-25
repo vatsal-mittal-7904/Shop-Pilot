@@ -45,14 +45,23 @@ const POLICY_ACTION_TYPE: Record<string, string> = {
  * Builds the AgentActionSummary PolicyBadge renders from the policyResult the
  * chat route already returns with each tool result.
  *
- * Deliberately NOT sourced from getRecentAgentActions() (explainability.ts),
- * even though that fetcher exists: AgentAction has no conversationId or
- * customerId column, so it can only query merchant-wide. That means (a) its rows
- * carry no key that would attribute one to a specific message, and (b) rendering
- * them here would show this shopper other customers' discount negotiations --
- * which is precisely what that function's own KNOWN LIMITATION docblock forbids.
- * The tool result, by contrast, is conversation-scoped by construction and is
- * attached to the exact response that produced it.
+ * Deliberately NOT sourced from getRecentAgentActions() (explainability.ts), even
+ * though that fetcher is now properly conversation-scoped -- AgentAction gained a
+ * conversationId column and both chat-route writers populate it, so the old
+ * cross-customer leak is closed. Two reasons the badge still comes from the tool
+ * result instead:
+ *
+ *   1. The client has no conversationId to pass it. The chat route creates the id
+ *      server-side (route.ts:148) and returns a plain toDataStreamResponse(), so
+ *      the id never crosses the boundary; AgentSessionProvider carries only
+ *      { customerId, merchantId }. The fetcher is simply uncallable from here.
+ *   2. Conversation scope still isn't message scope. Several DISCOUNT_OFFERs can
+ *      exist in one conversation and nothing distinguishes which assistant turn
+ *      produced which row, so a fetched list could not be placed beneath the
+ *      response it belongs to.
+ *
+ * The tool result has neither problem: it arrives attached to the exact message
+ * that produced it.
  *
  * `status` uses the same expression the server used when writing the row
  * (route.ts:309, :358), so the badge reflects the persisted AgentAction rather

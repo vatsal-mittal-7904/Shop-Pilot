@@ -72,7 +72,7 @@ async function main() {
   for (const product of catalog) {
     const existing = await prisma.product.findFirst({ where: { merchantId: merchant.id, name: product.name } })
     if (!existing) await prisma.product.create({ data: { merchantId: merchant.id, ...product } })
-  }
+  } 
 
   const keyboard = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, category: 'keyboard' } })
   const mouse = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, category: 'mouse' } })

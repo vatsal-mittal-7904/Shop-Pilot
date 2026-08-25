@@ -15,7 +15,32 @@
       "Bash(npx tsx *)",
       "Bash(node -e ' *)",
       "Bash(git check-ignore *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(node -e \"for \\(const p of ['ai','@ai-sdk/google','zod']\\) { try { console.log\\(p, '=>', require\\(p+'/package.json'\\).version\\) } catch\\(e\\) { console.log\\(p, '=> NOT INSTALLED'\\) } }\")",
+      "Bash(echo \"=== diff vs provided source \\(should be empty\\) ===\" && diff /Users/vatsalmittal7904/Downloads/route.ts src/app/api/chat/route.ts && echo \"\\(identical\\)\"; echo; echo \"=== git status ===\" && git status --short)",
+      "Bash(node -p \"require\\('./package.json'\\).version\")",
+      "Bash(grep -rn '\\\\$executeRaw\\\\|\\\\$queryRaw' src/)",
+      "Bash(grep -rn '\\\\$transaction' src/)",
+      "Bash(/Users/vatsalmittal7904/.local/share/uv/tools/graphifyy/bin/python -c 'import sys; open\\('\\\\''graphify-out/.graphify_python'\\\\'','\\\\''w'\\\\'',encoding='\\\\''utf-8'\\\\''\\).write\\(sys.executable\\)')",
+      "Bash(sed -n '/^model Product /,/^}/p' prisma/schema.prisma)",
+      "Bash(sed -n '/^model CartItem /,/^}/p' prisma/schema.prisma)",
+      "Bash(node -e \"console.log\\(require\\('next/package.json'\\).version\\)\")",
+      "Bash(awk '/^\\(model \\(Offer|OfferItem|AuditLog|Cart|CartItem|Conversation\\)|enum \\(OfferStatus|CartStatus|AuditStatus|AuditLogStatus\\)\\)\\\\b/,/^}/' prisma/schema.prisma)",
+      "Bash(awk '/^model Order \\\\{/,/^\\\\}/' prisma/schema.prisma)",
+      "Bash(awk '/^model Payment \\\\{/,/^\\\\}/' prisma/schema.prisma)",
+      "Bash(awk '/^model Offer \\\\{/,/^\\\\}/' prisma/schema.prisma)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('prisma:', JSON.stringify\\(p.prisma,null,2\\)\\); console.log\\('scripts:', JSON.stringify\\(p.scripts,null,2\\)\\); console.log\\('tsx:', p.devDependencies?.tsx ?? p.dependencies?.tsx ?? 'NOT INSTALLED'\\)\")",
+      "Bash(echo \"--- tsc exit: $? ---\")",
+      "Bash(awk '/^model WebhookEvent/,/^}/' prisma/schema.prisma)",
+      "Bash(awk '/^model Payment/,/^}/' prisma/schema.prisma)",
+      "Bash(awk '/^model Order /,/^}/' prisma/schema.prisma)",
+      "Bash(npm run *)",
+      "Bash(cp src/backend/actions/webhookProcessor.ts __TRACKED_VAR__/wp.bak)",
+      "Bash(sed -i '' 's/data: { processedAt: new Date\\(\\) },/data: { processedAtXX: new Date\\(\\) },/' src/backend/actions/webhookProcessor.ts)",
+      "Bash(md5 -q postcss.config.mjs src/app/globals.css)",
+      "Bash(exit 1)",
+      "Bash(awk '/^model AgentAction/,/^}/' prisma/schema.prisma)",
+      "Bash(awk '/^model Conversation/,/^}/' prisma/schema.prisma)"
     ]
   }
 }

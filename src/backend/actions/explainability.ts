@@ -26,35 +26,31 @@ export type AgentActionSummary = {
 }
 
 /**
- * ⚠️ KNOWN LIMITATION -- read before using this in production.
+ * Returns the policy decisions the agent made inside one conversation: that
+ * conversation's DISCOUNT_OFFER / BUNDLE_ADDON_OFFER actions, most recent first.
  *
- * `AgentAction` has no `conversationId`, `customerId`, `offerId`, or
- * `orderId` column -- only `merchantId`. There is no field anywhere on the
- * model (including inside its `input`/`policyResult` Json blobs, as written
- * by generate_checkout_offer and merchant.ts's campaign actions) that ties a
- * given row back to a specific conversation or customer.
+ * Scoped on three axes, all load-bearing:
+ *   - `customerId` on the Conversation lookup, so a caller can only ask about a
+ *     conversation they actually own;
+ *   - `conversationId` on the actions, so the result is this conversation's
+ *     decisions rather than the whole merchant's;
+ *   - `merchantId` alongside it -- redundant given the FK, but it keeps the query
+ *     correct rather than merely passing if a row is ever re-parented.
  *
- * That means this function CANNOT actually scope results to one
- * conversation. What it does instead: verifies the caller owns the
- * requested Conversation, then returns the merchant's most recent
- * DISCOUNT_OFFER / BUNDLE_ADDON_OFFER actions -- across ALL of that merchant's
- * customers, not just this one. Returning that as "this conversation's
- * actions" would leak other customers' discount negotiation history to
- * whoever is viewing this chat.
+ * History, because it explains the shape: this function originally could not scope
+ * by conversation at all. AgentAction carried only `merchantId`, so the narrowest
+ * thing it could return was every customer's discount negotiations for that
+ * merchant, and it was documented as unsafe to expose to end users. The
+ * `conversationId` column (migration 20260825120000_add_agentaction_conversation)
+ * closed that hole, and both writers in api/chat/route.ts (L305, L355) populate it.
  *
- * Do not expose this to end users as-is. Fix properly by adding a
- * `conversationId String?` (or at least `customerId String?`) column to
- * AgentAction, populating it at every call site that creates one, and
- * filtering on it here.
+ * What deliberately does NOT set it: merchant.ts's two campaign writers (L146,
+ * L222). A campaign approval happens on the merchant dashboard with no
+ * conversation in scope, so NULL is the honest value there -- and those rows are
+ * excluded from this query by `type` regardless.
  *
- * VERIFIED AGAINST prisma/schema.prisma: the limitation above is real. AgentAction
- * is { id, merchantId, type, reason, input, policyResult, expectedImpact, status,
- * campaignId, createdAt, updatedAt } -- no customer or conversation link exists.
- * Because of that this function is NOT wired into the customer-facing chat
- * (src/app/agent/page.tsx); that page renders PolicyBadge from the per-message
- * tool result instead, which is conversation-scoped by construction. See the
- * Day 11 merge notes. This function is kept for the merchant-side surface, where
- * merchant-wide scope is correct rather than a leak.
+ * Rows written before that migration keep conversationId NULL and never appear
+ * here. Intentional: they cannot be attributed to a conversation after the fact.
  */
 export async function getRecentAgentActions(conversationId: string): Promise<AgentActionSummary[]> {
   const { customer } = await requireCustomer()
