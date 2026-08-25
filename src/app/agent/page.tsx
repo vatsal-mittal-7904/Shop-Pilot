@@ -1,7 +1,7 @@
 'use client'
 
 import { useChat } from 'ai/react'
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { addProductToCart } from '@/backend/actions/commerce'
 import { startCheckout } from '@/backend/actions/payment'
@@ -73,12 +73,64 @@ function toPolicyBadgeAction(toolCallId: string, toolName: string, policyResult:
   return { id: toolCallId, type, status: policyResult.passed ? 'APPROVED' : 'BLOCKED', policyResult }
 }
 
+// How long the input/button stay disabled after a 429, in ms. Purely a
+// client-side cooldown for UX -- it doesn't need to match the server's
+// actual rate-limit window, just be long enough that a quick retry
+// doesn't immediately re-trip the limiter.
+const RATE_LIMIT_COOLDOWN_MS = 5000
+const RATE_LIMIT_MESSAGE = "Woah there! You're chatting a bit too fast. Please wait a few seconds before sending another message."
+
 export default function AgentSimulation() {
   const { customerId, merchantId } = useAgentSession()
+  const [rateLimited, setRateLimited] = useState(false)
+  const rateLimitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const triggerRateLimitCooldown = () => {
+    setRateLimited(true)
+    // A second 429 while already cooling down restarts the countdown
+    // instead of letting an earlier timer clear the flag early.
+    if (rateLimitTimeoutRef.current) clearTimeout(rateLimitTimeoutRef.current)
+    rateLimitTimeoutRef.current = setTimeout(() => setRateLimited(false), RATE_LIMIT_COOLDOWN_MS)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (rateLimitTimeoutRef.current) clearTimeout(rateLimitTimeoutRef.current)
+    }
+  }, [])
+
   const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
     api: '/api/chat',
     maxSteps: 5, // Allow the agent to call tools automatically in a loop
+    // Inspecting the raw Response here (before the hook checks response.ok
+    // and throws) is what lets us key off the real HTTP status rather than
+    // string-matching an error message that might change shape later.
+    onResponse: (response) => {
+      if (response.status === 429) {
+        triggerRateLimitCooldown()
+      }
+    },
+    // The hook still turns the non-ok response into a thrown Error after
+    // onResponse runs. Swallowing it here (rather than leaving it
+    // unhandled) keeps that from ever surfacing as a generic error state --
+    // the amber banner driven by `rateLimited` above is the only UI a 429
+    // produces.
+    onError: (error) => {
+      if (!rateLimited && /rate limit/i.test(error.message)) {
+        triggerRateLimitCooldown()
+      }
+    },
   })
+
+  // Enter-to-submit bypasses the disabled attribute on the send button, so
+  // the cooldown has to be enforced in the submit handler itself too.
+  const onFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    if (rateLimited) {
+      event.preventDefault()
+      return
+    }
+    handleSubmit(event)
+  }
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [checkingOut, setCheckingOut] = useState(false)
@@ -411,23 +463,37 @@ export default function AgentSimulation() {
               </div>
             </div>
           )}
+
+          {/* Rendered as a UI-only notice, not appended to `messages` --
+              it's a client-side cooldown state, not part of the
+              conversation history the server persists. */}
+          {rateLimited && (
+            <div className="flex justify-start">
+              <div className="max-w-[85%] md:max-w-[75%] rounded-2xl rounded-bl-none p-4 shadow-sm bg-amber-50 border border-amber-200 text-amber-800 flex items-start gap-2">
+                <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86l-8.18 14.14A1.5 1.5 0 003.5 20h17a1.5 1.5 0 001.39-2L13.71 3.86a1.5 1.5 0 00-2.42 0z" />
+                </svg>
+                <p className="text-[15px] leading-relaxed font-medium">{RATE_LIMIT_MESSAGE}</p>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
       </main>
 
       <footer className="bg-white border-t border-slate-200 p-4">
         <div className="max-w-4xl mx-auto">
-          <form onSubmit={handleSubmit} className="flex gap-3">
+          <form onSubmit={onFormSubmit} className="flex gap-3">
             <input
               value={input}
               onChange={handleInputChange}
-              placeholder="E.g. I need a mechanical keyboard under 8000 rupees..."
-              className="flex-1 border border-slate-300 rounded-xl px-5 py-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm bg-white"
-              disabled={isLoading}
+              placeholder={rateLimited ? 'Please wait a moment before sending another message...' : 'E.g. I need a mechanical keyboard under 8000 rupees...'}
+              className="flex-1 border border-slate-300 rounded-xl px-5 py-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm bg-white disabled:bg-slate-50 disabled:text-slate-400"
+              disabled={isLoading || rateLimited}
             />
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || rateLimited || !input.trim()}
               className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-6 font-semibold transition-colors shadow-sm flex flex-col justify-center items-center"
             >
               <svg className="w-6 h-6 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">

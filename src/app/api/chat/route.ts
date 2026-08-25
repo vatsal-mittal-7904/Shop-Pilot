@@ -7,6 +7,7 @@ import { requireCustomer } from '@/backend/auth/session'
 import { addProductToCart, createOfferForCustomer, getActiveCart, policyMap } from '@/backend/actions/commerce'
 import { evaluateDiscount } from '@/backend/actions/policyEngine'
 import { parseBuyerIntent } from '@/backend/actions/intent'
+import { checkRateLimit, getClientIp } from '@/backend/utils/rateLimit'
 
 export const maxDuration = 30
 
@@ -113,8 +114,46 @@ async function createRazorpayOrder(order: { id: string; totalAmount: number }): 
 }
 
 export async function POST(req: Request) {
-  // 1. Authenticate the session.
+  // 1. IP Rate limit before ANY DB work (like session validation).
+  // CAVEAT for local/demo runs: getClientIp() falls back to the constant
+  // 'unknown' when no proxy sets x-forwarded-for / x-real-ip, which is the
+  // case under `next dev`. Every caller then shares the single ip:unknown
+  // bucket, so the effective cap is 10 requests/minute across all users
+  // rather than per user. Behind Vercel (or any proxy that sets the header)
+  // the buckets separate as intended. Raise MAX_REQUESTS_PER_WINDOW or drop
+  // the ip check if a local multi-user demo needs headroom.
+  const clientIp = getClientIp(req)
+  const ipLimit = checkRateLimit(`ip:${clientIp}`)
+  if (!ipLimit.allowed) {
+    return Response.json(
+      { error: 'Rate limit exceeded. Please wait a moment.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': Math.ceil(ipLimit.retryAfterMs / 1000).toString(),
+        },
+      },
+    )
+  }
+
+  // 1a. Authenticate the session (performs a DB read).
   const { user, customer } = await requireCustomer()
+
+  // 1b. Customer-specific Rate limit.
+  // Keyed by the authenticated customerId -- more precise than IP once a
+  // session exists, and not spoofable by rotating source addresses.
+  const customerLimit = checkRateLimit(`customer:${customer.id}`)
+  if (!customerLimit.allowed) {
+    return Response.json(
+      { error: 'Rate limit exceeded. Please wait a moment.' },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': Math.ceil(customerLimit.retryAfterMs / 1000).toString(),
+        },
+      },
+    )
+  }
 
   // The client's payload is treated as display-only input, never as the
   // authoritative history: we pull just the newest user turn out of it below

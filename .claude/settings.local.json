@@ -40,7 +40,13 @@
       "Bash(md5 -q postcss.config.mjs src/app/globals.css)",
       "Bash(exit 1)",
       "Bash(awk '/^model AgentAction/,/^}/' prisma/schema.prisma)",
-      "Bash(awk '/^model Conversation/,/^}/' prisma/schema.prisma)"
+      "Bash(awk '/^model Conversation/,/^}/' prisma/schema.prisma)",
+      "Bash(node -p \"require\\('./node_modules/prisma/package.json'\\).version\")",
+      "Bash(node -p \"JSON.stringify\\(require\\('./node_modules/prisma/package.json'\\).exports['./config'],null,2\\)\")",
+      "Bash(node -p \"require\\('./node_modules/@prisma/config/package.json'\\).version\")",
+      "Bash(node -p \"const p=require\\('./node_modules/@prisma/config/package.json'\\); JSON.stringify\\({types:p.types,main:p.main,exports:p.exports},null,2\\)\")",
+      "Bash(cp \"/Users/vatsalmittal7904/Downloads/page.tsx\" src/app/agent/page.tsx && echo \"copied\" && echo \"=== resulting git diff \\(functional lines only\\) ===\" && git diff --stat src/app/agent/page.tsx && echo && echo \"=== confirm identical to reviewed source ===\" && diff -q src/app/agent/page.tsx \"/Users/vatsalmittal7904/Downloads/page.tsx\" && echo \"IDENTICAL to the file I reviewed\")",
+      "Bash(md5 -q postcss.config.mjs)"
     ]
   }
 }
