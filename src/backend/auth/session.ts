@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { prisma } from '@/backend/db/prisma'
 
 const SESSION_COOKIE = 'merchantos_session'
@@ -28,7 +28,16 @@ export async function destroySession() {
 
 export async function getCurrentSession() {
   const store = await cookies()
-  const token = store.get(SESSION_COOKIE)?.value
+  let token = store.get(SESSION_COOKIE)?.value
+  
+  if (!token) {
+    const headersList = await headers()
+    const authHeader = headersList.get('authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    }
+  }
+
   if (!token) return null
   const session = await prisma.session.findUnique({
     where: { token },

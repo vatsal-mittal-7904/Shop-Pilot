@@ -128,7 +128,16 @@ export async function createOfferForCustomer(input: z.infer<typeof offerInputSch
   const intent = data.buyerIntentId
     ? await prisma.buyerIntent.findFirst({ where: { id: data.buyerIntentId, customerId: customer.id } })
     : await prisma.buyerIntent.findFirst({ where: { customerId: customer.id }, orderBy: { createdAt: 'desc' } })
-  if (intent?.maximumAmount && total > intent.maximumAmount) throw new Error('Offer exceeds the buyer intent budget')
+  if (intent?.maximumAmount) {
+    const pastOrders = await prisma.order.aggregate({
+      where: { buyerIntentId: intent.id, status: { notIn: ['DRAFT', 'PAYMENT_FAILED', 'CANCELLED', 'EXPIRED'] } },
+      _sum: { totalAmount: true }
+    })
+    const currentSpend = pastOrders._sum.totalAmount || 0;
+    if (currentSpend + total > intent.maximumAmount) {
+      throw new Error('Offer exceeds the cumulative buyer intent budget')
+    }
+  }
   if (intent?.autonomousPurchase && total > (policies.MAX_AUTONOMOUS_SPEND ?? 0)) {
     throw new Error('Offer exceeds the merchant autonomous-payment limit')
   }
@@ -176,7 +185,16 @@ export async function createOrderFromOffer(offerId: string) {
       await tx.offer.update({ where: { id: offer.id }, data: { status: 'EXPIRED' } })
       throw new Error('This offer has expired. Please ask the agent for a new offer.')
     }
-    if (offer.buyerIntent?.maximumAmount && offer.total > offer.buyerIntent.maximumAmount) throw new Error('Offer exceeds buyer budget')
+    if (offer.buyerIntent?.maximumAmount) {
+      const pastOrders = await tx.order.aggregate({
+        where: { buyerIntentId: offer.buyerIntentId, status: { notIn: ['DRAFT', 'PAYMENT_FAILED', 'CANCELLED', 'EXPIRED'] } },
+        _sum: { totalAmount: true }
+      })
+      const currentSpend = pastOrders._sum.totalAmount || 0;
+      if (currentSpend + offer.total > offer.buyerIntent.maximumAmount) {
+        throw new Error('Offer exceeds cumulative buyer budget')
+      }
+    }
     if (offer.items.some((item) => item.product.inventory < item.quantity)) throw new Error('An item is out of stock')
 
     const order = await tx.order.create({
