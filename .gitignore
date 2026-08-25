@@ -53,3 +53,4 @@ next-env.d.ts
 # (rebuildable from source, ~1k nodes of JSON + HTML).
 /scratch/
 /graphify-out/
+.claude/settings.local.json
