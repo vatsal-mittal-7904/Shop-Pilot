@@ -8,10 +8,21 @@ import { prisma } from '@/backend/db/prisma'
  * contexts that resolve the merchantId securely.
  */
 export async function getMerchantROI(merchantId: string) {
+  // 1. Total Revenue Generated
+  const paidOrdersAgg = await prisma.order.aggregate({
+    where: { merchantId, status: 'PAID' },
+    _sum: { totalAmount: true }
+  })
+  const totalRevenueGenerated = paidOrdersAgg._sum.totalAmount || 0
+
+  // 2. Abandoned Carts Recovered
+  const abandonedCartsRecovered = await prisma.cart.count({
+    where: { merchantId, status: 'CONVERTED' }
+  })
+
+  // 3. Bundle Upsell Conversion Rate
   // We exclude ACTIVE offers entirely rather than counting them as failures,
   // so merchants with a healthy in-flight pipeline don't see an artificially depressed rate.
-  
-  // 1. Bundle offers: cartId is populated by the cart/add-on flow.
   const bundleOffers = await prisma.offer.findMany({
     where: {
       merchantId,
@@ -23,29 +34,28 @@ export async function getMerchantROI(merchantId: string) {
     },
   })
 
-  // 2. Intent offers: driven by BuyerIntent, cartId is null.
-  const intentOffers = await prisma.offer.findMany({
-    where: {
-      merchantId,
-      cartId: null,
-      status: { not: 'ACTIVE' },
-    },
-    include: {
-      order: true,
-    },
-  })
-
   const bundleTotal = bundleOffers.length
   // Accepted and paid is judged via the linked Order.status, not Offer.status.
   const bundlePaid = bundleOffers.filter((o) => o.order?.status === 'PAID').length
-  const bundleConversionRate = bundleTotal > 0 ? bundlePaid / bundleTotal : 0
+  const bundleUpsellConversionRate = bundleTotal > 0 ? (bundlePaid / bundleTotal) * 100 : 0
 
-  const intentTotal = intentOffers.length
-  const intentPaid = intentOffers.filter((o) => o.order?.status === 'PAID').length
-  const intentConversionRate = intentTotal > 0 ? intentPaid / intentTotal : 0
+  // 4. Profit Margins Protected (Number of blocked policy violations)
+  const blockedPolicyViolations = await prisma.agentAction.count({
+    where: { merchantId, status: 'BLOCKED' }
+  })
+
+  // 5. Get AI Recovered Revenue for the impact bar
+  const merchant = await prisma.merchant.findUnique({
+    where: { id: merchantId },
+    select: { aiRecoveredRevenue: true }
+  })
+  const aiRecoveredRevenue = merchant?.aiRecoveredRevenue || 0
 
   return {
-    bundle: { total: bundleTotal, paid: bundlePaid, conversionRate: bundleConversionRate },
-    intent: { total: intentTotal, paid: intentPaid, conversionRate: intentConversionRate },
+    totalRevenueGenerated,
+    abandonedCartsRecovered,
+    bundleUpsellConversionRate,
+    blockedPolicyViolations,
+    aiRecoveredRevenue,
   }
 }
