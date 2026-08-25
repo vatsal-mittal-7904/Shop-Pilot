@@ -3,7 +3,7 @@ import { prisma } from '@/backend/db/prisma'
 
 const MAX_DISCOUNT_POLICY_KEY = 'MAX_DISCOUNT_PERCENTAGE'
 
-const requestedPercentSchema = z.number().finite()
+const requestedPercentSchema = z.number().finite().min(0)
 
 export type DiscountPolicyResult = {
   checked: string[]

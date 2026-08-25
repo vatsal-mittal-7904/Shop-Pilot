@@ -544,7 +544,16 @@ export async function POST(req: Request) {
             return { error: 'Could not start payment right now. Please ask the customer to try again in a moment.' }
           }
 
-          await prisma.order.update({ where: { id: order.id }, data: { razorpayOrderId: razorpayOrder.id } })
+          const updateResult = await prisma.order.updateMany({
+            where: { id: order.id, razorpayOrderId: null },
+            data: { razorpayOrderId: razorpayOrder.id },
+          })
+          if (updateResult.count === 0) {
+            const existing = await prisma.order.findUnique({ where: { id: order.id } })
+            if (existing?.razorpayOrderId) {
+              razorpayOrder.id = existing.razorpayOrderId
+            }
+          }
 
           // 5. Payment row. Upsert, not create: Payment.orderId is @unique, so
           // a retry after a failed Razorpay call (which leaves the Order and
