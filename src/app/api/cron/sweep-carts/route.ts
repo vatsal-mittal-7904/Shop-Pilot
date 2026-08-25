@@ -6,22 +6,15 @@ import { markAbandonedCarts } from '@/backend/actions/cartSweeper'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
+  if (!process.env.CRON_SECRET) {
+    console.error('CRON_SECRET environment variable is missing')
+    return Response.json({ error: 'Server misconfiguration' }, { status: 500 })
+  }
+
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
-  // TODO: verify a cron secret before this goes to production, e.g.:
-  //   const authHeader = req.headers.get('authorization')
-  //   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-  //     return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  //   }
-  //
-  // Left as Session A wrote it, but note what is unguarded until it lands: this
-  // is an unauthenticated GET that mutates every merchant's carts. Anything that
-  // can issue a GET -- a crawler, a link preview, a prefetch -- can flip carts to
-  // ABANDONED for all merchants on demand. CRON_SECRET is not currently set in
-  // .env or .env.local, so the check above has to be added together with the var.
 
   const merchants = await prisma.merchant.findMany({ select: { id: true } })
 

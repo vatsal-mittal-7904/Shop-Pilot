@@ -102,6 +102,7 @@ export default function AgentSimulation() {
 
   const { messages, input, setInput, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
     api: '/api/chat',
+    body: { merchantId },
     maxSteps: 5, // Allow the agent to call tools automatically in a loop
     // Inspecting the raw Response here (before the hook checks response.ok
     // and throws) is what lets us key off the real HTTP status rather than
