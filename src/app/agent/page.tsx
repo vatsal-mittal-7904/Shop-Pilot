@@ -467,7 +467,8 @@ export default function AgentSimulation() {
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
           
           {isLoading && (
             <div className="flex justify-start">
