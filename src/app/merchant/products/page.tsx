@@ -22,7 +22,8 @@ export default function ProductAdder() {
   const handleAddProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setAddingProduct(true)
-    const formData = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const formData = new FormData(form)
     await addProduct({
       name: formData.get('name') as string,
       category: formData.get('category') as string,
@@ -35,7 +36,7 @@ export default function ProductAdder() {
       tags: (formData.get('tags') as string).split(',').map((tag) => tag.trim()).filter(Boolean),
       attributes: { highlights: formData.get('highlights') as string },
     })
-    e.currentTarget.reset()
+    form.reset()
     await refreshData()
     setAddingProduct(false)
   }
