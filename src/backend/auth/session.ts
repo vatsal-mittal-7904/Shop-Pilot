@@ -45,7 +45,11 @@ export async function getCurrentSession() {
   })
   if (!session || session.expiresAt <= new Date()) {
     if (session) await prisma.session.delete({ where: { id: session.id } })
-    store.delete(SESSION_COOKIE)
+    try {
+      store.delete(SESSION_COOKIE)
+    } catch (e) {
+      // Ignore in Server Components where cookie mutation is forbidden
+    }
     return null
   }
   return session
