@@ -237,8 +237,8 @@ export async function approveCampaign(campaignId: string) {
     throw new Error(`Discount of ${campaign.discountPercent}% exceeds the ${maxDiscount}% merchant policy limit.`)
   }
   const maxBudget = policy.CAMPAIGN_BUDGET_LIMIT ?? 0
-  if ((campaign.estimatedImpact ?? 0) > maxBudget) {
-    throw new Error(`Campaign budget estimate of ${campaign.estimatedImpact} exceeds the ${maxBudget} merchant policy limit.`)
+  if ((campaign.budget ?? 0) > maxBudget) {
+    throw new Error(`Campaign budget of ${campaign.budget ?? 0} exceeds the ${maxBudget} merchant policy limit.`)
   }
 
   const [updated] = await prisma.$transaction([
