@@ -223,7 +223,18 @@ export default function AgentSimulation() {
             </div>
           </div>
 
-          {messages.map((m) => (
+          {messages.map((m) => {
+            const hasContent = !!m.content;
+            const hasVisibleTool = m.toolInvocations?.some((raw) => {
+              const ti = raw as ToolInvocationView;
+              if (ti.state !== 'result') return true;
+              const res = Array.isArray(ti.result) ? undefined : ti.result;
+              if (ti.toolName === 'propose_bundle_addon' && res?.skipped) return false;
+              return true;
+            });
+            if (!hasContent && !hasVisibleTool && m.role !== 'user') return null;
+
+            return (
             <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl p-4 shadow-sm ${
                 m.role === 'user' 
