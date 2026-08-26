@@ -10,6 +10,7 @@ export default function ProductAdder() {
   const [addingProduct, setAddingProduct] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
   const refreshData = async () => {
     const res = await getMerchantDashboardData()
@@ -175,11 +176,38 @@ export default function ProductAdder() {
                           {p.inventory} in stock
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium flex gap-3 justify-end">
-                        <button onClick={() => setEditingProduct(p)} className="text-indigo-600 hover:text-indigo-900">Edit</button>
-                        <button onClick={() => handleDelete(p.id)} disabled={isDeleting === p.id} className="text-red-600 hover:text-red-900">
-                          {isDeleting === p.id ? '...' : 'Delete'}
-                        </button>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                        <div className="relative inline-block text-left">
+                          <button 
+                            onClick={() => setOpenDropdown(openDropdown === p.id ? null : p.id)} 
+                            className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 focus:outline-none transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                            </svg>
+                          </button>
+                          
+                          {openDropdown === p.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)}></div>
+                              <div className="absolute right-0 mt-2 z-20 w-32 bg-white rounded-md shadow-lg border border-slate-200 py-1 ring-1 ring-black ring-opacity-5">
+                                <button 
+                                  onClick={() => { setEditingProduct(p); setOpenDropdown(null); }} 
+                                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600"
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  onClick={() => { handleDelete(p.id); setOpenDropdown(null); }} 
+                                  disabled={isDeleting === p.id} 
+                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                >
+                                  {isDeleting === p.id ? 'Deleting...' : 'Delete'}
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
