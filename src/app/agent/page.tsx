@@ -100,7 +100,7 @@ export default function AgentSimulation() {
     }
   }, [])
 
-  const { messages, input, setInput, handleInputChange, handleSubmit, isLoading, setMessages } = useChat({
+  const { messages, input, setInput, handleInputChange, handleSubmit, isLoading, setMessages, append } = useChat({
     api: '/api/chat',
     body: { merchantId },
     maxSteps: 5, // Allow the agent to call tools automatically in a loop
@@ -274,7 +274,7 @@ export default function AgentSimulation() {
                         </div>
                         {products.length > 0 && (
                           <div className="mt-3">
-                            <ProductCards products={products} customerId={customerId} merchantId={merchantId} />
+                            <ProductCards products={products} customerId={customerId} merchantId={merchantId} onSelect={(p) => append({ role: "user", content: `I added ${p.name} to my cart.` })} />
                           </div>
                         )}
                       </div>
