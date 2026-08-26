@@ -70,7 +70,7 @@ export async function parseBuyerIntent(customerId: string, rawMessage: string) {
   let extracted: ExtractedIntent
   try {
     const { object } = await generateObject({
-      model: google('gemini-3.6-flash'),
+      model: google('gemini-1.5-flash'),
       schema: intentExtractionSchema,
       prompt: `Extract shopping intent from this customer message for an electronics storefront (categories include keyboard, mouse, headphones, monitor, webcam, accessory). If the user explicitly asks to remove, clear, or ignore their previous budget limit, set clearBudget to true. Message: "${trimmed}"`,
     })

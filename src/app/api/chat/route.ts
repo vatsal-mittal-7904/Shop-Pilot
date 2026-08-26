@@ -115,6 +115,7 @@ async function createRazorpayOrder(order: { id: string; totalAmount: number }): 
 }
 
 export async function POST(req: Request) {
+  try {
   // 1. IP Rate limit before ANY DB work (like session validation).
   // CAVEAT for local/demo runs: getClientIp() falls back to the constant
   // 'unknown' when no proxy sets x-forwarded-for / x-real-ip, which is the
@@ -205,7 +206,7 @@ export async function POST(req: Request) {
   let result;
   try {
     result = await streamText({
-      model: google('gemini-3.6-flash'),
+      model: google('gemini-1.5-flash'),
     system: SYSTEM_PROMPT,
     messages: sanitizedMessages,
     tools: {
@@ -625,4 +626,8 @@ export async function POST(req: Request) {
     throw error;
   }
   return result.toDataStreamResponse()
+  } catch (err) {
+    require('fs').appendFileSync('/tmp/chat_error.log', (err.stack || err.message || String(err)) + "\n\n");
+    return Response.json({ error: err.message || "Unknown" }, { status: 500 });
+  }
 }
