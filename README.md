@@ -1,63 +1,177 @@
-# MerchantOS AI 🚀
+<div align="center">
+  <h1>🛍️ MerchantOS</h1>
+  <p><b>An AI-native commerce layer with deterministic guardrails.</b></p>
+  
+  [![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+  [![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://prisma.io/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org/)
+</div>
 
-An AI-Native Merchant Infrastructure prototype built for the **Razorpay AI Builder / Agentic Commerce Hackathon**.
+<br/>
 
-This project proves the core thesis: *Turn a traditional Razorpay merchant into an AI-native merchant that human customers (and autonomous AI buyers) can understand, negotiate with, purchase from, and pay safely — while the merchant's own AI agent optimizes every transaction for revenue within strict deterministic boundaries.*
+MerchantOS lets a customer buy things by talking to an agent, and lets a merchant run growth campaigns proposed by an agent — **without ever letting the model decide what a discount is allowed to be.** Every price-affecting decision is evaluated by deterministic code against the merchant's own policy rows, recorded as an auditable `AgentAction`, and surfaced back to the user with the raw evaluation attached.
 
-## 🌟 Key Features
+> 🏆 Built for the **Razorpay Agentic Commerce Hackathon**.
 
-1. **Conversational Buyer Interface (The Agent):** A fully interactive, real-time two-way chat where a customer can negotiate with the Merchant AI to secure discounts, bundles, and product recommendations based on their specific budget and requirements.
-2. **Interactive UI Tool Rendering (Sliding Cards):** The AI Agent proactively searches the database and renders beautiful, horizontally-scrollable product cards directly inside the chat interface, followed by dynamic Razorpay checkout buttons once a deal is struck.
-3. **Deterministic Policy Engine:** AI is great for conversation, but risky for commerce. We built a strict backend policy engine (e.g., `MAX_DISCOUNT_PERCENTAGE = 15%`) that deterministically evaluates and blocks any unsafe pricing proposals made by the AI.
-4. **Intelligent Upselling & Bundling:** The AI Agent is strictly prompted to attempt cross-selling (e.g., offering a wireless mouse to complement a mechanical keyboard) before generating the final payment link.
-5. **Role-Based Gateway:** A centralized Landing Page that securely routes `admin@technest.com` to the Merchant Hub, while seamlessly onboarding new customer emails into the database and routing them to the Agent UI.
-6. **Merchant Hub & Growth Dashboard:** A comprehensive dashboard for the human merchant to review system audit trails, revenue, and "AI Growth Opportunities" (e.g., Abandoned Cart Recovery, Bundle Cross-Sells) generated dynamically from real database metrics.
-7. **Manual Product Adder:** A dedicated, robust interface for the merchant to manually manage catalog items, inventory, and images, fully integrated with the PostgreSQL database.
-8. **End-to-End Razorpay Integration:** The conversational flow successfully creates an internal order, generates a Razorpay Order, and processes a webhook to safely mark the transaction as `PAID` via the Immutable Audit Log.
+---
 
-## 🛠 Tech Stack
-* **Frontend/Backend:** Next.js (App Router), React, Tailwind CSS
-* **Database:** PostgreSQL (via Prisma ORM)
-* **AI:** Google Gemini (`gemini-3.6-flash`), Vercel AI SDK (`ai@3.4.15`, `@ai-sdk/google`)
-* **Payments:** Razorpay Test Mode
+## 🚀 Quick Start
+
+To instantly spin up the project on your local machine, run the following commands:
+
+```bash
+git clone https://github.com/vatsal-mittal-7904/razorPay_Project.git merchantos
+cd merchantos
+npm install
+npx prisma db push
+npx prisma db seed
+npm run db:seed:demo
+npm run dev
+```
+
+*Note: You must set up your `.env` and `.env.local` files first. See the [Local Setup](#-local-setup) section below for details.*
+
+---
+
+## 🧠 The Problem
+
+LLMs are excellent at conversation and catastrophic at custody of money.
+
+Ask a naive shopping agent for a better price and it will give you one. It will invent "40% off, just for you," because a plausible-sounding discount is exactly what the next-token objective rewards. Nothing in the model knows that this merchant's floor margin is 8%, that the campaign budget for the quarter is already committed, or that the SKU in the cart is a loss-leader. The failure is silent and it is expensive.
+
+The usual mitigations don't hold:
+
+- **Prompting harder** ("never offer more than 15%") is a request, not a constraint.
+- **Schema-capping the tool** (`discount: z.number().max(15)`) looks like enforcement but fails open in the worst way. The tool call is rejected *before* your code runs, so nothing is logged, nothing is explainable, and the model is free to apologise and try a different number.
+- **Post-hoc review** is too late. By then the promise has been made in the chat.
+
+The constraint has to live in code that the model cannot reach, it has to run *before* anything touches the cart, and every attempt — allowed or refused — has to leave a row behind.
+
+---
+
+## 🏗️ The Solution: Architecture
+
+### 1. Deterministic Policy Engine
+The model never computes a discount. It *requests* one, and a plain async function decides.
+
+[`evaluateDiscount()`](src/backend/actions/policyEngine.ts) is the whole enforcement surface — no LLM, no heuristics, one indexed read:
+
+```ts
+const policy = await prisma.merchantPolicy.findUnique({
+  where: { merchantId_key: { merchantId, key: 'MAX_DISCOUNT_PERCENTAGE' } },
+})
+const limit = policy?.value ?? 0        // absent policy => deny everything
+const passed = requested <= limit
+```
+
+**`AgentAction` is the interception record.** Both discount-bearing tools in [`api/chat/route.ts`](src/app/api/chat/route.ts) — `propose_bundle_addon` and `generate_checkout_offer` — write an intercept record before continuing.
+
+### 2. Autonomous Growth Queue
+The merchant side is agentic in the same bounded way: the system proposes, a human disposes, and the proposals are grounded in rows rather than vibes.
+
+**The campaign generator** ([`generateCampaigns()`](src/backend/actions/merchant.ts)) reads this merchant's real carts, orders, and inventory and emits `RECOVERY`, `BUNDLE`, and `CLEARANCE` opportunities. It is idempotent and deduplicated.
+
+---
+
+## 💻 Local Setup
+
+### Prerequisites
+- Node.js 20+
+- A PostgreSQL database
+- A Google AI (Gemini) API key
+- Razorpay **test-mode** keys
+
+### 1. Configure the environment
+`DATABASE_URL` goes in `.env` (Prisma reads it via `prisma.config.ts`):
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/merchantos"
+```
+
+Everything else goes in `.env.local`:
+```env
+# Gemini — the AI SDK reads GOOGLE_GENERATIVE_AI_API_KEY
+GOOGLE_GENERATIVE_AI_API_KEY="your_gemini_api_key"
+
+# Razorpay test mode. The NEXT_PUBLIC_ key is the only one exposed to the browser.
+NEXT_PUBLIC_RAZORPAY_KEY_ID="rzp_test_..."
+RAZORPAY_KEY_ID="rzp_test_..."
+RAZORPAY_KEY_SECRET="your_key_secret"
+RAZORPAY_WEBHOOK_SECRET="your_webhook_secret"
+
+# Required by GET /api/cron/sweep-carts
+CRON_SECRET="any_long_random_string"
+```
+
+### 2. Seed & Run
+Creates the TechNest merchant, product catalogue, the merchant admin, and the demo customer with an already-abandoned cart for the campaign generator.
+```bash
+npx prisma db push
+npx prisma db seed
+npm run db:seed:demo
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+- Merchants are routed to `/merchant/portal`
+- Customers are routed to `/agent`
+
+**Seeded credentials:**
+| Role | Email | Password |
+| --- | --- | --- |
+| Merchant admin | `admin@technest.com` | `technest-demo-2026` |
+| Demo customer | `demo.customer@technest.com` | `technest-customer-demo` |
+
+---
+
+## 🗺️ Guided Demo
+
+1. **Sign in as the customer** and ask for something with a budget — *"I need a mechanical keyboard under ₹8,000."*
+2. **Accept a product.** The agent attempts a bundle via `propose_bundle_addon`, which routes the discount through `evaluateDiscount` first. A `PolicyBadge` appears.
+3. **Push it.** Ask for 40% off. The engine refuses against the 15% ceiling, a `BLOCKED` `AgentAction` is written.
+4. **Check out.** `generate_checkout_link` produces a Razorpay order.
+5. **Switch to the merchant.** On `/merchant`, run the **Cart Sweeper**, then **Generate opportunities** to fill the growth queue.
+6. **Open `/merchant/analytics`.** Revenue, carts recovered, upsell conversion — and **Margins Protected**.
+
+---
 
 ## 📂 Project Structure
-* `src/app/page.tsx` - The universal Landing Page & Role-Based Gateway.
-* `src/app/agent/page.tsx` - The Live Conversational AI Customer Interface (with Sliding Cards).
-* `src/app/merchant/portal/page.tsx` - The Merchant Hub.
-* `src/app/merchant/page.tsx` - The Merchant AI Growth Dashboard & Audit Log.
-* `src/app/merchant/products/page.tsx` - The Manual Product Adder & Catalog Manager.
-* `src/backend/actions/commerce.ts` - The deterministic backend commerce services (Inventory, Policies, Orders).
-* `src/backend/actions/merchant.ts` - Server actions for generating AI opportunities and adding products.
-* `src/backend/actions/auth.ts` - Database-driven customer authentication.
-* `src/app/api/chat/route.ts` - The Vercel AI SDK streaming backend and Agent Tool Definitions (`search_catalog`, `propose_products`, `generate_checkout_link`).
-* `src/app/api/webhooks/razorpay/route.ts` - The Razorpay webhook handler.
 
-## 🚀 Running Locally
+```text
+src/
+├── app/
+│   ├── page.tsx                        # role-aware auth gateway
+│   ├── agent/                          # conversational buyer UI
+│   ├── merchant/                       # growth dashboard, hub, analytics
+│   └── api/
+│       ├── chat/route.ts               # AI SDK streaming + the six agent tools
+│       ├── agent/                      # REST surface for autonomous buyer agents
+│       ├── cron/sweep-carts/route.ts   # scheduled sweep (Bearer CRON_SECRET)
+│       └── webhooks/razorpay/route.ts  # HMAC-verified payment truth
+├── backend/
+│   ├── actions/
+│   │   ├── policyEngine.ts             # ⭐ deterministic discount enforcement
+│   │   ├── cartSweeper.ts              # sole writer of Cart.status = ABANDONED
+│   │   ├── merchant.ts                 # campaign generation, approval
+│   │   ├── analytics.ts                # merchant ROI aggregates
+│   │   └── intent.ts                   # BuyerIntent parsing
+│   ├── auth/                           # password hashing, session cookies
+│   └── utils/rateLimit.ts              # sliding-window limiter for /api/chat
+├── prisma/
+│   ├── schema.prisma                   # 19 models; MerchantPolicy + AgentAction
+│   └── seed-demo.ts                    # abandoned cart + co-purchase history
+└── tests/e2e/                          # Playwright buyer + merchant journeys
+```
 
-1. **Environment Variables:** Update your `.env.local` file with the following:
-   ```env
-   DATABASE_URL="postgres://postgres:postgres@localhost:51214/template1?sslmode=disable"
-   GOOGLE_GENERATIVE_AI_API_KEY="your_gemini_api_key"
-   NEXT_PUBLIC_RAZORPAY_KEY_ID="rzp_test_..."
-   RAZORPAY_KEY_ID="rzp_test_..."
-   RAZORPAY_KEY_SECRET="your_secret"
-   RAZORPAY_WEBHOOK_SECRET="my_secure_webhook_secret_123"
-   ```
-2. **Start the Next.js App:**
-   ```bash
-   npm run dev
-   ```
-3. **Setup Webhook (Optional for testing payments):**
-   Use ngrok to expose port 3000 and configure it in your Razorpay Dashboard for `order.paid` and `payment.captured` events.
-   ```bash
-   ngrok http 3000
-   ```
+---
 
-## 🎮 Demo Flow
-1. **The Gateway:** Visit `http://localhost:3000/`. Enter an email like `john@example.com` to log in as a Customer.
-2. **The Negotiation:** You will be taken to the Agent UI. Tell the agent your budget (e.g., "I need a mechanical keyboard under 8000 rupees").
-3. **The Proposal:** Watch the AI invoke the `search_catalog` tool, find a match, and render a sliding product card directly in the chat using the `propose_products` tool.
-4. **The Upsell:** Agree to the product. The AI will attempt to bundle it with a related item (like a mouse) for a discount.
-5. **The Checkout:** Once agreed, the AI triggers the `generate_checkout_link` tool. The backend Policy Engine verifies the discount is <= 15%. If safe, it renders the Razorpay checkout button.
-6. **The Merchant View:** Go back to `http://localhost:3000/` and log in as `admin@technest.com`. Explore the Growth Dashboard to see the Audit Log, or go to the Product Catalog to add new inventory.
+## 🛡️ Design Principles
+
+1. **The model proposes; code decides.** No price, discount, or order total is ever produced by an LLM.
+2. **Refusals are first-class data.** A `BLOCKED` `AgentAction` is written before the refusal is returned.
+3. **Every attempt reaches the engine.** No validation layer is allowed to reject a request before it earns an audited decision.
+4. **Explain with the artifact, not a summary.** The UI shows the engine's own `reason` and raw verdict JSON.
+5. **Fail closed.** Missing policy row → limit `0`. Missing `CRON_SECRET` → `500`. Bad webhook signature → `400`.
+6. **Ground numbers in rows.** Campaign impact and dashboard KPIs are aggregates over real data.
+
