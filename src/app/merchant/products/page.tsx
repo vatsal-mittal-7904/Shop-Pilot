@@ -91,7 +91,7 @@ export default function ProductAdder() {
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Add Product Form */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 self-start sticky top-28">
+          <div className="order-1 lg:order-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 self-start sticky top-28">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-slate-900">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
               {editingProduct && (
@@ -144,7 +144,7 @@ export default function ProductAdder() {
           </div>
 
           {/* Product List */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200">
+          <div className="order-2 lg:order-1 lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
