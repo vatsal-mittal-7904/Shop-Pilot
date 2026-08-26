@@ -1,4 +1,3 @@
-import { google } from '@ai-sdk/google'
 import { streamText, tool, type CoreMessage } from 'ai'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
@@ -8,6 +7,7 @@ import { addProductToCart, createOfferForCustomer, getActiveCart, policyMap } fr
 import { evaluateDiscount } from '@/backend/actions/policyEngine'
 import { parseBuyerIntent } from '@/backend/actions/intent'
 import { checkRateLimit, getClientIp } from '@/backend/utils/rateLimit'
+import { GEMINI_MODEL, geminiModel } from '@/backend/ai/model'
 
 export const maxDuration = 30
 
@@ -197,7 +197,7 @@ export async function POST(req: Request) {
   //    it immediately, so it's durable even if the model call fails.
   const messagesWithNewUserTurn = await appendConversationMessages(conversationId, [latestUserMessage])
 
-  let sanitizedMessages = [...messagesWithNewUserTurn]
+  const sanitizedMessages = [...messagesWithNewUserTurn]
   const lastIdx = sanitizedMessages.length - 1
   if (lastIdx >= 1 && sanitizedMessages[lastIdx - 1].role === 'tool' && sanitizedMessages[lastIdx].role === 'user') {
     sanitizedMessages.splice(lastIdx, 0, { role: 'assistant', content: 'Acknowledged.' })
@@ -206,7 +206,7 @@ export async function POST(req: Request) {
   let result;
   try {
     result = await streamText({
-      model: google('gemini-1.5-flash'),
+      model: geminiModel(),
     system: SYSTEM_PROMPT,
     messages: sanitizedMessages,
     tools: {
@@ -627,7 +627,32 @@ export async function POST(req: Request) {
   }
   return result.toDataStreamResponse()
   } catch (err) {
-    require('fs').appendFileSync('/tmp/chat_error.log', (err.stack || err.message || String(err)) + "\n\n");
-    return Response.json({ error: err.message || "Unknown" }, { status: 500 });
+    // Surface the real cause in the server log, but keep the client response
+    // generic -- err.message here can carry internal detail (Prisma queries,
+    // upstream URLs) that shouldn't reach a browser.
+    console.error('CHAT_ROUTE ERROR:', err)
+
+    const message = err instanceof Error ? err.message : String(err)
+
+    // The one cause worth naming explicitly. A model id the Gemini API no
+    // longer serves 404s on every single request, so the whole agent looks
+    // dead with nothing in the UI to say why. Retired ids typecheck fine (see
+    // the note in src/backend/ai/model.ts), so this is the first place the
+    // problem can actually be observed.
+    if (/is not found for API version|not supported for generateContent/.test(message)) {
+      return Response.json(
+        {
+          error:
+            `The configured Gemini model ("${GEMINI_MODEL}") is not available to this API key. ` +
+            `Set GEMINI_MODEL in .env.local to a model the key can serve.`,
+        },
+        { status: 502 },
+      )
+    }
+
+    return Response.json(
+      { error: 'The assistant is temporarily unavailable. Please try again.' },
+      { status: 500 },
+    )
   }
 }
