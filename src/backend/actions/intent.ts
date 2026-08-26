@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { generateObject } from 'ai'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/backend/db/prisma'
-import { geminiModel } from '@/backend/ai/model'
+import { aiModel } from '@/backend/ai/model'
 
 /**
  * Deliberately NOT a `'use server'` module, matching policyEngine.ts's own
@@ -70,7 +70,7 @@ export async function parseBuyerIntent(customerId: string, rawMessage: string) {
   let extracted: ExtractedIntent
   try {
     const { object } = await generateObject({
-      model: geminiModel(),
+      model: aiModel(),
       schema: intentExtractionSchema,
       prompt: `Extract shopping intent from this customer message for an electronics storefront (categories include keyboard, mouse, headphones, monitor, webcam, accessory). If the user explicitly asks to remove, clear, or ignore their previous budget limit, set clearBudget to true. Message: "${trimmed}"`,
     })
@@ -82,7 +82,7 @@ export async function parseBuyerIntent(customerId: string, rawMessage: string) {
     // Logged rather than swallowed silently: returning null here means
     // search_catalog runs with no buyer intent and answers with generic
     // products, which is indistinguishable from the model just being bad at
-    // its job. A misconfigured GEMINI_MODEL fails exactly this way on every
+    // its job. A misconfigured AI_MODEL fails exactly this way on every
     // turn, so the reason needs to reach the server log.
     console.error('parseBuyerIntent: intent extraction failed, continuing without intent:', error)
     return null
