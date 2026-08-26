@@ -100,30 +100,33 @@ export default function AgentSimulation() {
     }
   }, [])
 
-  const { messages, input, setInput, handleInputChange, handleSubmit, isLoading, setMessages, append } = useChat({
+  const [input, setInput] = useState('')
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)
+
+  const { messages, setMessages, status, stop, append } = useChat({
     api: '/api/chat',
     body: { merchantId },
-    maxSteps: 5, // Allow the agent to call tools automatically in a loop
-    // Inspecting the raw Response here (before the hook checks response.ok
-    // and throws) is what lets us key off the real HTTP status rather than
-    // string-matching an error message that might change shape later.
+    maxSteps: 5,
     onResponse: (response) => {
       if (response.status === 429) {
         triggerRateLimitCooldown()
         setInput(lastUserMessageRef.current)
       }
     },
-    // The hook still turns the non-ok response into a thrown Error after
-    // onResponse runs. Swallowing it here (rather than leaving it
-    // unhandled) keeps that from ever surfacing as a generic error state --
-    // the amber banner driven by `rateLimited` above is the only UI a 429
-    // produces.
     onError: (error) => {
       if (!rateLimited && /rate limit/i.test(error.message)) {
         triggerRateLimitCooldown()
       }
     },
   })
+
+  const isLoading = status === 'submitted' || status === 'streaming'
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault()
+    if (!input?.trim()) return
+    append({ role: 'user', content: input })
+    setInput('')
+  }
 
   // Enter-to-submit bypasses the disabled attribute on the send button, so
   // the cooldown has to be enforced in the submit handler itself too.
