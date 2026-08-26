@@ -1,6 +1,6 @@
 'use client'
 
-import { useChat } from 'ai/react'
+import { useChat } from '@ai-sdk/react'
 import { useRef, useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { addProductToCart } from '@/backend/actions/commerce'
