@@ -196,10 +196,18 @@ export async function POST(req: Request) {
   //    it immediately, so it's durable even if the model call fails.
   const messagesWithNewUserTurn = await appendConversationMessages(conversationId, [latestUserMessage])
 
-  const result = await streamText({
-    model: google('gemini-3.6-flash'),
+  let sanitizedMessages = [...messagesWithNewUserTurn]
+  const lastIdx = sanitizedMessages.length - 1
+  if (lastIdx >= 1 && sanitizedMessages[lastIdx - 1].role === 'tool' && sanitizedMessages[lastIdx].role === 'user') {
+    sanitizedMessages.splice(lastIdx, 0, { role: 'assistant', content: 'Acknowledged.' })
+  }
+
+  let result;
+  try {
+    result = await streamText({
+      model: google('gemini-3.6-flash'),
     system: SYSTEM_PROMPT,
-    messages: messagesWithNewUserTurn,
+    messages: sanitizedMessages,
     tools: {
       search_catalog: tool({
         description: "Search in-stock TechNest products. Automatically uses the customer's active buyer intent (category, budget) as context; pass query/category/maximumAmount only to override or refine that context for this search.",
@@ -612,5 +620,9 @@ export async function POST(req: Request) {
       await appendConversationMessages(conversationId, responseMessages)
     },
   })
+  } catch (error) {
+    console.error("STREAM_TEXT ERROR:", error);
+    throw error;
+  }
   return result.toDataStreamResponse()
 }
