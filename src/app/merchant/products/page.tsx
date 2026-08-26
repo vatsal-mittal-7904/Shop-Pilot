@@ -192,7 +192,7 @@ export default function ProductAdder() {
                           {openDropdown === p.id && (
                             <>
                               <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)}></div>
-                              <div className="absolute right-10 top-0 z-50 w-44 bg-[#262626] rounded-xl shadow-2xl py-2 flex flex-col border border-slate-700 overflow-hidden">
+                              <div className="absolute left-8 top-0 z-50 w-44 bg-[#262626] rounded-xl shadow-2xl py-2 flex flex-col border border-slate-700 overflow-hidden">
                                 <button 
                                   onClick={() => { setEditingProduct(p); setOpenDropdown(null); }} 
                                   className="w-full text-left px-5 py-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
