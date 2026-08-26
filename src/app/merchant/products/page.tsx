@@ -144,15 +144,15 @@ export default function ProductAdder() {
           </div>
 
           {/* Product List */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider rounded-tl-2xl">Product</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Price</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Stock</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider rounded-tr-2xl">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
@@ -190,7 +190,7 @@ export default function ProductAdder() {
                           {openDropdown === p.id && (
                             <>
                               <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)}></div>
-                              <div className="absolute right-0 mt-2 z-20 w-32 bg-white rounded-md shadow-lg border border-slate-200 py-1 ring-1 ring-black ring-opacity-5">
+                              <div className="absolute right-8 top-0 z-50 w-32 bg-white rounded-md shadow-lg border border-slate-200 py-1 ring-1 ring-black ring-opacity-5">
                                 <button 
                                   onClick={() => { setEditingProduct(p); setOpenDropdown(null); }} 
                                   className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600"
