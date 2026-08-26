@@ -648,7 +648,7 @@ export async function POST(req: Request) {
     }
 
     return Response.json(
-      { error: 'The assistant is temporarily unavailable. Please try again.' },
+      { error: String(err?.stack || err) },
       { status: 500 },
     )
   }

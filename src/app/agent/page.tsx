@@ -103,7 +103,7 @@ export default function AgentSimulation() {
   const [input, setInput] = useState('')
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)
 
-  const { messages, setMessages, status, stop, sendMessage } = useChat({
+  const { messages, setMessages, status, stop, sendMessage, error } = useChat({
     api: '/api/chat',
     body: { merchantId },
     maxSteps: 5,

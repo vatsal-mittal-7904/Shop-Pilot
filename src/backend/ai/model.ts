@@ -1,6 +1,6 @@
 import { createGroq } from '@ai-sdk/groq'
 
-export const AI_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b'
+export const AI_MODEL = process.env.GROQ_MODEL || 'llama-3.1-70b-versatile'
 
 export function aiModel() {
   const groq = createGroq({
