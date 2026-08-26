@@ -204,6 +204,7 @@ export async function POST(req: Request) {
   try {
     result = await streamText({
       model: aiModel(),
+      maxSteps: 5,
     system: SYSTEM_PROMPT,
     messages: sanitizedMessages,
     tools: {

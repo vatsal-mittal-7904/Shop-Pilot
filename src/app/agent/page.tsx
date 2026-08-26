@@ -106,7 +106,6 @@ export default function AgentSimulation() {
   const { messages, setMessages, status, stop, sendMessage, error } = useChat({
     api: '/api/chat',
     body: { merchantId },
-    maxSteps: 5,
     onResponse: (response) => {
       if (response.status === 429) {
         triggerRateLimitCooldown()
@@ -216,6 +215,11 @@ export default function AgentSimulation() {
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-4xl mx-auto space-y-6 pb-20">
+          {error && (
+            <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">
+              <span className="font-semibold">Chat Error:</span> {error.message}
+            </div>
+          )}
           
           <div className="bg-indigo-50 border border-indigo-100 text-indigo-800 text-sm p-4 rounded-xl mb-8 flex gap-3">
             <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
