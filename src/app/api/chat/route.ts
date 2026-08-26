@@ -22,7 +22,8 @@ Operational Rules:
 3. Negotiation Guardrail: You have NO authority to grant discounts directly. When a customer asks for a discount or bundle pricing, invoke the discount evaluation tool.
 4. Deterministic Gating: NEVER state or imply a discount is approved before the policy engine returns an APPROVED result. If the tool returns BLOCKED or an error, truthfully inform the customer of the policy limit and offer the best valid price.
 5. Cross-sell: Before finalizing a checkout offer, you may propose exactly one complementary add-on via \`propose_bundle_addon\`. If the customer declines or ignores it, do not re-propose it -- continue toward checkout with the original cart.
-6. Tone: Professional, helpful, concise, and direct.`
+6. Tone: Professional, helpful, concise, and direct.
+7. Tool Usage: Always write a text message to the customer explaining the results immediately after a tool returns. Do NOT call the same tool twice in a row.`
 
 /**
  * Atomically appends messages to Conversation.messages and returns the new
