@@ -180,27 +180,30 @@ export default function ProductAdder() {
                         <div className="relative inline-block text-left">
                           <button 
                             onClick={() => setOpenDropdown(openDropdown === p.id ? null : p.id)} 
-                            className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 focus:outline-none transition-colors"
+                            className="p-1 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100 focus:outline-none transition-colors"
                           >
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                              <circle cx="5" cy="12" r="2" />
+                              <circle cx="12" cy="12" r="2" />
+                              <circle cx="19" cy="12" r="2" />
                             </svg>
                           </button>
                           
                           {openDropdown === p.id && (
                             <>
                               <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)}></div>
-                              <div className="absolute right-8 top-0 z-50 w-32 bg-white rounded-md shadow-lg border border-slate-200 py-1 ring-1 ring-black ring-opacity-5">
+                              <div className="absolute right-10 top-0 z-50 w-44 bg-[#262626] rounded-xl shadow-2xl py-2 flex flex-col border border-slate-700 overflow-hidden">
                                 <button 
                                   onClick={() => { setEditingProduct(p); setOpenDropdown(null); }} 
-                                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600"
+                                  className="w-full text-left px-5 py-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
                                 >
                                   Edit
                                 </button>
+                                <div className="border-t border-slate-700/50 my-0"></div>
                                 <button 
                                   onClick={() => { handleDelete(p.id); setOpenDropdown(null); }} 
                                   disabled={isDeleting === p.id} 
-                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                  className="w-full text-left px-5 py-3 text-sm font-medium text-[#ED4956] hover:bg-white/10 transition-colors disabled:opacity-50"
                                 >
                                   {isDeleting === p.id ? 'Deleting...' : 'Delete'}
                                 </button>
