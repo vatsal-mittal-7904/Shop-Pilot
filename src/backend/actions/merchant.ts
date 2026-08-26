@@ -170,33 +170,37 @@ export async function generateCampaigns() {
 
   if (toCreate.length === 0) return []
 
-  const created = await prisma.$transaction(
-    toCreate.map((opportunity) =>
-      prisma.campaign.create({
-        data: {
-          merchantId: merchant.id,
-          type: opportunity.type,
-          title: opportunity.title,
-          rationale: opportunity.reason,
-          estimatedImpact: opportunity.estimatedImpact,
-          discountPercent: Number(opportunity.configuration.discountPercent || 0),
-          status: 'PROPOSED',
-          configuration: opportunity.configuration as Prisma.InputJsonValue,
-        },
-      }),
-    ),
-  )
+  const created = await prisma.$transaction(async (tx) => {
+    const campaigns = await Promise.all(
+      toCreate.map((opportunity) =>
+        tx.campaign.create({
+          data: {
+            merchantId: merchant.id,
+            type: opportunity.type,
+            title: opportunity.title,
+            rationale: opportunity.reason,
+            estimatedImpact: opportunity.estimatedImpact,
+            discountPercent: Number(opportunity.configuration.discountPercent || 0),
+            status: 'PROPOSED',
+            configuration: opportunity.configuration as Prisma.InputJsonValue,
+          },
+        })
+      )
+    );
 
-  await prisma.auditLog.create({
-    data: {
-      merchantId: merchant.id,
-      actorUserId: user.id,
-      action: 'CAMPAIGNS_GENERATED',
-      status: 'EXECUTED',
-      reason: `Generated ${created.length} campaign proposal${created.length === 1 ? '' : 's'}.`,
-      details: { campaignIds: created.map((campaign) => campaign.id) },
-    },
-  })
+    await tx.auditLog.create({
+      data: {
+        merchantId: merchant.id,
+        actorUserId: user.id,
+        action: 'CAMPAIGNS_GENERATED',
+        status: 'EXECUTED',
+        reason: `Generated ${campaigns.length} campaign proposal${campaigns.length === 1 ? '' : 's'}.`,
+        details: { campaignIds: campaigns.map((campaign) => campaign.id) },
+      },
+    });
+
+    return campaigns;
+  });
 
   return created
 }

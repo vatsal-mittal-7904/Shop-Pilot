@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import {
   approveOpportunity,
   getMerchantDashboardData,
@@ -113,6 +114,7 @@ export default function MerchantDashboard() {
           <h1 className="text-2xl font-bold tracking-tight">MerchantOS AI <span className="font-light text-indigo-300">| Growth Dashboard</span></h1>
         </div>
         <div className="flex items-center gap-4">
+          <Link href="/merchant/analytics" className="text-sm font-medium text-indigo-200 hover:text-white">Analytics</Link>
           <a href="/agent" className="text-sm font-medium text-indigo-200 hover:text-white">Simulate Agent Buyer</a>
           <div className="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center font-bold">TN</div>
         </div>

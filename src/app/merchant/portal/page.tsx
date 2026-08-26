@@ -15,7 +15,7 @@ export default function MerchantPortalSelector() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl w-full">
         
         {/* Product Adder */}
         <Link href="/merchant/products" className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 hover:border-indigo-300 hover:shadow-md transition-all group relative overflow-hidden flex flex-col h-full cursor-pointer">
@@ -58,6 +58,30 @@ export default function MerchantPortalSelector() {
           
           <div className="mt-auto inline-flex items-center text-emerald-400 font-semibold group-hover:text-emerald-300 relative z-10">
             Go to AI Dashboard
+            <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </div>
+        </Link>
+
+        {/* AI Performance ROI */}
+        <Link href="/merchant/analytics" className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 hover:border-violet-300 hover:shadow-md transition-all group relative overflow-hidden flex flex-col h-full cursor-pointer">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-400 to-fuchsia-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+
+          <div className="w-14 h-14 bg-violet-50 rounded-2xl flex items-center justify-center mb-6 text-violet-600">
+            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+            </svg>
+          </div>
+
+          <h2 className="text-2xl font-bold text-slate-900 mb-3">AI Performance ROI</h2>
+          <p className="text-slate-600 mb-8 flex-1">
+            See what the agent actually earned: revenue generated, carts recovered, bundle upsell conversion, and margins protected by policy.
+          </p>
+
+          <div className="mt-auto inline-flex items-center text-violet-600 font-semibold group-hover:text-violet-700">
+            Go to Analytics
             <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>

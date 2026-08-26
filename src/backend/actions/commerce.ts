@@ -211,19 +211,35 @@ export async function createOrderFromOffer(offerId: string) {
     })
     await tx.offer.update({ where: { id: offer.id }, data: { status: 'ACCEPTED' } })
     if (offer.cartId) {
-      for (const offerItem of offer.items) {
-        const cartItem = await tx.cartItem.findUnique({ where: { cartId_productId: { cartId: offer.cartId, productId: offerItem.productId } } })
-        if (cartItem) {
-          if (cartItem.quantity <= offerItem.quantity) {
-            await tx.cartItem.delete({ where: { id: cartItem.id } })
-          } else {
-            await tx.cartItem.update({ where: { id: cartItem.id }, data: { quantity: { decrement: offerItem.quantity } } })
-          }
+      // Find all current items in the cart
+      const currentItems = await tx.cartItem.findMany({ where: { cartId: offer.cartId } })
+      
+      // Mark the original cart as CONVERTED without destroying its items
+      await tx.cart.update({ where: { id: offer.cartId }, data: { status: 'CONVERTED' } })
+      
+      // Calculate what wasn't purchased
+      const leftovers = []
+      for (const cItem of currentItems) {
+        const bought = offer.items.find(o => o.productId === cItem.productId)
+        const boughtQty = bought ? bought.quantity : 0
+        const remaining = cItem.quantity - boughtQty
+        if (remaining > 0) {
+          leftovers.push({ productId: cItem.productId, quantity: remaining })
         }
       }
-      const remainingItems = await tx.cartItem.count({ where: { cartId: offer.cartId } })
-      if (remainingItems === 0) {
-        await tx.cart.update({ where: { id: offer.cartId }, data: { status: 'CONVERTED' } })
+      
+      // If there are leftovers, create a new ACTIVE cart to hold them
+      if (leftovers.length > 0) {
+        await tx.cart.create({
+          data: {
+            merchantId: offer.merchantId,
+            customerId: customer.id,
+            status: 'ACTIVE',
+            items: {
+              create: leftovers
+            }
+          }
+        })
       }
     }
     await tx.auditLog.create({ data: { merchantId: offer.merchantId, orderId: order.id, actorUserId: user.id, action: 'ORDER_ACCEPTED', status: 'APPROVED', reason: 'Offer revalidated before payment', details: { offerId: offer.id } } })

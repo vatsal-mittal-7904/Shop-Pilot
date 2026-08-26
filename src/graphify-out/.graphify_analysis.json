@@ -1,0 +1,343 @@
+{
+  "communities": {
+    "0": [
+      "app_merchant_page",
+      "app_merchant_page_campaign_status_styles",
+      "app_merchant_page_campaignitem",
+      "app_merchant_page_dashboarddata",
+      "app_merchant_page_merchantdashboard",
+      "app_merchant_page_opportunity",
+      "app_merchant_products_page",
+      "app_merchant_products_page_product",
+      "app_merchant_products_page_productadder",
+      "backend_actions_merchant",
+      "backend_actions_merchant_addproduct",
+      "backend_actions_merchant_approvecampaign",
+      "backend_actions_merchant_approveopportunity",
+      "backend_actions_merchant_generatecampaigns",
+      "backend_actions_merchant_getmerchantdashboarddata",
+      "backend_actions_merchant_merchantpolicymap",
+      "backend_actions_merchant_modifycampaign",
+      "backend_actions_merchant_modifycampaignschema",
+      "backend_actions_merchant_opportunitiesformerchant",
+      "backend_actions_merchant_opportunity",
+      "backend_actions_merchant_productinput",
+      "backend_actions_merchant_productschema",
+      "backend_actions_merchant_rejectcampaign",
+      "backend_actions_merchant_runcartsweeper",
+      "backend_auth_session_requiremerchant"
+    ],
+    "1": [
+      "app_api_chat_route",
+      "app_api_chat_route_appendconversationmessages",
+      "app_api_chat_route_createrazorpayorder",
+      "app_api_chat_route_getalreadyproposedaddonids",
+      "app_api_chat_route_maxduration",
+      "app_api_chat_route_post",
+      "backend_actions_commerce_addproducttocart",
+      "backend_actions_commerce_getactivecart",
+      "backend_actions_commerce_policymap",
+      "backend_actions_intent",
+      "backend_actions_intent_extractedintent",
+      "backend_actions_intent_intentextractionschema",
+      "backend_actions_intent_parsebuyerintent",
+      "backend_actions_policyengine",
+      "backend_actions_policyengine_discountpolicyresult",
+      "backend_actions_policyengine_evaluatediscount",
+      "backend_actions_policyengine_requestedpercentschema",
+      "backend_utils_ratelimit",
+      "backend_utils_ratelimit_checkratelimit",
+      "backend_utils_ratelimit_cleanupifdue",
+      "backend_utils_ratelimit_getclientip",
+      "backend_utils_ratelimit_lastcleanup",
+      "backend_utils_ratelimit_ratelimitresult",
+      "backend_utils_ratelimit_requestlog"
+    ],
+    "2": [
+      "app_api_agent_offer_route",
+      "app_api_agent_offer_route_post",
+      "app_api_agent_offer_route_schema",
+      "app_api_agent_order_route",
+      "app_api_agent_order_route_post",
+      "app_api_agent_order_route_schema",
+      "backend_actions_commerce",
+      "backend_actions_commerce_capturebuyerintent",
+      "backend_actions_commerce_checkinventory",
+      "backend_actions_commerce_createinternalorder",
+      "backend_actions_commerce_createofferforcustomer",
+      "backend_actions_commerce_createorderfromoffer",
+      "backend_actions_commerce_getrelatedproducts",
+      "backend_actions_commerce_offerinputschema",
+      "backend_actions_commerce_parseintent",
+      "backend_actions_commerce_productidsschema",
+      "backend_actions_commerce_proposeoffer",
+      "backend_actions_commerce_searchproducts",
+      "backend_actions_payment",
+      "backend_actions_payment_confirmpaymentpending",
+      "backend_actions_payment_createrazorpayorder",
+      "backend_actions_payment_startcheckout",
+      "backend_auth_session_requirecustomer"
+    ],
+    "3": [
+      "app_agent_components_agentsessionprovider_useagentsession",
+      "app_agent_components_policybadge",
+      "app_agent_components_policybadge_parsepolicyresult",
+      "app_agent_components_policybadge_policybadge",
+      "app_agent_components_policybadge_policyresultschema",
+      "app_agent_page",
+      "app_agent_page_agentsimulation",
+      "app_agent_page_bundleaddon",
+      "app_agent_page_buyerintentused",
+      "app_agent_page_checkoutoffer",
+      "app_agent_page_policy_action_type",
+      "app_agent_page_policyresult",
+      "app_agent_page_productcard",
+      "app_agent_page_razorpayoptions",
+      "app_agent_page_toolinvocationview",
+      "app_agent_page_topolicybadgeaction",
+      "backend_actions_explainability",
+      "backend_actions_explainability_agentactionsummary",
+      "backend_actions_explainability_conversationidschema",
+      "backend_actions_explainability_getrecentagentactions",
+      "backend_actions_explainability_relevant_action_types"
+    ],
+    "4": [
+      "app_api_agent_catalog_route",
+      "app_api_agent_catalog_route_get",
+      "app_api_agent_search_route",
+      "app_api_agent_search_route_post",
+      "app_api_agent_search_route_schema",
+      "app_api_cron_sweep_carts_route",
+      "app_api_cron_sweep_carts_route_dynamic",
+      "app_api_cron_sweep_carts_route_get",
+      "app_api_cron_sweep_carts_route_rationale_14",
+      "backend_actions_cartsweeper",
+      "backend_actions_cartsweeper_markabandonedcarts",
+      "backend_actions_cartsweeper_markabandonedcartsresult",
+      "backend_db_prisma",
+      "backend_db_prisma_globalforprisma"
+    ],
+    "5": [
+      "app_page",
+      "app_page_home",
+      "app_page_home_submit",
+      "backend_actions_auth",
+      "backend_actions_auth_authenticate",
+      "backend_actions_auth_credentialsschema",
+      "backend_actions_auth_signout",
+      "backend_auth_password",
+      "backend_auth_password_hashpassword",
+      "backend_auth_password_scrypt",
+      "backend_auth_password_verifypassword",
+      "backend_auth_session_createsession",
+      "backend_auth_session_destroysession"
+    ],
+    "6": [
+      "app_agent_components_checkoutbutton",
+      "app_agent_components_checkoutbutton_checkoutbutton",
+      "app_agent_components_checkoutbutton_checkoutbutton_handlepay",
+      "app_agent_components_checkoutbutton_checkoutbuttonprops",
+      "app_agent_components_checkoutbutton_checkoutstate",
+      "app_agent_components_checkoutbutton_currencyformatter",
+      "app_agent_components_checkoutbutton_formatinr",
+      "app_agent_components_checkoutbutton_loadrazorpayscript",
+      "app_agent_components_checkoutbutton_razorpayhandlerresponse",
+      "app_agent_components_checkoutbutton_razorpayinstance",
+      "app_agent_components_checkoutbutton_razorpayoptions",
+      "app_agent_components_checkoutbutton_window"
+    ],
+    "7": [
+      "app_agent_components_productcards",
+      "app_agent_components_productcards_formatinr",
+      "app_agent_components_productcards_getbadges",
+      "app_agent_components_productcards_inrformatter",
+      "app_agent_components_productcards_productcarddata",
+      "app_agent_components_productcards_productcards",
+      "app_agent_components_productcards_productcards_handleselect",
+      "app_agent_components_productcards_productcardsprops",
+      "app_agent_components_productcards_selectstate",
+      "backend_actions_cart",
+      "backend_actions_cart_addtocart",
+      "backend_actions_cart_addtocartschema"
+    ],
+    "8": [
+      "app_agent_components_bundleoffercard",
+      "app_agent_components_bundleoffercard_bundleoffercard",
+      "app_agent_components_bundleoffercard_bundleoffercard_handleaccept",
+      "app_agent_components_bundleoffercard_bundleoffercard_handlereject",
+      "app_agent_components_bundleoffercard_bundleoffercardprops",
+      "app_agent_components_bundleoffercard_cardstate",
+      "app_agent_components_bundleoffercard_currencyformatter",
+      "app_agent_components_bundleoffercard_formatinr",
+      "backend_actions_offer",
+      "backend_actions_offer_acceptbundle",
+      "backend_actions_offer_acceptbundleschema"
+    ],
+    "9": [
+      "app_agent_components_agentsessionprovider",
+      "app_agent_components_agentsessionprovider_agentsession",
+      "app_agent_components_agentsessionprovider_agentsessioncontext",
+      "app_agent_components_agentsessionprovider_agentsessionprovider",
+      "app_agent_layout",
+      "app_agent_layout_agentlayout",
+      "app_merchant_layout",
+      "app_merchant_layout_merchantlayout",
+      "backend_auth_session",
+      "backend_auth_session_getcurrentsession"
+    ],
+    "10": [
+      "app_api_webhooks_razorpay_route",
+      "app_api_webhooks_razorpay_route_isvalidsignature",
+      "app_api_webhooks_razorpay_route_post",
+      "backend_actions_webhookprocessor",
+      "backend_actions_webhookprocessor_paid_events",
+      "backend_actions_webhookprocessor_paymententityschema",
+      "backend_actions_webhookprocessor_processrazorpayevent",
+      "backend_actions_webhookprocessor_webhookpayloadschema",
+      "backend_services_razorpay",
+      "backend_services_razorpay_razorpay"
+    ],
+    "11": [
+      "app_layout",
+      "app_layout_metadata",
+      "app_layout_rootlayout"
+    ],
+    "12": [
+      "app_merchant_portal_page",
+      "app_merchant_portal_page_merchantportalselector"
+    ],
+    "13": [
+      "app_store_page",
+      "app_store_page_legacystoreredirect"
+    ]
+  },
+  "cohesion": {
+    "0": 0.18333333333333332,
+    "1": 0.14130434782608695,
+    "2": 0.14624505928853754,
+    "3": 0.12857142857142856,
+    "4": 0.17582417582417584,
+    "5": 0.28205128205128205,
+    "6": 0.19696969696969696,
+    "7": 0.22727272727272727,
+    "8": 0.23636363636363636,
+    "9": 0.3111111111111111,
+    "10": 0.28888888888888886,
+    "11": 0.6666666666666666,
+    "12": 1.0,
+    "13": 1.0
+  },
+  "gods": [
+    {
+      "id": "backend_auth_session_requirecustomer",
+      "label": "requireCustomer()",
+      "degree": 19
+    },
+    {
+      "id": "app_api_chat_route_post",
+      "label": "POST()",
+      "degree": 13
+    },
+    {
+      "id": "backend_auth_session_requiremerchant",
+      "label": "requireMerchant()",
+      "degree": 11
+    },
+    {
+      "id": "app_merchant_page_merchantdashboard",
+      "label": "MerchantDashboard()",
+      "degree": 8
+    },
+    {
+      "id": "backend_actions_commerce_addproducttocart",
+      "label": "addProductToCart()",
+      "degree": 7
+    },
+    {
+      "id": "backend_actions_commerce_createofferforcustomer",
+      "label": "createOfferForCustomer()",
+      "degree": 7
+    },
+    {
+      "id": "backend_actions_merchant_getmerchantdashboarddata",
+      "label": "getMerchantDashboardData()",
+      "degree": 7
+    },
+    {
+      "id": "backend_actions_payment_startcheckout",
+      "label": "startCheckout()",
+      "degree": 7
+    },
+    {
+      "id": "backend_auth_session_getcurrentsession",
+      "label": "getCurrentSession()",
+      "degree": 7
+    },
+    {
+      "id": "backend_actions_auth_authenticate",
+      "label": "authenticate()",
+      "degree": 6
+    }
+  ],
+  "surprises": [
+    {
+      "source": "handlePay()",
+      "target": "confirmPaymentPending()",
+      "source_files": [
+        "app/agent/_components/CheckoutButton.tsx",
+        "backend/actions/payment.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "AgentLayout()",
+      "target": "getCurrentSession()",
+      "source_files": [
+        "app/agent/layout.tsx",
+        "backend/auth/session.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; peripheral node `AgentLayout()` unexpectedly reaches hub `getCurrentSession()`"
+    },
+    {
+      "source": "AgentSimulation()",
+      "target": "addProductToCart()",
+      "source_files": [
+        "app/agent/page.tsx",
+        "backend/actions/commerce.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "AgentSimulation()",
+      "target": "startCheckout()",
+      "source_files": [
+        "app/agent/page.tsx",
+        "backend/actions/payment.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "POST()",
+      "target": "createOfferForCustomer()",
+      "source_files": [
+        "app/api/agent/offer/route.ts",
+        "backend/actions/commerce.ts"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "connects across different repos/directories; peripheral node `POST()` unexpectedly reaches hub `createOfferForCustomer()`"
+    }
+  ],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}
