@@ -120,6 +120,26 @@ export async function getMerchantDashboardData() {
 }
 
 type ProductInput = z.infer<typeof productSchema>
+export async function updateProduct(productId: string, input: ProductInput) {
+  const { user, merchant } = await requireMerchant()
+  const data = productSchema.parse(input)
+  const product = await prisma.product.update({
+    where: { id: productId, merchantId: merchant.id },
+    data: { ...data, imageUrl: data.imageUrl || null },
+  })
+  await prisma.auditLog.create({ data: { merchantId: merchant.id, actorUserId: user.id, action: 'PRODUCT_UPDATED', status: 'EXECUTED', reason: `Merchant updated ${product.name}`, details: { productId: product.id } } })
+  return product
+}
+
+export async function deleteProduct(productId: string) {
+  const { user, merchant } = await requireMerchant()
+  const product = await prisma.product.delete({
+    where: { id: productId, merchantId: merchant.id },
+  })
+  await prisma.auditLog.create({ data: { merchantId: merchant.id, actorUserId: user.id, action: 'PRODUCT_DELETED', status: 'EXECUTED', reason: `Merchant deleted ${product.name}`, details: { productId: product.id } } })
+  return product
+}
+
 export async function addProduct(input: ProductInput) {
   const { user, merchant } = await requireMerchant()
   const data = productSchema.parse(input)
