@@ -103,7 +103,7 @@ export default function AgentSimulation() {
   const [input, setInput] = useState('')
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)
 
-  const { messages, setMessages, status, stop, append } = useChat({
+  const { messages, setMessages, status, stop, sendMessage } = useChat({
     api: '/api/chat',
     body: { merchantId },
     maxSteps: 5,
@@ -124,7 +124,7 @@ export default function AgentSimulation() {
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!input?.trim()) return
-    append({ role: 'user', content: input })
+    sendMessage({ role: 'user', content: input })
     setInput('')
   }
 
@@ -177,7 +177,7 @@ export default function AgentSimulation() {
         order_id: razorpayOrder.id,
         handler: function (response: { razorpay_payment_id: string }) {
           alert(`Payment submitted. We are waiting for secure Razorpay webhook verification. Payment ID: ${response.razorpay_payment_id}`)
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Your payment was submitted. I will only confirm the order after the Razorpay webhook verifies it.' }])
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Your payment was submitted. I will only confirm the order after the Razorpay webhook verifies it.', parts: [] }])
         },
         prefill: {
           name: 'AI Agent Purchaser',
@@ -288,7 +288,7 @@ export default function AgentSimulation() {
                         </div>
                         {products.length > 0 && (
                           <div className="mt-3">
-                            <ProductCards products={products} customerId={customerId} merchantId={merchantId} onSelect={(p) => append({ role: "user", content: `I added ${p.name} to my cart.` })} />
+                            <ProductCards products={products} customerId={customerId} merchantId={merchantId} onSelect={(p) => sendMessage({ role: "user", content: `I added ${p.name} to my cart.` })} />
                           </div>
                         )}
                       </div>
@@ -322,7 +322,7 @@ export default function AgentSimulation() {
                                     {p.inventory > 0 ? 'In Stock' : 'Out of Stock'}
                                   </span>
                                 </div>
-                                <button type="button" onClick={async () => { await addProductToCart(p.id); setMessages(prev => [...prev, { id: `${Date.now()}-basket`, role: 'assistant', content: `${p.name} has been added to your basket. Ask me to compare options, negotiate, or create your final offer.` }]) }} className="mt-3 w-full rounded-lg border border-indigo-200 bg-white py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">Add to basket</button>
+                                <button type="button" onClick={async () => { await addProductToCart(p.id); setMessages(prev => [...prev, { id: `${Date.now()}-basket`, role: 'assistant', content: `${p.name} has been added to your basket. Ask me to compare options, negotiate, or create your final offer.`, parts: [] }]) }} className="mt-3 w-full rounded-lg border border-indigo-200 bg-white py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">Add to basket</button>
                               </div>
                             </div>
                           ))}
@@ -369,7 +369,7 @@ export default function AgentSimulation() {
                           bundleSubtotal={bundleSubtotal}
                           bundleDiscount={bundleDiscount}
                           bundleTotal={bundleTotal}
-                          onDismiss={() => setMessages(prev => [...prev, { id: `${Date.now()}-bundle-declined`, role: 'assistant', content: `No problem, I will leave the ${addon.name} out. Shall I put together your final offer?` }])}
+                          onDismiss={() => setMessages(prev => [...prev, { id: `${Date.now()}-bundle-declined`, role: 'assistant', content: `No problem, I will leave the ${addon.name} out. Shall I put together your final offer?`, parts: [] }])}
                         />
                         {/* Shows which policy cleared this bundle's discount, and to what limit. */}
                         {badgeAction && <div className="mt-3"><PolicyBadge action={badgeAction} /></div>}
