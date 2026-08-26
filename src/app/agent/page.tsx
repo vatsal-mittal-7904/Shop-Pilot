@@ -501,7 +501,7 @@ export default function AgentSimulation() {
         <div className="max-w-4xl mx-auto">
           <form onSubmit={onFormSubmit} className="flex gap-3">
             <input
-              value={input}
+              value={input || ''}
               onChange={handleInputChange}
               placeholder={rateLimited ? 'Please wait a moment before sending another message...' : 'E.g. I need a mechanical keyboard under 8000 rupees...'}
               className="flex-1 border border-slate-300 rounded-xl px-5 py-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm bg-white disabled:bg-slate-50 disabled:text-slate-400"
@@ -509,7 +509,7 @@ export default function AgentSimulation() {
             />
             <button
               type="submit"
-              disabled={isLoading || rateLimited || !input.trim()}
+              disabled={isLoading || rateLimited || !input?.trim()}
               className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-6 font-semibold transition-colors shadow-sm flex flex-col justify-center items-center"
             >
               <svg className="w-6 h-6 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
