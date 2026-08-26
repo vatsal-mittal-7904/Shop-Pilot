@@ -103,7 +103,7 @@ export default function AgentSimulation() {
   const [input, setInput] = useState('')
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)
 
-  const { messages, setMessages, status, stop, sendMessage, error } = useChat({
+  const { messages, setMessages, status, stop, append, error } = useChat({
     api: '/api/chat',
     body: { merchantId },
     onResponse: (response) => {
@@ -123,7 +123,7 @@ export default function AgentSimulation() {
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!input?.trim()) return
-    sendMessage({ role: 'user', content: input })
+    append({ role: 'user', content: input }, { body: { merchantId } })
     setInput('')
   }
 
@@ -292,7 +292,7 @@ export default function AgentSimulation() {
                         </div>
                         {products.length > 0 && (
                           <div className="mt-3">
-                            <ProductCards products={products} customerId={customerId} merchantId={merchantId} onSelect={(p) => sendMessage({ role: "user", content: `I added ${p.name} to my cart.` })} />
+                            <ProductCards products={products} customerId={customerId} merchantId={merchantId} onSelect={(p) => append({ role: "user", content: `I added ${p.name} to my cart.` }, { body: { merchantId } })} />
                           </div>
                         )}
                       </div>

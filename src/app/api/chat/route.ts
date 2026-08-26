@@ -162,7 +162,10 @@ export async function POST(req: Request) {
   // authoritative history: we pull just the newest user turn out of it below
   // and discard the rest, so a stale or tampered client array can't overwrite
   // what's persisted server-side.
-  const { messages: clientMessages, merchantId: clientMerchantId } = (await req.json()) as { messages: CoreMessage[], merchantId?: string }
+  let payload;
+  try { payload = await req.json() } catch(e) { payload = {} }
+  const clientMessages = payload.messages || [];
+  const clientMerchantId = payload.merchantId || payload.data?.merchantId || (payload.body && payload.body.merchantId) || null;
 
   const latestUserMessage = [...clientMessages].reverse().find((message) => message.role === 'user')
   const latestUserContent = typeof latestUserMessage?.content === 'string' ? latestUserMessage.content : ''
