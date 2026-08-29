@@ -626,7 +626,7 @@ export async function POST(req: Request) {
     console.error("STREAM_TEXT ERROR:", error);
     throw error;
   }
-  return result.toDataStreamResponse()
+  return result.toUIMessageStreamResponse()
   } catch (err) {
     // Surface the real cause in the server log, but keep the client response
     // generic -- err.message here can carry internal detail (Prisma queries,
