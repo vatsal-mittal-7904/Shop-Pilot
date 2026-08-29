@@ -103,9 +103,10 @@ export default function AgentSimulation() {
   const [input, setInput] = useState('')
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)
 
-  const { messages, setMessages, status, stop, append, error } = useChat({
+  const { messages, setMessages, status, stop, sendMessage, error } = useChat({
     api: '/api/chat',
     body: { merchantId },
+    maxToolRoundtrips: 5,
     onResponse: (response) => {
       if (response.status === 429) {
         triggerRateLimitCooldown()
@@ -123,7 +124,7 @@ export default function AgentSimulation() {
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!input?.trim()) return
-    append({ role: 'user', content: input }, { body: { merchantId } })
+    sendMessage({ text: input }, { body: { merchantId } })
     setInput('')
   }
 
@@ -231,7 +232,7 @@ export default function AgentSimulation() {
           </div>
 
           {messages.map((m) => {
-            const hasContent = !!m.content;
+            const hasContent = !!m.content || !!(m.parts && m.parts.length > 0);
             const hasVisibleTool = m.toolInvocations?.some((raw) => {
               const ti = raw as ToolInvocationView;
               if (ti.state !== 'result') return true;
@@ -249,6 +250,7 @@ export default function AgentSimulation() {
                   : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
               }`}>
                 {m.content && <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{m.content}</p>}
+                {!m.content && m.parts && <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{m.parts.filter((p) => p.type === 'text').map((p) => p.text).join('')}</p>}
                 
                 {/* Render Tool Invocations inside the Chat! */}
                 {m.toolInvocations?.map((rawToolInvocation: unknown) => {
@@ -292,7 +294,7 @@ export default function AgentSimulation() {
                         </div>
                         {products.length > 0 && (
                           <div className="mt-3">
-                            <ProductCards products={products} customerId={customerId} merchantId={merchantId} onSelect={(p) => append({ role: "user", content: `I added ${p.name} to my cart.` }, { body: { merchantId } })} />
+                            <ProductCards products={products} customerId={customerId} merchantId={merchantId} onSelect={(p) => sendMessage({ text: `I added ${p.name} to my cart.` }, { body: { merchantId } })} />
                           </div>
                         )}
                       </div>

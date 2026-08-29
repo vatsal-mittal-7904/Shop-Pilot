@@ -612,7 +612,6 @@ export async function POST(req: Request) {
         },
       }),
     },
-    maxSteps: 5,
     onFinish: async ({ responseMessages }) => {
       // 4. Append the assistant's response -- including every tool call and
       //    tool result generated across all steps of this turn -- to the
