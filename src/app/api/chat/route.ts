@@ -168,7 +168,7 @@ export async function POST(req: Request) {
   const clientMerchantId = payload.merchantId || payload.data?.merchantId || (payload.body && payload.body.merchantId) || null;
 
   const latestUserMessage = [...clientMessages].reverse().find((message) => message.role === 'user')
-  const latestUserContent = typeof latestUserMessage?.content === 'string' ? latestUserMessage.content : ''
+  const latestUserContent = typeof latestUserMessage?.content === 'string' ? latestUserMessage.content : (Array.isArray(latestUserMessage?.content) ? latestUserMessage.content.map(c => c.text || '').join('') : (Array.isArray((latestUserMessage as any)?.parts) ? (latestUserMessage as any).parts.map((p: any) => p.text || '').join('') : ''))
   if (!latestUserMessage || !latestUserContent) {
     return Response.json({ error: 'A user message is required' }, { status: 400 })
   }
@@ -199,7 +199,8 @@ export async function POST(req: Request) {
 
   // 3. Append the incoming user message to the server-side array and persist
   //    it immediately, so it's durable even if the model call fails.
-  const messagesWithNewUserTurn = await appendConversationMessages(conversationId, [latestUserMessage])
+  const cleanUserMessage = { role: "user", content: latestUserContent } as CoreMessage;
+  const messagesWithNewUserTurn = await appendConversationMessages(conversationId, [cleanUserMessage])
 
   const sanitizedMessages = [...messagesWithNewUserTurn]
 
