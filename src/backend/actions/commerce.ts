@@ -91,19 +91,24 @@ export async function createOfferFromActiveCart(input: z.input<typeof offerInput
   // Authoritative merchant: the basket's own, not the caller's claim.
   const merchantId = cart.merchantId
 
-  // `campaignId` arrives from the caller (the chat tool passes through a value
-  // the model produced). It grants nothing on its own, but it is persisted on
-  // the Offer and downstream code reads it, so it has to be a real APPROVED
-  // campaign belonging to THIS merchant. Without this check any valid campaign
-  // UUID could be stapled to any offer.
+  // Separate discount ceiling from discount authorization:
+  // Any discount > 0 must be authorized by an approved Campaign belonging to
+  // this merchant. The ceiling (MAX_DISCOUNT_PERCENTAGE) enforces the maximum limit,
+  // but does not grant discounts on its own.
   if (data.campaignId) {
     const campaign = await prisma.campaign.findFirst({
       where: { id: data.campaignId, merchantId, status: 'APPROVED' },
-      select: { id: true },
     })
     if (!campaign) {
       throw new Error('That campaign is not an approved campaign for this merchant.')
     }
+    const config = campaign.configuration as Record<string, unknown> | null
+    const authorizedDiscount = campaign.discountPercent ?? (typeof config?.discountPercent === 'number' ? config.discountPercent : 0)
+    if (data.discountPercentage > authorizedDiscount) {
+      throw new Error(`Discount of ${data.discountPercentage}% exceeds the authorized campaign discount of ${authorizedDiscount}%.`)
+    }
+  } else if (data.discountPercentage > 0) {
+    throw new Error('Discounts are not authorized without an approved campaign.')
   }
 
   const policies = await policyMap(merchantId)

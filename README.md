@@ -17,9 +17,9 @@ MerchantOS lets a customer buy things by talking to an agent, and lets a merchan
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Interactive Demo
 
-To instantly spin up the project on your local machine, run the following commands:
+To instantly spin up the project and run the complete interactive end-to-end commerce lifecycle demo:
 
 ```bash
 git clone https://github.com/vatsal-mittal-7904/razorPay_Project.git merchantos
@@ -28,50 +28,57 @@ npm install
 npx prisma db push
 npx prisma db seed
 npm run db:seed:demo
+
+# Run the complete end-to-end interactive CLI journey:
+npm run demo:interactive
+```
+
+To run the Next.js web application:
+```bash
 npm run dev
 ```
 
-*Note: You must set up your `.env` and `.env.local` files first. See the [Local Setup](#-local-setup) section below for details.*
+*Note: Configure `.env` and `.env.local` first. See [Local Setup](#-local-setup) below for details.*
 
 ---
 
-## 🧠 The Problem
+## 🧠 The Problem & Core Architecture
 
 LLMs are excellent at conversation and catastrophic at custody of money.
 
-Ask a naive shopping agent for a better price and it will give you one. It will invent "40% off, just for you," because a plausible-sounding discount is exactly what the next-token objective rewards. Nothing in the model knows that this merchant's floor margin is 8%, that the campaign budget for the quarter is already committed, or that the SKU in the cart is a loss-leader. The failure is silent and it is expensive.
+Ask a naive shopping agent for a better price and it will invent "40% off, just for you," because next-token prediction rewards plausible-sounding bargains. It knows nothing of floor margins, committed quarterly budgets, or inventory constraints.
 
-The usual mitigations don't hold:
+### The Guardrail Boundaries (Safety by Design)
 
-- **Prompting harder** ("never offer more than 15%") is a request, not a constraint.
-- **Schema-capping the tool** (`discount: z.number().max(15)`) looks like enforcement but fails open in the worst way. The tool call is rejected *before* your code runs, so nothing is logged, nothing is explainable, and the model is free to apologise and try a different number.
-- **Post-hoc review** is too late. By then the promise has been made in the chat.
-
-The constraint has to live in code that the model cannot reach, it has to run *before* anything touches the cart, and every attempt — allowed or refused — has to leave a row behind.
-
----
-
-## 🏗️ The Solution: Architecture
-
-### 1. Deterministic Policy Engine
-The model never computes a discount. It *requests* one, and a plain async function decides.
-
-[`evaluateDiscount()`](src/backend/actions/policyEngine.ts) is the whole enforcement surface — no LLM, no heuristics, one indexed read:
-
-```ts
-const policy = await prisma.merchantPolicy.findUnique({
-  where: { merchantId_key: { merchantId, key: 'MAX_DISCOUNT_PERCENTAGE' } },
-})
-const limit = policy?.value ?? 0        // absent policy => deny everything
-const passed = requested <= limit
+```text
+┌───────────────────────────────────────────────┐  ┌───────────────────────────────────────────────┐
+│     AUTONOMOUS BUYER AGENT LAYER              │  │     HUMAN-IN-THE-LOOP MERCHANT LAYER          │
+│                                               │  │                                               │
+│  Shopper  ──▶  AI Chat  ──▶  Deterministic    │  │  AI Growth Engine  ──▶  Merchant Dashboard    │
+│  Prompt        Agent         Policy Engine    │  │  (Cart Recovery &        Approval Gate        │
+│                               (ALLOW / BLOCK) │  │   Clearance Proposals)   (Review & Dispatch)  │
+└──────────────────────┬────────────────────────┘  └───────────────────────┬───────────────────────┘
+                       │                                                   │
+                       ▼                                                   ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                             TRANSACTION & SETTLEMENT CORE                                        │
+│                                                                                                  │
+│   HMAC Basket Binding  ──▶  Explicit Acceptance  ──▶  Razorpay Test Order  ──▶  Signed Webhook   │
+│   (Anti-Tampering)          (Owner State Change)      (mso_<id> Receipt)        (payment.captured│
+│                                                                                                  │
+│   Reconciliation Worker ◀── Durable Refund Outbox ◀── Stockout Safe Settlement (Atomic Inventory)│
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**`AgentAction` is the interception record.** Both discount-bearing tools in [`api/chat/route.ts`](src/app/api/chat/route.ts) — `propose_bundle_addon` and `generate_checkout_offer` — write an intercept record before continuing.
+#### 1. Autonomous Buyer Interactions (Bounded by Deterministic Policy)
+- The model **never computes a price or discount**. It requests a discount, and [`evaluateDiscount()`](src/backend/actions/policyEngine.ts) verifies against indexed `MerchantPolicy` rows (`MAX_DISCOUNT_PERCENTAGE`, `MIN_MARGIN_PERCENTAGE`).
+- Every attempt—approved or refused—writes an immutable [`AgentAction`](src/backend/actions/policyEngine.ts) row.
+- Basket selections are sealed with an **HMAC SHA-256 signature** ([`cartSelectionBinding.ts`](src/backend/utils/cartSelectionBinding.ts)) to prevent tampering.
+- Order creation requires explicit, authenticated customer acceptance.
 
-### 2. Autonomous Growth Queue
-The merchant side is agentic in the same bounded way: the system proposes, a human disposes, and the proposals are grounded in rows rather than vibes.
-
-**The campaign generator** ([`generateCampaigns()`](src/backend/actions/merchant.ts)) emits deterministic abandoned-cart `RECOVERY` and high-inventory `CLEARANCE` opportunities. Merchant approval revalidates policy, margin, inventory, recipient eligibility, and a reserved discount budget, then issues customer-specific expiring offers. Cross-sell and upsell remain buyer-initiated flows; they are not represented as “executed campaigns” without a recipient-delivery path.
+#### 2. Human-in-the-Loop Merchant Growth Gates
+- The growth engine autonomously identifies opportunities (abandoned cart `RECOVERY` and high-inventory `CLEARANCE`).
+- **Safety Gate**: The AI proposes; the **human merchant disposes**. No recovery offers or discount codes are ever dispatched until the merchant reviews the rationale and explicitly approves the campaign, triggering deterministic re-validation of inventory, margins, and budget limits.
 
 ---
 
@@ -106,6 +113,13 @@ OFFER_BINDING_SECRET="another-long-random-string"
 
 # Required by GET /api/cron/sweep-carts
 CRON_SECRET="any_long_random_string"
+
+# Optional Operator Notification Channels for Critical Queue Backlogs
+# Dispatches real-time alerts to Webhook, Slack, or Discord if refunds or reconciliations stall
+OPERATOR_ALERT_WEBHOOK_URL="https://operator.example.com/alerts"
+ALERT_WEBHOOK_SECRET="operator_alert_signing_secret"
+SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
+DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
 ```
 
 ### 2. Seed & Run
@@ -127,38 +141,56 @@ Open [http://localhost:3000](http://localhost:3000).
 | Merchant admin | `admin@technest.com` | `technest-demo-2026` |
 | Demo customer | `demo.customer@technest.com` | `technest-customer-demo` |
 
-### Test taxonomy and Razorpay test-mode proof
+These credentials exist only for local development and disposable test databases.
+`prisma/seed-demo.ts` refuses to run with `NODE_ENV=production`; the production
+catalog seed requires explicitly supplied, non-demo merchant credentials; and
+server startup fails closed if either documented demo email remains in the
+production database. Remove or replace those accounts before deploying.
 
-`npm run test:state-transitions` uses a real disposable PostgreSQL database,
-but intentionally mocks Razorpay. It proves internal state transitions such as
-inventory commitment, idempotency, and webhook handling; it is not provider
-integration evidence. `npm run test:integration` remains a compatibility alias
-for that suite.
+### 3. Interactive CLI Demo (`npm run demo:interactive`)
 
-`npm run test:razorpay:provider-contract` is the provider evidence. It is
-deliberately opt-in and uses no Razorpay mock: with a separate database plus
-`rzp_test_*` keys, it creates an order through the authenticated customer
-checkout path, then fetches that order and its empty payment list directly from
-Razorpay. It verifies provider id, amount, INR currency, durable
-`mso_<internal-order-id>` receipt, `created` status, and provider-side notes.
+To see the complete financial custody and commerce lifecycle in action without manually navigating UI screens, run:
 
 ```bash
-TEST_DATABASE_URL="postgresql://.../merchantos_e2e" npm run test:razorpay:provider-contract
+npm run demo:interactive
 ```
 
-`TEST_DATABASE_URL` must be different from `DATABASE_URL`; the harness resets
-and seeds it. This test proves real provider order creation and the payment-list
-read, not a simulated Razorpay response. For capture/webhook proof, expose
-`/api/webhooks/razorpay` through a public HTTPS tunnel, configure
-`RAZORPAY_WEBHOOK_SECRET` in Razorpay test mode, complete the checkout using a
-Razorpay test payment method, and confirm the merchant audit ledger contains
-`PAYMENT_CAPTURED` with the matching Razorpay payment id.
+The interactive demo steps through:
+1. **Catalog Search & Basket Addition**: Customer searches products and populates their active basket.
+2. **Dynamic Bundle Offer Negotiation**: Demonstrates the policy engine blocking a 35% discount attempt against the 15% merchant ceiling, then approving a compliant 10% bundle offer.
+3. **Cryptographic Basket Binding & Acceptance**: Generates HMAC SHA-256 over exact line items and verifies anti-tampering defenses upon explicit customer acceptance.
+4. **Razorpay Checkout & Spend Limits**: Enforces daily/monthly account limits, creates the provider order with durable `mso_<orderId>` receipt, and enqueues payment reconciliation.
+5. **Signed Webhook Delivery & Cart Conversion**: Simulates Razorpay `payment.captured` with HMAC-SHA256 signature, transitioning the order to `PAID`, cart to `CONVERTED`, and decrementing stock.
+6. **Cart Recovery & Refund Outbox**: Sweeps abandoned carts, generates autonomous recovery campaign, executes human-in-the-loop merchant approval, and demonstrates the durable refund outbox worker.
 
 ---
 
-## 🗺️ Guided Demo
+## 🧪 Test Taxonomy and Verification
 
-1. **Sign in as the customer** and ask for something with a budget — *"I need a mechanical keyboard under ₹8,000."*
+MerchantOS provides three tiers of automated verification:
+
+1. **Unit Testing (`npm run test:unit`)**:
+   Runs 23+ isolated test suites (98+ tests) verifying deterministic discount authorization, HMAC basket binding, account budgets, untrusted tool sanitization, operator alert dispatchers, and money-safety fail-closed invariants.
+
+2. **State Transitions & Idempotency (`npm run test:state-transitions`)**:
+   Uses a real disposable PostgreSQL database with mocked Razorpay to prove internal state transitions, cart lifecycles, and audit ledger immutability.
+
+3. **Live Razorpay Provider Contract (`npm run test:razorpay:provider-contract`)**:
+   Opt-in live provider test that creates real Razorpay test-mode orders, verifies receipts, currency, and provider payment lists directly against Razorpay API.
+
+```bash
+# Run all unit tests
+npm run test:unit
+
+# Run live provider contract test (requires TEST_DATABASE_URL and Razorpay test keys)
+TEST_DATABASE_URL="postgresql://.../merchantos_e2e" npm run test:razorpay:provider-contract
+```
+
+---
+
+## 🗺️ Guided Web UI Demo
+
+1. **Sign in as the customer** (`demo.customer@technest.com` / `technest-customer-demo`) and ask for something with a budget — *"I need a mechanical keyboard under ₹8,000."*
 2. **Accept a product.** The agent attempts a bundle via `propose_bundle_addon`, which routes the discount through `evaluateDiscount` first. A `PolicyBadge` appears.
 3. **Push it.** Ask for 40% off. The engine refuses against the 15% ceiling, a `BLOCKED` `AgentAction` is written.
 4. **Check out.** `generate_checkout_link` produces a Razorpay order.

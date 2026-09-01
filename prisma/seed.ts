@@ -3,13 +3,19 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 import { hashPassword } from '../src/backend/auth/password'
+import {
+  assertProductionMerchantCredentials,
+  DEFAULT_DEMO_MERCHANT_EMAIL,
+  DEFAULT_DEMO_MERCHANT_PASSWORD,
+} from '../src/backend/security/demoSafety'
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) })
 
 async function main() {
-  const adminEmail = (process.env.MERCHANT_ADMIN_EMAIL || 'admin@technest.com').toLowerCase()
-  const adminPassword = process.env.MERCHANT_ADMIN_PASSWORD || 'technest-demo-2026'
+  assertProductionMerchantCredentials()
+  const adminEmail = (process.env.MERCHANT_ADMIN_EMAIL || DEFAULT_DEMO_MERCHANT_EMAIL).toLowerCase()
+  const adminPassword = process.env.MERCHANT_ADMIN_PASSWORD || DEFAULT_DEMO_MERCHANT_PASSWORD
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
     update: { role: 'MERCHANT' },

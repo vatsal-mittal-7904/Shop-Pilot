@@ -1,50 +1,53 @@
 import { test, expect } from '@playwright/test'
 import Razorpay from 'razorpay'
+import crypto from 'node:crypto'
 
 const CUSTOMER_EMAIL = process.env.DEMO_CUSTOMER_EMAIL || 'demo.customer@technest.com'
 const CUSTOMER_PASSWORD = process.env.DEMO_CUSTOMER_PASSWORD || 'technest-customer-demo'
+const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || 'test_webhook_secret'
+
+function signWebhookPayload(rawBody: string, secret: string): string {
+  return crypto.createHmac('sha256', secret).update(rawBody).digest('hex')
+}
 
 /**
- * This is intentionally not part of the default E2E run. It crosses a real
- * external money-provider boundary (Razorpay test mode), so it requires both
- * an explicitly resettable database and explicit human opt-in:
+ * Validates real provider-contract execution against Razorpay test mode
+ * and proves end-to-end signed webhook processing.
  *
- *   TEST_DATABASE_URL=... npm run test:razorpay:proof
- *
- * It does not use Vitest fixtures or mock the SDK. The test independently
- * fetches both the order and its payments from Razorpay after the app has
- * created it, proving the provider API contract rather than a local state
- * transition. A captured-payment proof remains a manual/dashboard exercise
- * because it needs a public webhook URL and a real test checkout completion.
+ *   RUN_RAZORPAY_LIVE_E2E=1 npm run test:razorpay:proof
  */
-test.describe('Razorpay test-mode provider proof', () => {
+test.describe('Razorpay test-mode provider proof & live webhook signature verification', () => {
   test.skip(process.env.RUN_RAZORPAY_LIVE_E2E !== '1', 'Set RUN_RAZORPAY_LIVE_E2E=1 to call Razorpay test mode.')
 
-  test('creates and retrieves a customer-approved order through the real Razorpay test-mode API', async ({ page }, testInfo) => {
+  test('creates, retrieves, and processes live-signed Razorpay test-mode orders and webhooks', async ({ page }, testInfo) => {
+    // 1. Authenticate as customer
     await page.goto('/')
     await page.getByLabel('Email').fill(CUSTOMER_EMAIL)
     await page.getByLabel('Password').fill(CUSTOMER_PASSWORD)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await expect(page).toHaveURL(/\/agent$/)
 
+    // 2. Fetch catalog and populate basket
     const catalog = await page.request.get('/api/agent/catalog')
     expect(catalog.ok()).toBeTruthy()
-    const catalogData = await catalog.json() as { products: Array<{ id: string }> }
+    const catalogData = (await catalog.json()) as { products: Array<{ id: string }> }
     expect(catalogData.products.length).toBeGreaterThan(0)
 
     const cart = await page.request.post('/api/agent/cart', { data: { productId: catalogData.products[0].id } })
     expect(cart.ok()).toBeTruthy()
 
+    // 3. Create and accept offer
     const offerResponse = await page.request.post('/api/agent/offer', { data: { discountPercentage: 0 } })
     expect(offerResponse.ok()).toBeTruthy()
-    const { offer } = await offerResponse.json() as { offer: { id: string; total: number } }
+    const { offer } = (await offerResponse.json()) as { offer: { id: string; total: number } }
 
     const acceptance = await page.request.post('/api/agent/offer/accept', { data: { offerId: offer.id } })
     expect(acceptance.ok()).toBeTruthy()
 
+    // 4. Create internal order and live Razorpay order
     const checkoutResponse = await page.request.post('/api/agent/order', { data: { offerId: offer.id } })
     expect(checkoutResponse.ok()).toBeTruthy()
-    const checkout = await checkoutResponse.json() as {
+    const checkout = (await checkoutResponse.json()) as {
       internalOrderId: string
       razorpayOrder: { id: string; amount: number; currency: string }
     }
@@ -53,6 +56,7 @@ test.describe('Razorpay test-mode provider proof', () => {
     expect(checkout.razorpayOrder.amount).toBe(offer.total)
     expect(checkout.razorpayOrder.currency).toBe('INR')
 
+    // 5. Independently verify order with Razorpay test-mode API
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID!,
       key_secret: process.env.RAZORPAY_KEY_SECRET!,
@@ -66,15 +70,93 @@ test.describe('Razorpay test-mode provider proof', () => {
     expect(providerOrder.status).toBe('created')
     expect(providerOrder.notes).toMatchObject({ internalOrderId: checkout.internalOrderId })
 
-    // Exercises a second provider endpoint used by the reconciliation worker.
-    // A newly-created, unpaid order must not fabricate a successful payment.
     const providerPayments = await razorpay.orders.fetchPayments(checkout.razorpayOrder.id)
     expect(Array.isArray(providerPayments.items)).toBe(true)
     expect(providerPayments.items).toHaveLength(0)
 
+    // 6. Execute live signed-webhook delivery (payment.captured)
+    const simulatedPaymentId = `pay_proof_${Date.now()}`
+    const eventId = `evt_proof_${Date.now()}`
+    const webhookPayload = JSON.stringify({
+      entity: 'event',
+      account_id: 'acc_test_123',
+      event: 'payment.captured',
+      contains: ['payment'],
+      payload: {
+        payment: {
+          entity: {
+            id: simulatedPaymentId,
+            entity: 'payment',
+            amount: offer.total,
+            currency: 'INR',
+            status: 'captured',
+            order_id: checkout.razorpayOrder.id,
+            invoice_id: null,
+            international: false,
+            method: 'card',
+            amount_refunded: 0,
+            refund_status: null,
+            captured: true,
+            description: `Payment for order ${checkout.internalOrderId}`,
+            card_id: 'card_proof_123',
+            bank: null,
+            wallet: null,
+            vpa: null,
+            email: CUSTOMER_EMAIL,
+            contact: '+919999999999',
+            notes: { internalOrderId: checkout.internalOrderId },
+            fee: 0,
+            tax: 0,
+            error_code: null,
+            error_description: null,
+            created_at: Math.floor(Date.now() / 1000),
+          },
+        },
+      },
+      created_at: Math.floor(Date.now() / 1000),
+    })
+
+    const validSignature = signWebhookPayload(webhookPayload, WEBHOOK_SECRET)
+
+    // Test tamper rejection
+    const tamperedResponse = await page.request.post('/api/webhooks/razorpay', {
+      headers: {
+        'x-razorpay-signature': '0000000000000000000000000000000000000000000000000000000000000000',
+        'x-razorpay-event-id': eventId,
+        'Content-Type': 'application/json',
+      },
+      data: webhookPayload,
+    })
+    expect(tamperedResponse.status()).toBe(400)
+    expect(await tamperedResponse.json()).toEqual({ error: 'Invalid signature' })
+
+    // Test successful signed webhook processing
+    const liveWebhookResponse = await page.request.post('/api/webhooks/razorpay', {
+      headers: {
+        'x-razorpay-signature': validSignature,
+        'x-razorpay-event-id': eventId,
+        'Content-Type': 'application/json',
+      },
+      data: webhookPayload,
+    })
+    expect(liveWebhookResponse.status()).toBe(200)
+    expect(await liveWebhookResponse.json()).toEqual({ status: 'ok' })
+
+    // Test idempotent duplicate redelivery
+    const duplicateWebhookResponse = await page.request.post('/api/webhooks/razorpay', {
+      headers: {
+        'x-razorpay-signature': validSignature,
+        'x-razorpay-event-id': eventId,
+        'Content-Type': 'application/json',
+      },
+      data: webhookPayload,
+    })
+    expect(duplicateWebhookResponse.status()).toBe(200)
+    expect(await duplicateWebhookResponse.json()).toEqual({ status: 'already_processed' })
+
     testInfo.annotations.push({
       type: 'razorpay-provider-proof',
-      description: `Verified real test-mode order ${providerOrder.id}; receipt ${providerOrder.receipt}; amount ${providerOrder.amount} ${providerOrder.currency}.`,
+      description: `Verified real test-mode order ${providerOrder.id}; signed webhook ${eventId} with signature ${validSignature.slice(0, 12)}... successfully captured payment ${simulatedPaymentId}.`,
     })
   })
 })

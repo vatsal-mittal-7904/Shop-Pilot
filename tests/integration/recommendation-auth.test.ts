@@ -29,8 +29,15 @@ describe.sequential('Recommendation Authorization & Constraints', () => {
     const ctx = await getCustomerContext()
     customerId = ctx.customer.id
     
-    const merchant = await prisma.merchant.findFirstOrThrow()
+    const merchant = await prisma.merchant.findFirstOrThrow({ where: { name: 'TechNest' } })
     merchantId = merchant.id
+
+    // Ensure deterministic discount limit policy
+    await prisma.merchantPolicy.upsert({
+      where: { merchantId_key: { merchantId, key: 'MAX_DISCOUNT_PERCENTAGE' } },
+      create: { merchantId, key: 'MAX_DISCOUNT_PERCENTAGE', value: 15 },
+      update: { value: 15 }
+    })
 
     const conversation = await prisma.conversation.create({
       data: { merchantId, customerId, messages: [] }

@@ -5,6 +5,7 @@ import { razorpay } from '@/backend/services/razorpay'
 import { prisma } from '@/backend/db/prisma'
 import { requireCustomer } from '@/backend/auth/session'
 import { createOrReuseCheckoutOrder } from '@/backend/actions/order'
+import { triggerOpportunisticReconciliation } from '@/backend/actions/opportunisticReconciliation'
 
 export async function startCheckout(offerId: string) {
   const { internalOrderId, razorpayOrder } = await createOrReuseCheckoutOrder(offerId)
@@ -16,7 +17,7 @@ export async function createRazorpayOrder(internalOrderId: string) {
   const orderId = z.string().uuid().parse(internalOrderId)
   const order = await prisma.order.findFirst({
     where: { id: orderId, customerId: customer.id },
-    include: { payment: true, items: { include: { product: true } } },
+    include: { payment: true, items: { include: { product: true } }, offer: true },
   })
   if (!order) throw new Error('Order not found')
   if (!['ACCEPTED', 'PAYMENT_PENDING'].includes(order.status)) throw new Error('Order is not ready for payment')
@@ -28,6 +29,16 @@ export async function createRazorpayOrder(internalOrderId: string) {
     return { id: order.razorpayOrderId, amount: order.totalAmount, currency: order.currency }
   }
 
+  // Money Invariant: Never create a new provider order from an expired offer
+  const now = new Date()
+  if (order.offer && (order.offer.expiresAt <= now || order.offer.status === 'EXPIRED')) {
+    await prisma.order.update({ where: { id: order.id }, data: { status: 'EXPIRED' } })
+    if (order.offer.status !== 'EXPIRED') {
+      await prisma.offer.update({ where: { id: order.offer.id }, data: { status: 'EXPIRED' } })
+    }
+    throw new Error('This offer has expired. Please ask for a fresh offer before checking out.')
+  }
+
   // Razorpay makes `receipt` unique and lets us query orders by that receipt.
   // Persist it before calling the provider, then reconcile by it on every retry.
   // This closes the dangerous gap where Razorpay succeeds but the process dies
@@ -37,6 +48,9 @@ export async function createRazorpayOrder(internalOrderId: string) {
     where: { id: order.id, razorpayReceipt: null },
     data: { razorpayReceipt: receipt },
   })
+
+  // Tier 3 Self-Healing: Opportunistically heal pending payments for this merchant on retry
+  triggerOpportunisticReconciliation({ merchantId: order.merchantId, maxReconciliations: 2 }).catch(() => {})
 
   const providerOrder = await findRazorpayOrderByReceipt(receipt)
   if (providerOrder) {

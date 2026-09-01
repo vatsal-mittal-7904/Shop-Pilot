@@ -175,7 +175,30 @@ export async function createOrReuseCheckoutOrder(offerId: string) {
       throw new Error('A persisted customer acceptance record is required before checkout can begin.')
     }
 
+    const now = new Date()
+
     if (offer.order) {
+      // If a provider order was ALREADY created at Razorpay before expiry, reuse it
+      if (offer.order.razorpayOrderId) {
+        if (offer.order.status !== 'PAYMENT_PENDING') {
+          throw new Error(`This offer already has an order in progress (status: ${offer.order.status}). Ask the customer to request a fresh offer to restart checkout.`)
+        }
+        return offer.order
+      }
+
+      // If no provider order exists yet, enforce offer expiration
+      if (offer.expiresAt <= now) {
+        await tx.order.update({
+          where: { id: offer.order.id },
+          data: { status: 'EXPIRED' },
+        })
+        await tx.offer.update({
+          where: { id: offer.id },
+          data: { status: 'EXPIRED' },
+        })
+        throw new Error('This offer has expired. Please ask for a fresh offer before checking out.')
+      }
+
       if (offer.order.status === 'INVENTORY_FAILED') {
          // Try to recover it
          const shortItem = offer.items.find((item) => item.product.inventory < item.quantity)
@@ -194,8 +217,8 @@ export async function createOrReuseCheckoutOrder(offerId: string) {
       return offer.order
     }
 
-    const now = new Date()
     if (offer.expiresAt <= now) {
+      await tx.offer.update({ where: { id: offer.id }, data: { status: 'EXPIRED' } })
       throw new Error('This offer has expired. Please ask for a fresh offer before checking out.')
     }
 

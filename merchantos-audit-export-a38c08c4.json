@@ -1,0 +1,3818 @@
+{
+  "id": "a38c08c4-e013-4bf7-902e-721ee3655aa2",
+  "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+  "chainHead": "2f6e6e313a28a681b7b9c553d5b378b26025b359a7824691d077ef0589d52352",
+  "signature": "bef3d17536cb29f7b012fdccaf452d04f5736510090d34f25dbce6059ef6d38a",
+  "createdAt": "2026-09-01T20:36:13.094Z",
+  "payload": {
+    "format": "merchantos.audit-export.v1",
+    "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+    "exportedAt": "2026-09-01T20:36:13.088Z",
+    "entries": [
+      {
+        "id": "38204c0e-0cf9-4585-abbe-33ba20c12bc6",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "91cc9b4f-e795-4dbf-a447-e68645ea92a0",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "347af733-b2c9-4e6e-94af-ee5941ce8afa"
+        },
+        "status": "APPROVED",
+        "previousHash": "GENESIS",
+        "entryHash": "92a60b6827f3da9051d365b5d6a214f0ea62c526eccee88ae300489abf375a1e",
+        "createdAt": "2026-09-01T19:08:23.880Z"
+      },
+      {
+        "id": "041f5489-1885-4a75-b563-3040c73b320d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "91cc9b4f-e795-4dbf-a447-e68645ea92a0",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_91cc9b4f-e795-4dbf-a447-e68645ea92a0",
+          "razorpayOrderId": "order_fake_1788289703859"
+        },
+        "status": "EXECUTED",
+        "previousHash": "92a60b6827f3da9051d365b5d6a214f0ea62c526eccee88ae300489abf375a1e",
+        "entryHash": "d894058f29b326ce010e1890ff6b41769cffcfd8601f4e498038eb329c208360",
+        "createdAt": "2026-09-01T19:08:23.894Z"
+      },
+      {
+        "id": "a0db3de5-62d4-4cfe-8b0a-d6c5f694702b",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "91cc9b4f-e795-4dbf-a447-e68645ea92a0",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788289703902",
+          "razorpayOrderId": "order_fake_1788289703859",
+          "razorpayPaymentId": "pay_1788289703902_0.7048088478561956",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "d894058f29b326ce010e1890ff6b41769cffcfd8601f4e498038eb329c208360",
+        "entryHash": "37b0558bb865083eba097c1c8b292de2a0db5c2e2cec8c33107671468dd95a42",
+        "createdAt": "2026-09-01T19:08:23.910Z"
+      },
+      {
+        "id": "0058f182-80af-4c1a-af1c-b92a2d11b3c8",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "882f4f54-7e49-4c34-9301-ea252acbfe32",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "dd166ade-f81f-4efd-b803-7b44e1a707ea"
+        },
+        "status": "APPROVED",
+        "previousHash": "37b0558bb865083eba097c1c8b292de2a0db5c2e2cec8c33107671468dd95a42",
+        "entryHash": "174c787df3448fcd3932b76e3733be78a7bcea46037fb930f38205ddceee8f52",
+        "createdAt": "2026-09-01T19:08:23.922Z"
+      },
+      {
+        "id": "75147bc7-31ef-4d65-b0db-fbf7daa58289",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "882f4f54-7e49-4c34-9301-ea252acbfe32",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_882f4f54-7e49-4c34-9301-ea252acbfe32",
+          "razorpayOrderId": "order_fake_1788289703860"
+        },
+        "status": "EXECUTED",
+        "previousHash": "174c787df3448fcd3932b76e3733be78a7bcea46037fb930f38205ddceee8f52",
+        "entryHash": "10229b50ec086323df846a0c1ec83a164f48720ccc2733eefb919994d8b99b03",
+        "createdAt": "2026-09-01T19:08:23.925Z"
+      },
+      {
+        "id": "112559ef-51c9-43fa-8de8-09ea9813b3ea",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "882f4f54-7e49-4c34-9301-ea252acbfe32",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788289703925_failed",
+          "razorpayOrderId": "order_fake_1788289703860"
+        },
+        "status": "FAILED",
+        "previousHash": "10229b50ec086323df846a0c1ec83a164f48720ccc2733eefb919994d8b99b03",
+        "entryHash": "f41f649eb8fd5f5438201e187c11a0fabe85aaee9c193c8b455936d49cc68b1a",
+        "createdAt": "2026-09-01T19:08:23.927Z"
+      },
+      {
+        "id": "5380e62b-865d-4d80-af08-9b1c320d0e4e",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "3097b4bb-72f9-4a6d-b0a9-9e315e663443",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "fbd3b84e-868e-4e51-827a-dadf00b69ca1"
+        },
+        "status": "APPROVED",
+        "previousHash": "f41f649eb8fd5f5438201e187c11a0fabe85aaee9c193c8b455936d49cc68b1a",
+        "entryHash": "8c905978459e8c42f4e317c50069d0fcf20b4f608adfc5cf8705f1281d29ebf3",
+        "createdAt": "2026-09-01T19:08:23.934Z"
+      },
+      {
+        "id": "c683338c-33c6-445f-892e-e60a2ecef2d5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "3097b4bb-72f9-4a6d-b0a9-9e315e663443",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_3097b4bb-72f9-4a6d-b0a9-9e315e663443",
+          "razorpayOrderId": "order_fake_1788289703861"
+        },
+        "status": "EXECUTED",
+        "previousHash": "8c905978459e8c42f4e317c50069d0fcf20b4f608adfc5cf8705f1281d29ebf3",
+        "entryHash": "abc2134d0b705b632a087247c2c9d6176c216b97b8d208dff80f3a09f4f6d1c5",
+        "createdAt": "2026-09-01T19:08:23.936Z"
+      },
+      {
+        "id": "ae86462f-c205-4791-9daa-f925aaa13602",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "d56b4a61-24a1-4ee3-bdb0-7b8a38a99cfc",
+          "offerId": "06f00e98-9e10-4f32-8f00-363acc7ba917",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "b760de62-9a4f-42b6-bcc2-faf3c4d42399",
+          "recommendedProductId": "c7b1b0db-f3e2-4505-85a1-5a01f0496a8e"
+        },
+        "status": "APPROVED",
+        "previousHash": "abc2134d0b705b632a087247c2c9d6176c216b97b8d208dff80f3a09f4f6d1c5",
+        "entryHash": "8ec472ec915218f7867462180fbc098e6488cfd1402f25c0bcf87c133a638f84",
+        "createdAt": "2026-09-01T19:08:24.181Z"
+      },
+      {
+        "id": "11bf1320-5717-43fb-acf6-fedc7c90313a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "c936845f-be92-4be1-9cca-38f534bcd9e3",
+          "offerId": "a2fdbf2d-2181-4cb4-a2dc-2cd5fa142f72",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "8ec472ec915218f7867462180fbc098e6488cfd1402f25c0bcf87c133a638f84",
+        "entryHash": "f2dcb533d7227b50915706b4c2cb03dd31fe890fefcc4015ee6cd7681176b937",
+        "createdAt": "2026-09-01T19:08:24.409Z"
+      },
+      {
+        "id": "15cd5ab7-4856-4184-ab59-fa728f7bef37",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "7b480bc6-17d9-4345-a261-60242a5154e3",
+          "offerId": "13ed3a9a-6d34-4636-9aab-c1ea3ec81e1d",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "f2dcb533d7227b50915706b4c2cb03dd31fe890fefcc4015ee6cd7681176b937",
+        "entryHash": "13908d81927eef3d31888d7e10e6202ebd654d8c43cb6d2375aeb8f93642cc4b",
+        "createdAt": "2026-09-01T19:08:24.430Z"
+      },
+      {
+        "id": "8391d43a-182f-44c7-8cb4-93ad37edbf03",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "23189826-971c-4cce-8ea4-dd7d5438bf4d",
+          "campaignId": "a8a17817-8d78-49ba-b84c-4ddc26c11e3b",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "d34bde4b-8c29-4af6-83dd-000ff51ed6ba"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "13908d81927eef3d31888d7e10e6202ebd654d8c43cb6d2375aeb8f93642cc4b",
+        "entryHash": "f939f838e9662a1fe55134e99139dda822a33a6551631256c68d64aa979fc9a1",
+        "createdAt": "2026-09-01T19:08:24.628Z"
+      },
+      {
+        "id": "b6d6b8ad-9fd5-49cc-a864-95cb2e685001",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "ce8aaefb-dcab-4e81-b9ce-b82e84b0dfdc",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "cab99a1f-60f2-4b58-b798-f902f49d3758"
+        },
+        "status": "APPROVED",
+        "previousHash": "f939f838e9662a1fe55134e99139dda822a33a6551631256c68d64aa979fc9a1",
+        "entryHash": "7c0ca49f0ef94cd00a95512f78b3d9333a404ab80d7e453f9a15e6ada5844229",
+        "createdAt": "2026-09-01T19:08:44.601Z"
+      },
+      {
+        "id": "7932ae4d-2212-4171-843f-671d7cec2f71",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "ce8aaefb-dcab-4e81-b9ce-b82e84b0dfdc",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_ce8aaefb-dcab-4e81-b9ce-b82e84b0dfdc",
+          "razorpayOrderId": "order_fake_1788289724581"
+        },
+        "status": "EXECUTED",
+        "previousHash": "7c0ca49f0ef94cd00a95512f78b3d9333a404ab80d7e453f9a15e6ada5844229",
+        "entryHash": "abb239d22c17e8c5c4c67d95f5c26ef55f431db9650bce03f28a19d3cfa9d48f",
+        "createdAt": "2026-09-01T19:08:44.616Z"
+      },
+      {
+        "id": "e9411be0-71ca-435f-b096-45b82ed6efae",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "ce8aaefb-dcab-4e81-b9ce-b82e84b0dfdc",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788289724623",
+          "razorpayOrderId": "order_fake_1788289724581",
+          "razorpayPaymentId": "pay_1788289724623_0.7841320436633976",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "abb239d22c17e8c5c4c67d95f5c26ef55f431db9650bce03f28a19d3cfa9d48f",
+        "entryHash": "6e81e46cf3ce6fd57fd37817379c489fd45a418b66837f94a6a70bb36000c269",
+        "createdAt": "2026-09-01T19:08:44.632Z"
+      },
+      {
+        "id": "2addb7a9-174f-4cd9-91cb-e42f6b251745",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "fe7beca6-fad1-4e88-b318-9b65aed67172",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "6e6c85ec-897d-495d-83cd-1c72e38cd15d"
+        },
+        "status": "APPROVED",
+        "previousHash": "6e81e46cf3ce6fd57fd37817379c489fd45a418b66837f94a6a70bb36000c269",
+        "entryHash": "1dbbff6701528bdb45f51fcb956e8ee880417fdd0a5933ff6eaf93eb2e89c4b7",
+        "createdAt": "2026-09-01T19:08:44.646Z"
+      },
+      {
+        "id": "cf3c67cb-9b72-4d18-8cb9-f945b96adebe",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "fe7beca6-fad1-4e88-b318-9b65aed67172",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_fe7beca6-fad1-4e88-b318-9b65aed67172",
+          "razorpayOrderId": "order_fake_1788289724582"
+        },
+        "status": "EXECUTED",
+        "previousHash": "1dbbff6701528bdb45f51fcb956e8ee880417fdd0a5933ff6eaf93eb2e89c4b7",
+        "entryHash": "63bc6f8727786e31c2e888729e190b5ded24542f5a6d185c63e9b10277494237",
+        "createdAt": "2026-09-01T19:08:44.649Z"
+      },
+      {
+        "id": "dc384c51-b1c9-4672-8869-5f04c9f4968c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "fe7beca6-fad1-4e88-b318-9b65aed67172",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788289724649_failed",
+          "razorpayOrderId": "order_fake_1788289724582"
+        },
+        "status": "FAILED",
+        "previousHash": "63bc6f8727786e31c2e888729e190b5ded24542f5a6d185c63e9b10277494237",
+        "entryHash": "95751b103f75041f62f1679c7baacc3d5ab76b051f4b2fdcd1abab73d0db71db",
+        "createdAt": "2026-09-01T19:08:44.652Z"
+      },
+      {
+        "id": "060513c5-4746-4d6e-9aa9-370be1f456c9",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "ecc54dcb-03e7-4390-b946-1fbacee07d24",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "5aa6924f-bc60-4c84-ab4b-ea9ca80cdef3"
+        },
+        "status": "APPROVED",
+        "previousHash": "95751b103f75041f62f1679c7baacc3d5ab76b051f4b2fdcd1abab73d0db71db",
+        "entryHash": "ce541aa874d38c1449811bcc44f8054be1a127e7688b5a5993a3f49ad8454ef5",
+        "createdAt": "2026-09-01T19:08:44.658Z"
+      },
+      {
+        "id": "a00b93d5-d252-434a-9b6a-2131fab344e1",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "ecc54dcb-03e7-4390-b946-1fbacee07d24",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_ecc54dcb-03e7-4390-b946-1fbacee07d24",
+          "razorpayOrderId": "order_fake_1788289724583"
+        },
+        "status": "EXECUTED",
+        "previousHash": "ce541aa874d38c1449811bcc44f8054be1a127e7688b5a5993a3f49ad8454ef5",
+        "entryHash": "9c9d6f09d30b3e785ae4e9ba1657f2ae9cd850af881d595e308f44d81ff983a4",
+        "createdAt": "2026-09-01T19:08:44.661Z"
+      },
+      {
+        "id": "adc5dc2f-017e-4a28-acfd-c67060b47f7e",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "30603325-8a7c-4f30-9952-085231149e16",
+          "offerId": "72978061-9683-437b-ad43-b5606f4eddf4",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "9c9d6f09d30b3e785ae4e9ba1657f2ae9cd850af881d595e308f44d81ff983a4",
+        "entryHash": "feb4e800349eb75b79d3df014e237d213064027a014e95ea0606b194710b95c5",
+        "createdAt": "2026-09-01T19:08:44.884Z"
+      },
+      {
+        "id": "10b885b0-39d7-4465-861d-6983ad451351",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "9ce0b8d9-201f-4aa3-b3c1-4fe7224c5a41",
+          "offerId": "6880bed5-3dd0-4c81-ac5f-22db725c1566",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "feb4e800349eb75b79d3df014e237d213064027a014e95ea0606b194710b95c5",
+        "entryHash": "67a4380dc0d8747a0fd44e6c366cc5d098e1dc38dc8a055a27f7defd7c2b3759",
+        "createdAt": "2026-09-01T19:08:44.907Z"
+      },
+      {
+        "id": "066ed6d9-9e99-48d6-afc3-e7d531e9dfa3",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "70cf0098-e74f-473a-9090-4bd6281c2f80",
+          "offerId": "dc0247fa-0299-4007-af3a-cab616fc18af",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "a3d155d6-eede-42d9-892a-3a977f75ce37",
+          "recommendedProductId": "11a575bd-e1da-4c6c-adf7-670db2e3551a"
+        },
+        "status": "APPROVED",
+        "previousHash": "67a4380dc0d8747a0fd44e6c366cc5d098e1dc38dc8a055a27f7defd7c2b3759",
+        "entryHash": "dbf7c5a8d5bdb845c779ee080ed03736715e72b134b6ceb4d3f8941c14201838",
+        "createdAt": "2026-09-01T19:08:45.135Z"
+      },
+      {
+        "id": "213f3a8d-942a-400b-9d1c-7edfed458bf1",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "8091db51-e9b9-4c83-92d9-d1aca126a7f4",
+          "campaignId": "bcaa3a0e-4709-4249-aa82-38d669cccae8",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "83369efb-5855-4d48-975e-326e76cf676d"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "dbf7c5a8d5bdb845c779ee080ed03736715e72b134b6ceb4d3f8941c14201838",
+        "entryHash": "b0e26fb7037afb8c3436ba27f41549938fa45cc69ba4076dd11ad79d6ba33335",
+        "createdAt": "2026-09-01T19:08:45.330Z"
+      },
+      {
+        "id": "e0d095a6-67e1-4d1b-8fcf-12fd310945ed",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "624ad122-0908-40a6-8987-479534f022f1",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "cf5f30b8-1725-41eb-b85f-5cf62a86dc03"
+        },
+        "status": "APPROVED",
+        "previousHash": "b0e26fb7037afb8c3436ba27f41549938fa45cc69ba4076dd11ad79d6ba33335",
+        "entryHash": "2dd225c4b8d3c71ba9677e7c6a1af0c98a9f349abcc304d1734399d770f0092f",
+        "createdAt": "2026-09-01T19:09:07.097Z"
+      },
+      {
+        "id": "2f2359bf-1bde-4db6-a4d6-8c9178eec493",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "624ad122-0908-40a6-8987-479534f022f1",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_624ad122-0908-40a6-8987-479534f022f1",
+          "razorpayOrderId": "order_fake_1788289747055"
+        },
+        "status": "EXECUTED",
+        "previousHash": "2dd225c4b8d3c71ba9677e7c6a1af0c98a9f349abcc304d1734399d770f0092f",
+        "entryHash": "d92b2b5610bf5f0e07139239ff0a1175b77a81771907d088a06ce5dfe20af927",
+        "createdAt": "2026-09-01T19:09:07.111Z"
+      },
+      {
+        "id": "544cb5fc-85dd-4b88-b77e-8c87a4907c1b",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "624ad122-0908-40a6-8987-479534f022f1",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788289747118",
+          "razorpayOrderId": "order_fake_1788289747055",
+          "razorpayPaymentId": "pay_1788289747118_0.9326005798033418",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "d92b2b5610bf5f0e07139239ff0a1175b77a81771907d088a06ce5dfe20af927",
+        "entryHash": "92b1535c05c7ac59776f5bb36a7e7a20d12c807b915a27a34e72a07de6af26cd",
+        "createdAt": "2026-09-01T19:09:07.126Z"
+      },
+      {
+        "id": "1fea5504-014d-4f52-96d7-40d7a2b089c7",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c909fcca-e6e1-4221-a226-b7890fc8d38d",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "5f6ce199-a6ed-4303-9d46-86d0600baac9"
+        },
+        "status": "APPROVED",
+        "previousHash": "92b1535c05c7ac59776f5bb36a7e7a20d12c807b915a27a34e72a07de6af26cd",
+        "entryHash": "2133b0a99de0af5fd6d456b911f83771664243343d1c8fc57aafbcec7dc19313",
+        "createdAt": "2026-09-01T19:09:07.137Z"
+      },
+      {
+        "id": "fb9b3aa6-a55f-4e0c-a733-9dc10256ab2a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c909fcca-e6e1-4221-a226-b7890fc8d38d",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_c909fcca-e6e1-4221-a226-b7890fc8d38d",
+          "razorpayOrderId": "order_fake_1788289747056"
+        },
+        "status": "EXECUTED",
+        "previousHash": "2133b0a99de0af5fd6d456b911f83771664243343d1c8fc57aafbcec7dc19313",
+        "entryHash": "d8f6b544f2e5967ba77110e752f8da2f3465b58437d0bbda15c326644b00b2b9",
+        "createdAt": "2026-09-01T19:09:07.140Z"
+      },
+      {
+        "id": "41e8d240-8a63-4c75-bd1a-b8b44429290a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c909fcca-e6e1-4221-a226-b7890fc8d38d",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788289747141_failed",
+          "razorpayOrderId": "order_fake_1788289747056"
+        },
+        "status": "FAILED",
+        "previousHash": "d8f6b544f2e5967ba77110e752f8da2f3465b58437d0bbda15c326644b00b2b9",
+        "entryHash": "f8071709d1bd8b0bfae749506adf0d51d62f868ee797d4da60b5310c85c4a011",
+        "createdAt": "2026-09-01T19:09:07.143Z"
+      },
+      {
+        "id": "906999a1-ff6e-4ab4-8583-d9db123084cd",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "7686813e-d44a-45d7-8b88-9a76ae84d5a9",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "0d734600-d37e-485d-8ef5-5b8fdc9388a8"
+        },
+        "status": "APPROVED",
+        "previousHash": "f8071709d1bd8b0bfae749506adf0d51d62f868ee797d4da60b5310c85c4a011",
+        "entryHash": "6ad79db9af2f23a2b580ca5db5aec476a250f812ec78a88af2bc9009b0e2427f",
+        "createdAt": "2026-09-01T19:09:07.149Z"
+      },
+      {
+        "id": "ad876ee3-2197-4b1c-a74b-4a9c59fb90a9",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "7686813e-d44a-45d7-8b88-9a76ae84d5a9",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_7686813e-d44a-45d7-8b88-9a76ae84d5a9",
+          "razorpayOrderId": "order_fake_1788289747057"
+        },
+        "status": "EXECUTED",
+        "previousHash": "6ad79db9af2f23a2b580ca5db5aec476a250f812ec78a88af2bc9009b0e2427f",
+        "entryHash": "5c7003fc6402a0ac0fdd4aa4b353549e43d288fe141a2695102628575f662b50",
+        "createdAt": "2026-09-01T19:09:07.152Z"
+      },
+      {
+        "id": "7bb2b808-87ae-4312-ad66-9b1669aa4740",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "d0f9fbac-aca3-4aae-86d0-fce8db433cea",
+          "offerId": "995ebdeb-4785-413f-872d-96865e239255",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "5c7003fc6402a0ac0fdd4aa4b353549e43d288fe141a2695102628575f662b50",
+        "entryHash": "4eb91a4af1c074aba4f89ce676c73cb3ff434e580bc922cbb54c3bec94ea8df1",
+        "createdAt": "2026-09-01T19:09:07.380Z"
+      },
+      {
+        "id": "638203cc-2f99-443f-bb3d-451244ab60f5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "320db565-ed2b-4a26-8a46-8bacfe512069",
+          "offerId": "bc1e020d-c4ff-4b28-8863-7db29d6d8495",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "4eb91a4af1c074aba4f89ce676c73cb3ff434e580bc922cbb54c3bec94ea8df1",
+        "entryHash": "75e17e75b5b96c07de646d31601e2683841f5330e982a17426520f9e6ccbfcf4",
+        "createdAt": "2026-09-01T19:09:07.403Z"
+      },
+      {
+        "id": "c0bdaa45-8170-488a-87ac-89544f0f030a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "fe199e1d-ce6f-4303-a282-7fc9a68a4ecc",
+          "offerId": "ec553877-9f0b-4cda-9860-abf38712a423",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "89d10677-8ed6-4684-a90a-bd5d1af008ee",
+          "recommendedProductId": "a58c9b6b-c720-418b-9715-34377e967da4"
+        },
+        "status": "APPROVED",
+        "previousHash": "75e17e75b5b96c07de646d31601e2683841f5330e982a17426520f9e6ccbfcf4",
+        "entryHash": "b2714a9024d17e42091790cd580ab022d863583d3f3458bccfe86bc1624e02f6",
+        "createdAt": "2026-09-01T19:09:07.634Z"
+      },
+      {
+        "id": "9ece565a-6512-45ed-8e4a-6c1d064b1fd8",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "eb3fa922-be56-4261-81d3-fb219e800ea3",
+          "campaignId": "c7d3ab39-e218-40b7-b5a2-9dbf1da4165a",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "1355104c-cf1c-4636-9768-0eccdfc8bf5e"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "b2714a9024d17e42091790cd580ab022d863583d3f3458bccfe86bc1624e02f6",
+        "entryHash": "a28e1ef902e72594368d4a597b827bac9eebdb786f02785566af76c4251dd21d",
+        "createdAt": "2026-09-01T19:09:07.833Z"
+      },
+      {
+        "id": "011ca9f0-ecec-4378-b951-95e2f7670bbf",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "08617297-f3ee-4184-ba2c-9e4cd61cfdd8",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "96f25024-dcfa-42ab-b52d-e8465e3fb339"
+        },
+        "status": "APPROVED",
+        "previousHash": "a28e1ef902e72594368d4a597b827bac9eebdb786f02785566af76c4251dd21d",
+        "entryHash": "5ac75c02e8713c531f6c8c8b1fb3afdf23eaffbb3343a165a69e306daafd3b4e",
+        "createdAt": "2026-09-01T19:10:11.031Z"
+      },
+      {
+        "id": "18dd4ce3-9a7d-4148-a4c9-b9b3eedbbcf3",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "08617297-f3ee-4184-ba2c-9e4cd61cfdd8",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_08617297-f3ee-4184-ba2c-9e4cd61cfdd8",
+          "razorpayOrderId": "order_fake_1788289811007"
+        },
+        "status": "EXECUTED",
+        "previousHash": "5ac75c02e8713c531f6c8c8b1fb3afdf23eaffbb3343a165a69e306daafd3b4e",
+        "entryHash": "21ae9b0a5585fce5de0fa2349f9c89fd308744229761f6884dc2b9310ec4594a",
+        "createdAt": "2026-09-01T19:10:11.046Z"
+      },
+      {
+        "id": "b65e1a23-63d5-461d-9a91-d12566e0a230",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "08617297-f3ee-4184-ba2c-9e4cd61cfdd8",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788289811055",
+          "razorpayOrderId": "order_fake_1788289811007",
+          "razorpayPaymentId": "pay_1788289811055_0.3741474131560253",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "21ae9b0a5585fce5de0fa2349f9c89fd308744229761f6884dc2b9310ec4594a",
+        "entryHash": "e63f80071a86d1a0101db2566067796bba30bd9618b9302e8dc8dd9617f405bd",
+        "createdAt": "2026-09-01T19:10:11.076Z"
+      },
+      {
+        "id": "6fe2b59c-8dc5-4c24-a876-7d3cb859c7bf",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "e419656c-2f32-4575-be1f-3dd5a672eafb",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "348e4d8c-29ac-4c07-8beb-084e7cecb66f"
+        },
+        "status": "APPROVED",
+        "previousHash": "e63f80071a86d1a0101db2566067796bba30bd9618b9302e8dc8dd9617f405bd",
+        "entryHash": "3ce8ed5cb23190a5ea4712b2d53076554a8075e061d4a057b0769415d51a3067",
+        "createdAt": "2026-09-01T19:10:11.099Z"
+      },
+      {
+        "id": "4b68cf14-f9b3-4883-9f73-5424d362feae",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "e419656c-2f32-4575-be1f-3dd5a672eafb",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_e419656c-2f32-4575-be1f-3dd5a672eafb",
+          "razorpayOrderId": "order_fake_1788289811008"
+        },
+        "status": "EXECUTED",
+        "previousHash": "3ce8ed5cb23190a5ea4712b2d53076554a8075e061d4a057b0769415d51a3067",
+        "entryHash": "fe16f1fc71ec066974181923733835ad3dce5021d764b9390d277365bf064738",
+        "createdAt": "2026-09-01T19:10:11.102Z"
+      },
+      {
+        "id": "02205ca7-8268-4550-82e3-ac9e983108c7",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "e419656c-2f32-4575-be1f-3dd5a672eafb",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788289811103_failed",
+          "razorpayOrderId": "order_fake_1788289811008"
+        },
+        "status": "FAILED",
+        "previousHash": "fe16f1fc71ec066974181923733835ad3dce5021d764b9390d277365bf064738",
+        "entryHash": "4869891c631c87d4c8e09966cb5e2a8273af23abe84e5a5edc506c48bfc4bd5d",
+        "createdAt": "2026-09-01T19:10:11.106Z"
+      },
+      {
+        "id": "28d4a0bb-fb48-4eed-a23d-8d1fb36bb44c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c7534ec7-17b0-4aec-8bb2-6ba488b95c7a",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "2b59bada-b3c1-4553-88b5-f797fd3dc7f5"
+        },
+        "status": "APPROVED",
+        "previousHash": "4869891c631c87d4c8e09966cb5e2a8273af23abe84e5a5edc506c48bfc4bd5d",
+        "entryHash": "0105b3c4591b21f01a14c8f38a39ae8fbae7c7d6669dbb9fb91c20e6efe3f6c6",
+        "createdAt": "2026-09-01T19:10:11.113Z"
+      },
+      {
+        "id": "ade7b4d2-6c1f-45d5-aa70-9b1193b44ad7",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c7534ec7-17b0-4aec-8bb2-6ba488b95c7a",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_c7534ec7-17b0-4aec-8bb2-6ba488b95c7a",
+          "razorpayOrderId": "order_fake_1788289811009"
+        },
+        "status": "EXECUTED",
+        "previousHash": "0105b3c4591b21f01a14c8f38a39ae8fbae7c7d6669dbb9fb91c20e6efe3f6c6",
+        "entryHash": "ff21b85c93a805639e8927e4fbee32ff4d1d236eb52bbb70a863007ba6f141a5",
+        "createdAt": "2026-09-01T19:10:11.116Z"
+      },
+      {
+        "id": "a03685be-7fd8-4175-8e75-03e87d07f3e5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "bbe4559e-d3de-46b4-a982-2bad95ad2091",
+          "offerId": "d9a04d34-a64b-45de-98fc-689446d679ea",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "ff21b85c93a805639e8927e4fbee32ff4d1d236eb52bbb70a863007ba6f141a5",
+        "entryHash": "301f06f2e336864c0d3ee3357809a92dd47396cbc2ab766fceef2cb2cfc9dffc",
+        "createdAt": "2026-09-01T19:10:11.352Z"
+      },
+      {
+        "id": "7140b309-a682-456f-b727-20eab50f2213",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "b9051e1c-a22c-4417-9470-9eff53656748",
+          "offerId": "fda15260-3524-43b4-a13b-79a19d05d374",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "301f06f2e336864c0d3ee3357809a92dd47396cbc2ab766fceef2cb2cfc9dffc",
+        "entryHash": "5c7f7dca2a0294c018d7fae3e3ea43a9e45bb023bd42ac7ada566c5506e435ac",
+        "createdAt": "2026-09-01T19:10:11.372Z"
+      },
+      {
+        "id": "c6192971-40bf-401a-984b-02f731ad72aa",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "2b5174a4-3de4-4ba8-94ca-c9422400f772",
+          "campaignId": "9a536a65-6333-4f4d-8d30-c1e4f088106a",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "27b2941a-ef00-45e2-9c81-7292267318ec"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "5c7f7dca2a0294c018d7fae3e3ea43a9e45bb023bd42ac7ada566c5506e435ac",
+        "entryHash": "3754f3612e3068ea96f3f913656d6d6315376afb0c2ab1b47fea868a96a8a349",
+        "createdAt": "2026-09-01T19:10:11.817Z"
+      },
+      {
+        "id": "5a486fda-f2bb-4b20-a628-1491d7eadd2e",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "3b6b797a-7cfb-4af9-989f-dde08a53fed6",
+          "offerId": "16cdecf3-f9ce-4321-b531-4dbc76130041",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "1ae0dbec-36e9-43e2-b309-81be55ce64aa",
+          "recommendedProductId": "5333e291-f93c-4a40-a8de-113bd45fcff1"
+        },
+        "status": "APPROVED",
+        "previousHash": "3754f3612e3068ea96f3f913656d6d6315376afb0c2ab1b47fea868a96a8a349",
+        "entryHash": "6d8aa5268d6ca1afcef077b165140c2fc47cdac2592bfde296dcfba62261bd49",
+        "createdAt": "2026-09-01T19:10:34.859Z"
+      },
+      {
+        "id": "fc7ae20b-89ff-4a8f-8732-f1b8d2a3426d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "edf89418-9744-48ce-b9b4-48e4f8aeb164",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "82960d71-77f0-437a-9a1c-4a4145f4c9c8"
+        },
+        "status": "APPROVED",
+        "previousHash": "6d8aa5268d6ca1afcef077b165140c2fc47cdac2592bfde296dcfba62261bd49",
+        "entryHash": "6e7e4565de45d7c12feefae51f18abebf9411a770b19271071e7ad277e3a2613",
+        "createdAt": "2026-09-01T19:10:35.066Z"
+      },
+      {
+        "id": "c964e076-5d5c-4eda-b441-97fd2ebe037b",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "edf89418-9744-48ce-b9b4-48e4f8aeb164",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_edf89418-9744-48ce-b9b4-48e4f8aeb164",
+          "razorpayOrderId": "order_fake_1788289835049"
+        },
+        "status": "EXECUTED",
+        "previousHash": "6e7e4565de45d7c12feefae51f18abebf9411a770b19271071e7ad277e3a2613",
+        "entryHash": "0914ec10add8987dc83c6231bdc6f8711ee8cc27e836b115043e880d2ca8eb90",
+        "createdAt": "2026-09-01T19:10:35.080Z"
+      },
+      {
+        "id": "47feb3d9-06e8-4db2-ba58-b0e7c9b7eca5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "edf89418-9744-48ce-b9b4-48e4f8aeb164",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788289835087",
+          "razorpayOrderId": "order_fake_1788289835049",
+          "razorpayPaymentId": "pay_1788289835088_0.06539698012666884",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "0914ec10add8987dc83c6231bdc6f8711ee8cc27e836b115043e880d2ca8eb90",
+        "entryHash": "6290adfb51bab19586e90ffabf2a0d278c417e75e7f067df43572432eda35931",
+        "createdAt": "2026-09-01T19:10:35.096Z"
+      },
+      {
+        "id": "2a61ad62-faa2-460d-ab48-3a444cf8dd88",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "458d98a4-4ac2-496c-a55c-e909b03f6da2",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "ad34afc6-8b9f-4543-ac6c-9e26449a7693"
+        },
+        "status": "APPROVED",
+        "previousHash": "6290adfb51bab19586e90ffabf2a0d278c417e75e7f067df43572432eda35931",
+        "entryHash": "6e8f8978c148efef1645ad24f6bc3d4014a3f56e894c459875c7e4fe2c2d0c1a",
+        "createdAt": "2026-09-01T19:10:35.106Z"
+      },
+      {
+        "id": "eee5bdb4-9f39-499a-84ba-3003fb24bb0e",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "458d98a4-4ac2-496c-a55c-e909b03f6da2",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_458d98a4-4ac2-496c-a55c-e909b03f6da2",
+          "razorpayOrderId": "order_fake_1788289835050"
+        },
+        "status": "EXECUTED",
+        "previousHash": "6e8f8978c148efef1645ad24f6bc3d4014a3f56e894c459875c7e4fe2c2d0c1a",
+        "entryHash": "0138ec143d28f8826eae3c75aa014d946b9e826cb3740bff2572da95c4b28ec5",
+        "createdAt": "2026-09-01T19:10:35.109Z"
+      },
+      {
+        "id": "34b23438-d5e2-44be-afd9-95703bf799c9",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "458d98a4-4ac2-496c-a55c-e909b03f6da2",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788289835109_failed",
+          "razorpayOrderId": "order_fake_1788289835050"
+        },
+        "status": "FAILED",
+        "previousHash": "0138ec143d28f8826eae3c75aa014d946b9e826cb3740bff2572da95c4b28ec5",
+        "entryHash": "62fab6dd26c6ab5b67e817e82ee04d69a470b1e8afbc0e2788f97ea199ebef9c",
+        "createdAt": "2026-09-01T19:10:35.112Z"
+      },
+      {
+        "id": "6ecac637-9814-4a4c-a100-7660f07df40c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "94bfa6df-136d-4f7f-a593-7cd8b7a894ec",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "681da4d3-8790-40dc-9af1-f564c2f78867"
+        },
+        "status": "APPROVED",
+        "previousHash": "62fab6dd26c6ab5b67e817e82ee04d69a470b1e8afbc0e2788f97ea199ebef9c",
+        "entryHash": "bbdb962016bfb8182467aee7eda20dc24230e8deab2d81b75530c37936e2ba7d",
+        "createdAt": "2026-09-01T19:10:35.118Z"
+      },
+      {
+        "id": "c78c5aad-45ea-4dee-9d35-f1cfcde8a0c0",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "94bfa6df-136d-4f7f-a593-7cd8b7a894ec",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_94bfa6df-136d-4f7f-a593-7cd8b7a894ec",
+          "razorpayOrderId": "order_fake_1788289835051"
+        },
+        "status": "EXECUTED",
+        "previousHash": "bbdb962016bfb8182467aee7eda20dc24230e8deab2d81b75530c37936e2ba7d",
+        "entryHash": "a331fa96ee62cd4f774490a08004ea6753153152b29588229dabe22628847cfd",
+        "createdAt": "2026-09-01T19:10:35.121Z"
+      },
+      {
+        "id": "a719b9e2-5245-45d5-a129-9eddab061693",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "bcb43ab1-2e0e-4932-b7df-e8ae5b5fa346",
+          "offerId": "2e817831-6469-4fc8-b59c-8e8770fda745",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "a331fa96ee62cd4f774490a08004ea6753153152b29588229dabe22628847cfd",
+        "entryHash": "8d8930e05ec11138c3bc86142e1a2105438a60b7988a3e08077e18ee418fe8f1",
+        "createdAt": "2026-09-01T19:10:35.341Z"
+      },
+      {
+        "id": "d09d6372-18b3-4423-9d2f-9919bc7450f4",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "08c20dbc-126f-4f47-86ed-f7ea5fa94a5b",
+          "offerId": "234668b2-a915-4874-b477-7afafc98e6ae",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "8d8930e05ec11138c3bc86142e1a2105438a60b7988a3e08077e18ee418fe8f1",
+        "entryHash": "b90104002b73d1c86f95f536ad0e4416f9dfeec4cb4d99876ba25fbc55f1f248",
+        "createdAt": "2026-09-01T19:10:35.363Z"
+      },
+      {
+        "id": "4251dd89-85f2-4359-bfb6-77281171ff49",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "14a412d9-ebe3-4ea7-91ab-86dcdd4848d1",
+          "campaignId": "76edc0c6-1c5b-488d-9cf2-b6f172342d03",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "ff7920da-a519-47f6-8f5d-ad79a9e69ab3"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "b90104002b73d1c86f95f536ad0e4416f9dfeec4cb4d99876ba25fbc55f1f248",
+        "entryHash": "b549fa04073b6c9855e2a06de5b1b857b10f65ab67a476ee9a3b0d503664db2e",
+        "createdAt": "2026-09-01T19:10:35.555Z"
+      },
+      {
+        "id": "6be40550-f646-4da6-b2af-099dc6eb4077",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c9812a04-db20-4ccc-bb7e-121d33641ee7",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "32c7f485-3706-492d-a093-3dd2ec9b77d0"
+        },
+        "status": "APPROVED",
+        "previousHash": "b549fa04073b6c9855e2a06de5b1b857b10f65ab67a476ee9a3b0d503664db2e",
+        "entryHash": "6297ae309687e26dfdd6bad838f1751af7486d0383cecd2f3dcf3afa96a39ab6",
+        "createdAt": "2026-09-01T19:10:42.666Z"
+      },
+      {
+        "id": "3e677a6b-a1e3-44cc-b1c0-7f20bc45e30a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c9812a04-db20-4ccc-bb7e-121d33641ee7",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_c9812a04-db20-4ccc-bb7e-121d33641ee7",
+          "razorpayOrderId": "order_fake_1788289842643"
+        },
+        "status": "EXECUTED",
+        "previousHash": "6297ae309687e26dfdd6bad838f1751af7486d0383cecd2f3dcf3afa96a39ab6",
+        "entryHash": "6b98b4a51d0c7d61e4e51b36eb0d8da7e650e0d2144be7ded455f8a999004ba5",
+        "createdAt": "2026-09-01T19:10:42.680Z"
+      },
+      {
+        "id": "1b8fb37f-f494-4214-91d3-d1f01adb811e",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c9812a04-db20-4ccc-bb7e-121d33641ee7",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788289842688",
+          "razorpayOrderId": "order_fake_1788289842643",
+          "razorpayPaymentId": "pay_1788289842688_0.16356341892567772",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "6b98b4a51d0c7d61e4e51b36eb0d8da7e650e0d2144be7ded455f8a999004ba5",
+        "entryHash": "af28c5134b0671faad40eb2fa1004cf0bcd1e015f173cd57cc2b3f8f0fded980",
+        "createdAt": "2026-09-01T19:10:42.696Z"
+      },
+      {
+        "id": "772b3a20-7cb3-4584-b4b7-5369fd5a487b",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "adbc1ea6-87d1-4b57-9ab3-c723bc88ac60",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "9a29993f-59f4-44e3-9704-f29569cf04ad"
+        },
+        "status": "APPROVED",
+        "previousHash": "af28c5134b0671faad40eb2fa1004cf0bcd1e015f173cd57cc2b3f8f0fded980",
+        "entryHash": "34abda81d3b46555ed00261d7a9288ceab9ca037c93b917c5edc9d5966a2024e",
+        "createdAt": "2026-09-01T19:10:42.706Z"
+      },
+      {
+        "id": "52485aaa-1aac-4147-8454-03d911e8f611",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "adbc1ea6-87d1-4b57-9ab3-c723bc88ac60",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_adbc1ea6-87d1-4b57-9ab3-c723bc88ac60",
+          "razorpayOrderId": "order_fake_1788289842644"
+        },
+        "status": "EXECUTED",
+        "previousHash": "34abda81d3b46555ed00261d7a9288ceab9ca037c93b917c5edc9d5966a2024e",
+        "entryHash": "c5a1b0125b06090ac72db381f666c39a97c278cce3858e7f86d82f160fffe69e",
+        "createdAt": "2026-09-01T19:10:42.709Z"
+      },
+      {
+        "id": "844b6616-edd0-46cf-a2ab-699e29b4d160",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "adbc1ea6-87d1-4b57-9ab3-c723bc88ac60",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788289842710_failed",
+          "razorpayOrderId": "order_fake_1788289842644"
+        },
+        "status": "FAILED",
+        "previousHash": "c5a1b0125b06090ac72db381f666c39a97c278cce3858e7f86d82f160fffe69e",
+        "entryHash": "272303d746567a91015169119f3c73125ed05b0ad376e298242122634cf7d058",
+        "createdAt": "2026-09-01T19:10:42.712Z"
+      },
+      {
+        "id": "15c6285b-f7fe-413a-aca5-fff8f7b39988",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "5838962c-e0c6-4d2c-b48c-5e90b74aa2ce",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "59b38030-9d69-458a-8cf6-00b1f25427aa"
+        },
+        "status": "APPROVED",
+        "previousHash": "272303d746567a91015169119f3c73125ed05b0ad376e298242122634cf7d058",
+        "entryHash": "07f6ab2a48f67afdfa4d06e016b182cd292667946278cdfdfd60077cad89bedd",
+        "createdAt": "2026-09-01T19:10:42.719Z"
+      },
+      {
+        "id": "61dbf3ee-086d-4b16-b16e-ecfb119bf43a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "5838962c-e0c6-4d2c-b48c-5e90b74aa2ce",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_5838962c-e0c6-4d2c-b48c-5e90b74aa2ce",
+          "razorpayOrderId": "order_fake_1788289842645"
+        },
+        "status": "EXECUTED",
+        "previousHash": "07f6ab2a48f67afdfa4d06e016b182cd292667946278cdfdfd60077cad89bedd",
+        "entryHash": "4d9c1d35245206b481957084e7d661af6bea5c7fb0b0d81754fcc089de330eda",
+        "createdAt": "2026-09-01T19:10:42.722Z"
+      },
+      {
+        "id": "262f6f60-41d3-4763-ab4b-a7b8146d0c21",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "fe09c813-77ee-4d7e-b99d-6011a6cbc030",
+          "offerId": "2ac5291e-66f1-40ec-b806-935fb9d7c340",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "4d9c1d35245206b481957084e7d661af6bea5c7fb0b0d81754fcc089de330eda",
+        "entryHash": "dfd7f0c92d126d71b2555754a2a2b7bd3a5e2959098e772bb1a472f6f08fab6d",
+        "createdAt": "2026-09-01T19:10:42.953Z"
+      },
+      {
+        "id": "e081c415-df14-43e4-ab27-9083c68794fb",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "ef24bc17-7242-4983-89a1-fe1e59778006",
+          "offerId": "d552b061-927a-4da0-8ae1-ce0151e3e481",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "dfd7f0c92d126d71b2555754a2a2b7bd3a5e2959098e772bb1a472f6f08fab6d",
+        "entryHash": "69b3b1e3394a1b416f2d96ba981b160f9d2d3014967e03829af3af24a40fa637",
+        "createdAt": "2026-09-01T19:10:42.975Z"
+      },
+      {
+        "id": "ecc7d3d7-2b2d-40fd-b04e-7497f69d79f9",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "13bdf2b0-ab25-4d14-b1fd-ad42953eaf97",
+          "offerId": "cb65c62b-20d5-4f22-a839-d3228b85e4ba",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "9a1b9ba6-2b2b-4feb-8d8b-8767de430b49",
+          "recommendedProductId": "d433b890-e037-4c99-8cbd-412ee716f38a"
+        },
+        "status": "APPROVED",
+        "previousHash": "69b3b1e3394a1b416f2d96ba981b160f9d2d3014967e03829af3af24a40fa637",
+        "entryHash": "4d4cce8b0a7bde87153133584eaa30faf69eb73d9df13f5d3adeb6b9353e380b",
+        "createdAt": "2026-09-01T19:10:43.199Z"
+      },
+      {
+        "id": "9ee0a17b-d9a3-4461-8bfc-48dbee69cd34",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "f6f82b8d-f20c-4e57-9d4e-880cd4f47fe0",
+          "campaignId": "959c4d9e-84b8-4e24-8890-eedb81c42cf0",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "294be7fc-0d1d-4983-99b1-9e340457676b"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "4d4cce8b0a7bde87153133584eaa30faf69eb73d9df13f5d3adeb6b9353e380b",
+        "entryHash": "c954cbab6337b976a7cb52b18ebc8263515bb4d0d588aff8e8706bad129a8ac1",
+        "createdAt": "2026-09-01T19:10:43.397Z"
+      },
+      {
+        "id": "dc5f3dfe-b5ba-4e2f-a30a-da1102db11f0",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "7bc7f5b3-ae09-41c8-83d8-e1955cca1c78",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "a9befc8a-5ca9-43d8-9ab1-182264414245"
+        },
+        "status": "APPROVED",
+        "previousHash": "c954cbab6337b976a7cb52b18ebc8263515bb4d0d588aff8e8706bad129a8ac1",
+        "entryHash": "16162f7637a029b875722a852451ccf14a313429bfc1e4230e4a3faa41d7f6cc",
+        "createdAt": "2026-09-01T19:10:59.031Z"
+      },
+      {
+        "id": "4a0c750b-c7e3-4834-bbd8-582dbb07e278",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "7bc7f5b3-ae09-41c8-83d8-e1955cca1c78",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_7bc7f5b3-ae09-41c8-83d8-e1955cca1c78",
+          "razorpayOrderId": "order_fake_1788289859008"
+        },
+        "status": "EXECUTED",
+        "previousHash": "16162f7637a029b875722a852451ccf14a313429bfc1e4230e4a3faa41d7f6cc",
+        "entryHash": "c3696a9ffa5fbdc2d27e20330ea32df438a42101895d08ddcabca185e60e4362",
+        "createdAt": "2026-09-01T19:10:59.046Z"
+      },
+      {
+        "id": "4098965e-3ee5-471d-bf3c-696f09956e0d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "7bc7f5b3-ae09-41c8-83d8-e1955cca1c78",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788289859054",
+          "razorpayOrderId": "order_fake_1788289859008",
+          "razorpayPaymentId": "pay_1788289859054_0.08126564264439418",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "c3696a9ffa5fbdc2d27e20330ea32df438a42101895d08ddcabca185e60e4362",
+        "entryHash": "ab44c1cfcd517938972c8f99ae1cd828454d84d0c1494d5cee572ba4c4e0deb8",
+        "createdAt": "2026-09-01T19:10:59.062Z"
+      },
+      {
+        "id": "0f821cb4-1d56-447c-9928-eeec1e233633",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "83bbdfab-bfaf-49b1-942e-ea84c50265c5",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "88bb7d02-59fe-49cc-ae8c-ae8016e367d0"
+        },
+        "status": "APPROVED",
+        "previousHash": "ab44c1cfcd517938972c8f99ae1cd828454d84d0c1494d5cee572ba4c4e0deb8",
+        "entryHash": "493b57fecc0641936d1e169857ce80abd80eeaa97a5bd946f925af2e22c8250a",
+        "createdAt": "2026-09-01T19:10:59.073Z"
+      },
+      {
+        "id": "aa9271cb-cd8f-4695-8dbc-effb6bccc62d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "83bbdfab-bfaf-49b1-942e-ea84c50265c5",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_83bbdfab-bfaf-49b1-942e-ea84c50265c5",
+          "razorpayOrderId": "order_fake_1788289859009"
+        },
+        "status": "EXECUTED",
+        "previousHash": "493b57fecc0641936d1e169857ce80abd80eeaa97a5bd946f925af2e22c8250a",
+        "entryHash": "64bd69f1324f1b97712d7404fbc8e44bd9b4456370e426823c092418ff43efa9",
+        "createdAt": "2026-09-01T19:10:59.076Z"
+      },
+      {
+        "id": "e850f0a0-cf91-4164-bf99-d8840c1803c4",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "83bbdfab-bfaf-49b1-942e-ea84c50265c5",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788289859076_failed",
+          "razorpayOrderId": "order_fake_1788289859009"
+        },
+        "status": "FAILED",
+        "previousHash": "64bd69f1324f1b97712d7404fbc8e44bd9b4456370e426823c092418ff43efa9",
+        "entryHash": "6605e33d500b6a56fde10fd19c6ac5671ff3bfa53979642924bf32242b412c08",
+        "createdAt": "2026-09-01T19:10:59.079Z"
+      },
+      {
+        "id": "60c67f23-8f79-4448-8906-46cef352b68a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "8a940c2f-8d05-4141-be9b-1ad99000f4b9",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "3d71f5ea-7f58-4ab2-8354-4e21ada4b598"
+        },
+        "status": "APPROVED",
+        "previousHash": "6605e33d500b6a56fde10fd19c6ac5671ff3bfa53979642924bf32242b412c08",
+        "entryHash": "4f76dc350cbb1dcb8f59bf8f6b48c8a12121f05e7a7f2e6f814ed2f1197d8416",
+        "createdAt": "2026-09-01T19:10:59.086Z"
+      },
+      {
+        "id": "ca2702f0-d2bd-42d8-bd78-45acbb7abc9a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "8a940c2f-8d05-4141-be9b-1ad99000f4b9",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_8a940c2f-8d05-4141-be9b-1ad99000f4b9",
+          "razorpayOrderId": "order_fake_1788289859010"
+        },
+        "status": "EXECUTED",
+        "previousHash": "4f76dc350cbb1dcb8f59bf8f6b48c8a12121f05e7a7f2e6f814ed2f1197d8416",
+        "entryHash": "92f1e801d7daeb8a83461933cc448a96520940683054e6eb20a50029c2303bf6",
+        "createdAt": "2026-09-01T19:10:59.089Z"
+      },
+      {
+        "id": "88b6d3b9-5358-4e37-949c-e79157e956c4",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "45d9d0a8-8098-4a55-a4f9-7bb843e07017",
+          "offerId": "f9e40530-456a-4b28-90c8-cd458a1d58f3",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "92f1e801d7daeb8a83461933cc448a96520940683054e6eb20a50029c2303bf6",
+        "entryHash": "340a84a2cef0c68ea22a2cb23765aec6cf854b43277929a6b546a230a1b8d92c",
+        "createdAt": "2026-09-01T19:10:59.318Z"
+      },
+      {
+        "id": "e30675c9-5f77-4345-b0db-b8939f4b838e",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "fbd164df-8d4c-48e5-84c5-2cbcd0040fc5",
+          "offerId": "51101b99-c19a-44b6-8840-9860c3f0fd19",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "340a84a2cef0c68ea22a2cb23765aec6cf854b43277929a6b546a230a1b8d92c",
+        "entryHash": "7b66d826825a4646d95f74cd6f9473c4de074e5e0337ee9fe43c29af0744d0f3",
+        "createdAt": "2026-09-01T19:10:59.341Z"
+      },
+      {
+        "id": "80372dbe-fbb1-4034-b970-ca251ba42b35",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "176df272-c58c-40d5-a4e1-bacd3256a99a",
+          "offerId": "b23564ec-5606-461b-ab59-f0ad433e0255",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "985d8495-2f6a-4a4d-b126-821eb0a9f826",
+          "recommendedProductId": "b262c4ad-8e76-495b-b234-38c026a4fa3d"
+        },
+        "status": "APPROVED",
+        "previousHash": "7b66d826825a4646d95f74cd6f9473c4de074e5e0337ee9fe43c29af0744d0f3",
+        "entryHash": "dd36f914552af5dc50346d04e98e5af0d97e6d175e11ef087b0c72dc87485cdb",
+        "createdAt": "2026-09-01T19:10:59.576Z"
+      },
+      {
+        "id": "cc402bcc-e420-4f96-96ff-1147a8f9c2a8",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "d2730413-411f-4e80-8e50-9c2d9bfa64c1",
+          "campaignId": "85d15afa-4975-4ae5-baab-4e06d141449c",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "90aee8b2-2c03-4ed0-97e5-f0c0759afa6c"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "dd36f914552af5dc50346d04e98e5af0d97e6d175e11ef087b0c72dc87485cdb",
+        "entryHash": "4c0b2b0f07199ff51c750cca8468013d5403892230f95b88c6ed8e964939fdeb",
+        "createdAt": "2026-09-01T19:10:59.795Z"
+      },
+      {
+        "id": "4bea7681-85b3-4ce7-a50e-a33ad42adf79",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "2ae17adc-faae-4c88-870b-269a589a059d",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "c40b6ca8-4e4b-4e64-830b-58d779f258bb"
+        },
+        "status": "APPROVED",
+        "previousHash": "4c0b2b0f07199ff51c750cca8468013d5403892230f95b88c6ed8e964939fdeb",
+        "entryHash": "67241e8aa02fc68b305af4ebd67cd4f73cd10f6eff72d80e57f16fee3b32f08d",
+        "createdAt": "2026-09-01T19:11:31.792Z"
+      },
+      {
+        "id": "e6f517d5-60d0-402b-81dc-a6a4638e2b58",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "2ae17adc-faae-4c88-870b-269a589a059d",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_2ae17adc-faae-4c88-870b-269a589a059d",
+          "razorpayOrderId": "order_fake_1788289891772"
+        },
+        "status": "EXECUTED",
+        "previousHash": "67241e8aa02fc68b305af4ebd67cd4f73cd10f6eff72d80e57f16fee3b32f08d",
+        "entryHash": "69bf18eccafd7627e0ccf81b68b79a233396ff5817006ad443a4bb7cb05c418e",
+        "createdAt": "2026-09-01T19:11:31.808Z"
+      },
+      {
+        "id": "7ae4e543-ad26-43c6-bfe0-bb1121885e74",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "2ae17adc-faae-4c88-870b-269a589a059d",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788289891816",
+          "razorpayOrderId": "order_fake_1788289891772",
+          "razorpayPaymentId": "pay_1788289891816_0.5131631638806791",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "69bf18eccafd7627e0ccf81b68b79a233396ff5817006ad443a4bb7cb05c418e",
+        "entryHash": "710822d6d320c766525c3e1cce8397793f784dbeadee8e642e2b83bf3e1c74fa",
+        "createdAt": "2026-09-01T19:11:31.823Z"
+      },
+      {
+        "id": "4a56abc4-30ed-467a-9c9f-1f2c1c520e46",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "32b6d009-8082-4c56-be86-01949b30bb7b",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "87425f62-880a-4845-a512-666c3b708dc6"
+        },
+        "status": "APPROVED",
+        "previousHash": "710822d6d320c766525c3e1cce8397793f784dbeadee8e642e2b83bf3e1c74fa",
+        "entryHash": "b38dd20ad8fd64376151a539c37c2cdab706379b7a8e81f6e2f7b8fe2e34b821",
+        "createdAt": "2026-09-01T19:11:31.834Z"
+      },
+      {
+        "id": "e2dae916-b23c-4723-97db-54c25e997502",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "32b6d009-8082-4c56-be86-01949b30bb7b",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_32b6d009-8082-4c56-be86-01949b30bb7b",
+          "razorpayOrderId": "order_fake_1788289891773"
+        },
+        "status": "EXECUTED",
+        "previousHash": "b38dd20ad8fd64376151a539c37c2cdab706379b7a8e81f6e2f7b8fe2e34b821",
+        "entryHash": "8a5afb734e16167f8f36623f37249d4a38cc00283fa98862e3e5715ba92deeb9",
+        "createdAt": "2026-09-01T19:11:31.837Z"
+      },
+      {
+        "id": "0c4770ec-60ce-416c-969d-3ceab8cfbc05",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "32b6d009-8082-4c56-be86-01949b30bb7b",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788289891837_failed",
+          "razorpayOrderId": "order_fake_1788289891773"
+        },
+        "status": "FAILED",
+        "previousHash": "8a5afb734e16167f8f36623f37249d4a38cc00283fa98862e3e5715ba92deeb9",
+        "entryHash": "c64990390cffb1c25c768ce3d6e5446787eae83f57f70bc574c41425ddcd36e8",
+        "createdAt": "2026-09-01T19:11:31.840Z"
+      },
+      {
+        "id": "23dc71a6-fe22-46e0-8426-fcf63e8c624a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "2b1952ec-fd87-470a-995b-ada4b9b8bcb1",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "f64915d9-b2ca-46c9-81b8-a46ac5eec0d1"
+        },
+        "status": "APPROVED",
+        "previousHash": "c64990390cffb1c25c768ce3d6e5446787eae83f57f70bc574c41425ddcd36e8",
+        "entryHash": "ba1dd1541924d0b1e7b6765a1e163819cb6968387f0d3058226a73ca8d778b96",
+        "createdAt": "2026-09-01T19:11:31.846Z"
+      },
+      {
+        "id": "2011f8e5-37ac-4d70-ba1f-a4765666999c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "2b1952ec-fd87-470a-995b-ada4b9b8bcb1",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_2b1952ec-fd87-470a-995b-ada4b9b8bcb1",
+          "razorpayOrderId": "order_fake_1788289891774"
+        },
+        "status": "EXECUTED",
+        "previousHash": "ba1dd1541924d0b1e7b6765a1e163819cb6968387f0d3058226a73ca8d778b96",
+        "entryHash": "b741c42eea9f3824fd3126d2e6715598aba6f6efea132ed616527809cdda12ed",
+        "createdAt": "2026-09-01T19:11:31.850Z"
+      },
+      {
+        "id": "48bfbb89-ddb0-4ea4-b432-188edf457747",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "c92506fc-15d1-45cb-924b-d6b21cc45714",
+          "offerId": "97a99598-5938-4164-ac30-7a5fdc470530",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "b741c42eea9f3824fd3126d2e6715598aba6f6efea132ed616527809cdda12ed",
+        "entryHash": "50818fb2b4af3fda6ea90fdf2df38884057d1d6b1acc189aab7ee95a8604ce7b",
+        "createdAt": "2026-09-01T19:11:32.081Z"
+      },
+      {
+        "id": "8c51a7e3-01a1-4b9e-ab64-8b5dcc4e3963",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "cec655d8-e0d4-4a58-8eb4-7a17b6cf319f",
+          "offerId": "9ccc2e66-0dde-4674-95dd-c3aa4eccad06",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "50818fb2b4af3fda6ea90fdf2df38884057d1d6b1acc189aab7ee95a8604ce7b",
+        "entryHash": "d71ad13aea109ce824a99f2f4a6f05e3197c4623e49b238dbcceb0ff6d594cd4",
+        "createdAt": "2026-09-01T19:11:32.102Z"
+      },
+      {
+        "id": "efe3ec14-0a74-4dd0-b378-2582fbef6306",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "4d196569-1611-4c97-965d-185dfacd2fea",
+          "offerId": "7bef1ee5-06be-4b86-afbc-b9b341d8c58c",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "f733cb87-68e9-400a-a4c2-7c01f1799144",
+          "recommendedProductId": "dd5ac117-20ec-4f97-bb05-aaf23344fe34"
+        },
+        "status": "APPROVED",
+        "previousHash": "d71ad13aea109ce824a99f2f4a6f05e3197c4623e49b238dbcceb0ff6d594cd4",
+        "entryHash": "0f991c69faed5ed24fb5142ff228e32b721b4d1048c5699bc4e110a6a9c374a7",
+        "createdAt": "2026-09-01T19:11:32.337Z"
+      },
+      {
+        "id": "879a3bbf-1837-41e0-b37f-c06b451007ea",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "bbcb3e1e-c455-4d17-9f67-3a20ada7189e",
+          "campaignId": "565db9c9-a94c-4339-a9b8-27334fe902e1",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "dd8f082a-4a9a-483b-bbbc-fd4741a827d3"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "0f991c69faed5ed24fb5142ff228e32b721b4d1048c5699bc4e110a6a9c374a7",
+        "entryHash": "4203e8c7c7454d6a7fe152cea1e4d9399d1140bdd4e90ba76ac0927a395d63e5",
+        "createdAt": "2026-09-01T19:11:32.531Z"
+      },
+      {
+        "id": "f141b66a-1ef4-44ed-a9b4-f856d02bbc0c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "9cea3658-8e87-48eb-b80a-0309d0672975",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "99aed850-36dd-4708-ad59-902cd0883731"
+        },
+        "status": "APPROVED",
+        "previousHash": "4203e8c7c7454d6a7fe152cea1e4d9399d1140bdd4e90ba76ac0927a395d63e5",
+        "entryHash": "969d39efbe98a96440ebf6c2f8264746ad0b8e90d0f0ca3747af09f70ad61817",
+        "createdAt": "2026-09-01T19:19:26.123Z"
+      },
+      {
+        "id": "ed9112a4-39a8-4ca9-bef6-7d234f030f51",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "9cea3658-8e87-48eb-b80a-0309d0672975",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_9cea3658-8e87-48eb-b80a-0309d0672975",
+          "razorpayOrderId": "order_fake_1788290366098"
+        },
+        "status": "EXECUTED",
+        "previousHash": "969d39efbe98a96440ebf6c2f8264746ad0b8e90d0f0ca3747af09f70ad61817",
+        "entryHash": "c9558bdcc5e2ecfd7052db6ffaab5bfe4b26bd1dd2f41e3c79ec82cf09180790",
+        "createdAt": "2026-09-01T19:19:26.145Z"
+      },
+      {
+        "id": "dfd072ce-e01e-4258-b106-bf873c19fc00",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "9cea3658-8e87-48eb-b80a-0309d0672975",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788290366157",
+          "razorpayOrderId": "order_fake_1788290366098",
+          "razorpayPaymentId": "pay_1788290366157_0.4561297141017776",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "c9558bdcc5e2ecfd7052db6ffaab5bfe4b26bd1dd2f41e3c79ec82cf09180790",
+        "entryHash": "4f0f3797ed5fed11046d02d083eb06034eca7644b5d410be7856c54e8ecf0e70",
+        "createdAt": "2026-09-01T19:19:26.166Z"
+      },
+      {
+        "id": "2c5d94eb-cd28-45ed-9ff1-e5d9626f1eb5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d7c0d369-057f-4637-8d17-2ea71aa4a1e7",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "1cb1629b-34c5-457f-afce-f2af5d84842b"
+        },
+        "status": "APPROVED",
+        "previousHash": "4f0f3797ed5fed11046d02d083eb06034eca7644b5d410be7856c54e8ecf0e70",
+        "entryHash": "629d0b71180b1b3b6b7d16a1d4569461ec02793f498e823405506878f8c2fbb6",
+        "createdAt": "2026-09-01T19:19:26.179Z"
+      },
+      {
+        "id": "a978eeb3-7002-4f6b-8724-4e43543042ac",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d7c0d369-057f-4637-8d17-2ea71aa4a1e7",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_d7c0d369-057f-4637-8d17-2ea71aa4a1e7",
+          "razorpayOrderId": "order_fake_1788290366099"
+        },
+        "status": "EXECUTED",
+        "previousHash": "629d0b71180b1b3b6b7d16a1d4569461ec02793f498e823405506878f8c2fbb6",
+        "entryHash": "13a83db9c429e3b9412578358aac89781aea88209abfb61fb879195fab2a96ff",
+        "createdAt": "2026-09-01T19:19:26.182Z"
+      },
+      {
+        "id": "dbbdcf0e-58fd-4ecb-b6f1-b146dbf6d724",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d7c0d369-057f-4637-8d17-2ea71aa4a1e7",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788290366183_failed",
+          "razorpayOrderId": "order_fake_1788290366099"
+        },
+        "status": "FAILED",
+        "previousHash": "13a83db9c429e3b9412578358aac89781aea88209abfb61fb879195fab2a96ff",
+        "entryHash": "27e479a76fa57ad09345e5ed16c2f84e37d7e9001cfd2a8522f1b9d3d86bf8f0",
+        "createdAt": "2026-09-01T19:19:26.185Z"
+      },
+      {
+        "id": "7e9d78c9-e52c-4d81-b0d9-6fa3eac37eb5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d72294c1-e60b-46aa-9869-df62b18c4897",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "93132a15-bf2e-40eb-81ea-7454f16d7f31"
+        },
+        "status": "APPROVED",
+        "previousHash": "27e479a76fa57ad09345e5ed16c2f84e37d7e9001cfd2a8522f1b9d3d86bf8f0",
+        "entryHash": "dc3d95c0c36f2ae48e4cd7507277e3591029110653fca44aace4034d4641fde7",
+        "createdAt": "2026-09-01T19:19:26.192Z"
+      },
+      {
+        "id": "f39c9ea6-684d-4718-ba13-e716f84c1d90",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d72294c1-e60b-46aa-9869-df62b18c4897",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_d72294c1-e60b-46aa-9869-df62b18c4897",
+          "razorpayOrderId": "order_fake_1788290366100"
+        },
+        "status": "EXECUTED",
+        "previousHash": "dc3d95c0c36f2ae48e4cd7507277e3591029110653fca44aace4034d4641fde7",
+        "entryHash": "d071aefcf741ac8dfdb47619aaa8378b0a457cde23900ec31d01f1aa32e4be0f",
+        "createdAt": "2026-09-01T19:19:26.196Z"
+      },
+      {
+        "id": "5ff0cb07-fc28-4ee0-b56f-dcc1c39b6fe8",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "794c22fa-b6f8-4cd8-98b1-b5cf3ee38eab",
+          "offerId": "8e945733-ae6a-431d-bab0-e4c646143bbd",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "d071aefcf741ac8dfdb47619aaa8378b0a457cde23900ec31d01f1aa32e4be0f",
+        "entryHash": "d103b6517f51ed28cfe53b42a3c467a411c54e7676144cf5d8a454cc55db8051",
+        "createdAt": "2026-09-01T19:19:26.439Z"
+      },
+      {
+        "id": "5f86b1c1-a14a-475d-90c6-507d43ed31cd",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "b01abeb5-8c6a-48a0-a83b-eb3690bd5790",
+          "offerId": "c53ecd0c-6919-478d-a892-179540f584d8",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "d103b6517f51ed28cfe53b42a3c467a411c54e7676144cf5d8a454cc55db8051",
+        "entryHash": "c4005c1ce27d3cfdd32f251b0040a5e616246219f3934b6318f204284faa31c0",
+        "createdAt": "2026-09-01T19:19:26.471Z"
+      },
+      {
+        "id": "59baca24-1032-47c3-a401-6440f54df03f",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "4abfc629-86a5-4ea0-8d1a-3ce46f7eddc2",
+          "offerId": "f849e922-da9a-42c0-9e95-14d69e621d99",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "8b996242-71fb-495f-8068-b553b633fd73",
+          "recommendedProductId": "7a732066-3f69-446f-8204-d706a07128ab"
+        },
+        "status": "APPROVED",
+        "previousHash": "c4005c1ce27d3cfdd32f251b0040a5e616246219f3934b6318f204284faa31c0",
+        "entryHash": "1d3413864aecb4c45ea1dcfcbe3a1f35e1f8559349242b06147f5572cbf009db",
+        "createdAt": "2026-09-01T19:19:26.709Z"
+      },
+      {
+        "id": "2b896651-8e7e-43a5-a05b-38ca9f83cbac",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "5d669f7c-997a-4ab4-8515-9ca7dab411b6",
+          "campaignId": "91f13a2b-ea4b-472b-aed0-a146dce05e64",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "723488a2-1189-4680-8578-bdca9caff77e"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "1d3413864aecb4c45ea1dcfcbe3a1f35e1f8559349242b06147f5572cbf009db",
+        "entryHash": "60313c65d38740b00d493654436828e6eb5ffc4392a7b4470aa6985ee5359584",
+        "createdAt": "2026-09-01T19:19:26.913Z"
+      },
+      {
+        "id": "0bf80c14-c12e-4059-af51-0ee991dc82aa",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "b99a185e-ba16-40e0-8ff2-8d258302038d",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "98ad992f-cbf2-4a53-a060-c66f45ce5037"
+        },
+        "status": "APPROVED",
+        "previousHash": "60313c65d38740b00d493654436828e6eb5ffc4392a7b4470aa6985ee5359584",
+        "entryHash": "35af91fbe25c0c3f4067ad9496413d8bb4ea720b7ce11104bcbabc74e52789b1",
+        "createdAt": "2026-09-01T19:49:11.392Z"
+      },
+      {
+        "id": "808e9b38-3354-498e-8aa2-8b21c590acf4",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "b99a185e-ba16-40e0-8ff2-8d258302038d",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_b99a185e-ba16-40e0-8ff2-8d258302038d",
+          "razorpayOrderId": "order_fake_1788292151371"
+        },
+        "status": "EXECUTED",
+        "previousHash": "35af91fbe25c0c3f4067ad9496413d8bb4ea720b7ce11104bcbabc74e52789b1",
+        "entryHash": "a76534561981b09d575ee655b4dfdf4e7cdabb4ebf206733823e1289e44baee4",
+        "createdAt": "2026-09-01T19:49:11.412Z"
+      },
+      {
+        "id": "aa552d5c-42bd-4fb8-b9b0-83507ba243db",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "b99a185e-ba16-40e0-8ff2-8d258302038d",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788292151420",
+          "razorpayOrderId": "order_fake_1788292151371",
+          "razorpayPaymentId": "pay_1788292151420_0.6562549827925626",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "a76534561981b09d575ee655b4dfdf4e7cdabb4ebf206733823e1289e44baee4",
+        "entryHash": "9d1466c5b2b59059b8f0ba14433f3dc54247c49f7777675b90a0ab01eca7abb3",
+        "createdAt": "2026-09-01T19:49:11.429Z"
+      },
+      {
+        "id": "1884acde-2eed-4427-b93f-4826fb7df905",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c37551e2-64aa-4311-8e92-2af096520abe",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "a4e37a6f-6812-4a50-9cf6-778d3c270a58"
+        },
+        "status": "APPROVED",
+        "previousHash": "9d1466c5b2b59059b8f0ba14433f3dc54247c49f7777675b90a0ab01eca7abb3",
+        "entryHash": "6659125e0efdb0261a7f2f9c21c1dccf17aa52b53329bab16e7e8dc95e71f872",
+        "createdAt": "2026-09-01T19:49:11.439Z"
+      },
+      {
+        "id": "61fc3622-142f-4e65-b437-cdd8a064e51a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c37551e2-64aa-4311-8e92-2af096520abe",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_c37551e2-64aa-4311-8e92-2af096520abe",
+          "razorpayOrderId": "order_fake_1788292151372"
+        },
+        "status": "EXECUTED",
+        "previousHash": "6659125e0efdb0261a7f2f9c21c1dccf17aa52b53329bab16e7e8dc95e71f872",
+        "entryHash": "06e726db9605a3b9ebcfc74e21556e5068f413b16a4a41e81cdb9f0e2c4fb0cf",
+        "createdAt": "2026-09-01T19:49:11.443Z"
+      },
+      {
+        "id": "a57972e2-c3eb-4665-b2b6-6c4336afb029",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c37551e2-64aa-4311-8e92-2af096520abe",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788292151443_failed",
+          "razorpayOrderId": "order_fake_1788292151372"
+        },
+        "status": "FAILED",
+        "previousHash": "06e726db9605a3b9ebcfc74e21556e5068f413b16a4a41e81cdb9f0e2c4fb0cf",
+        "entryHash": "83f4181176d1d85db3644d1acfe8aa43797d840f71ff93c033ac26a99bbfa53b",
+        "createdAt": "2026-09-01T19:49:11.446Z"
+      },
+      {
+        "id": "cfa1d146-cfff-4224-8d7e-70331a830015",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "755d821d-31d8-4663-8d57-016776281518",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "981773e1-0ae2-40d9-9492-e3b3d3ac474a"
+        },
+        "status": "APPROVED",
+        "previousHash": "83f4181176d1d85db3644d1acfe8aa43797d840f71ff93c033ac26a99bbfa53b",
+        "entryHash": "b1bb4a0a99f078cccbceab157173427500624fcd0aade62862ec2583ab24464d",
+        "createdAt": "2026-09-01T19:49:11.452Z"
+      },
+      {
+        "id": "8b9ce354-4428-4bde-bb27-4a34720d313c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "755d821d-31d8-4663-8d57-016776281518",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_755d821d-31d8-4663-8d57-016776281518",
+          "razorpayOrderId": "order_fake_1788292151373"
+        },
+        "status": "EXECUTED",
+        "previousHash": "b1bb4a0a99f078cccbceab157173427500624fcd0aade62862ec2583ab24464d",
+        "entryHash": "37ae73e97b4897b5bd47782a268ee5744000e3a929d14faa332207ce18f2e830",
+        "createdAt": "2026-09-01T19:49:11.455Z"
+      },
+      {
+        "id": "37ac1b11-567c-44c6-9248-d015bc10d25f",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "f935a272-b536-4919-97c8-4864a0a146ff",
+          "offerId": "6564a47e-902b-4864-a9e7-8e94e2f76e37",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "37ae73e97b4897b5bd47782a268ee5744000e3a929d14faa332207ce18f2e830",
+        "entryHash": "4ba1f39c2a49a9c624f274df672a4f650b86c6eb1981a7c21334da04293feefd",
+        "createdAt": "2026-09-01T19:49:11.681Z"
+      },
+      {
+        "id": "b44dbb01-71e2-4dc1-9282-a0509596e173",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "4640fbe0-30d3-4a24-9129-9df3d2db1384",
+          "offerId": "a79d83ac-b157-4b5a-83c8-d0c7564d43e3",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "4ba1f39c2a49a9c624f274df672a4f650b86c6eb1981a7c21334da04293feefd",
+        "entryHash": "43f0ae1c24cb1b226fc5d07a954e83f74b5cda1def524014638efbd92af1eb5e",
+        "createdAt": "2026-09-01T19:49:11.702Z"
+      },
+      {
+        "id": "8c3c7849-19b9-4868-8972-113662babdca",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "bd73db01-927b-432d-81fd-90ca9392ee3b",
+          "offerId": "0a89b08a-62e7-4a79-a7f6-17747f3cfbd4",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "f0cd8088-28d3-40cb-8a1f-18157482394c",
+          "recommendedProductId": "2f05e984-c07f-4e3b-9a51-16c1581ba392"
+        },
+        "status": "APPROVED",
+        "previousHash": "43f0ae1c24cb1b226fc5d07a954e83f74b5cda1def524014638efbd92af1eb5e",
+        "entryHash": "1a55f92653567fcba2eb6c330f28547914d0bdd69d5a898ee146c3182a6dea9f",
+        "createdAt": "2026-09-01T19:49:11.930Z"
+      },
+      {
+        "id": "7bb762e6-0de0-4711-9acb-109653cf5860",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "01b2947d-62d8-4cc1-b6f1-47cbaa7c2711",
+          "campaignId": "e1b62ffb-8173-45b3-8600-81943c9572bc",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "3a8eb398-6f6d-4e76-bf91-5d6ece1ef394"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "1a55f92653567fcba2eb6c330f28547914d0bdd69d5a898ee146c3182a6dea9f",
+        "entryHash": "e072fd218908ac01014d8d585d9bc495fbaa2c8e6ee752e64242559bdca6dbbc",
+        "createdAt": "2026-09-01T19:49:12.308Z"
+      },
+      {
+        "id": "8301b4ec-5e9b-4cdf-8e84-82f94ca52add",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "a49279c1-8ad0-42b3-a076-3cce6196fd9a",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "1197346f-ac0a-4bce-b456-e0192a22649d"
+        },
+        "status": "APPROVED",
+        "previousHash": "e072fd218908ac01014d8d585d9bc495fbaa2c8e6ee752e64242559bdca6dbbc",
+        "entryHash": "1439c92cfa41e03d08e7341fc943258c93b0212300e92da2d2acaf42282b1316",
+        "createdAt": "2026-09-01T19:49:23.555Z"
+      },
+      {
+        "id": "d3cd1c56-e830-4d45-9d4e-d9c88bc3e04c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "a49279c1-8ad0-42b3-a076-3cce6196fd9a",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_a49279c1-8ad0-42b3-a076-3cce6196fd9a",
+          "razorpayOrderId": "order_fake_1788292163536"
+        },
+        "status": "EXECUTED",
+        "previousHash": "1439c92cfa41e03d08e7341fc943258c93b0212300e92da2d2acaf42282b1316",
+        "entryHash": "609e784e3e62ddacf4c2b36594481571cac7bd5f8fca310e91300c5b547dcbea",
+        "createdAt": "2026-09-01T19:49:23.570Z"
+      },
+      {
+        "id": "8a48718a-869e-4238-abd7-4c0a4f598fd6",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "a49279c1-8ad0-42b3-a076-3cce6196fd9a",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788292163578",
+          "razorpayOrderId": "order_fake_1788292163536",
+          "razorpayPaymentId": "pay_1788292163578_0.4781821632584099",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "609e784e3e62ddacf4c2b36594481571cac7bd5f8fca310e91300c5b547dcbea",
+        "entryHash": "500891de167122458630da3c89a83cbfcbba9d2e67cc8ecf3bc7b9a51b691cc1",
+        "createdAt": "2026-09-01T19:49:23.586Z"
+      },
+      {
+        "id": "8d2b1a23-8b7c-409b-8a98-4c9d50573572",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "794401a2-ccb4-47ff-b0db-9bc41dd5eabf",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "570bfb4a-dcc2-49c1-8883-03478cd7e3ad"
+        },
+        "status": "APPROVED",
+        "previousHash": "500891de167122458630da3c89a83cbfcbba9d2e67cc8ecf3bc7b9a51b691cc1",
+        "entryHash": "3e14f516ece99d3b7ad7fa3cff46d5fd6f76d5eb4c9b03e66ddbbdbc597e1f0c",
+        "createdAt": "2026-09-01T19:49:23.597Z"
+      },
+      {
+        "id": "4febecec-196e-4a92-829f-64c07a8b1507",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "794401a2-ccb4-47ff-b0db-9bc41dd5eabf",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_794401a2-ccb4-47ff-b0db-9bc41dd5eabf",
+          "razorpayOrderId": "order_fake_1788292163537"
+        },
+        "status": "EXECUTED",
+        "previousHash": "3e14f516ece99d3b7ad7fa3cff46d5fd6f76d5eb4c9b03e66ddbbdbc597e1f0c",
+        "entryHash": "6f6d5be71643221bceab5efde9f9ee23024aad63d689b7a98d0b4c9ad4abd23a",
+        "createdAt": "2026-09-01T19:49:23.600Z"
+      },
+      {
+        "id": "9763df8c-0e25-4805-b3e3-1985217159b3",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "794401a2-ccb4-47ff-b0db-9bc41dd5eabf",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788292163601_failed",
+          "razorpayOrderId": "order_fake_1788292163537"
+        },
+        "status": "FAILED",
+        "previousHash": "6f6d5be71643221bceab5efde9f9ee23024aad63d689b7a98d0b4c9ad4abd23a",
+        "entryHash": "d9cbf986468bcb3707812fbd788f7a44f89f32ae72533dcdd591c3fad7792cee",
+        "createdAt": "2026-09-01T19:49:23.603Z"
+      },
+      {
+        "id": "252fba73-bd9a-4672-ab54-d1f548f504d9",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "6a29264f-018a-42f3-a04e-9d287ac8cc97",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "4946f0ff-cf7a-424d-9eb5-4822512bbf2b"
+        },
+        "status": "APPROVED",
+        "previousHash": "d9cbf986468bcb3707812fbd788f7a44f89f32ae72533dcdd591c3fad7792cee",
+        "entryHash": "4f78be7e5c3e411e4a979dae0f3b9c7b00ba4cc5f20da9e63109ee37367a7e53",
+        "createdAt": "2026-09-01T19:49:23.609Z"
+      },
+      {
+        "id": "a7c42765-a983-46fe-9baa-2400a1aa2e7b",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "6a29264f-018a-42f3-a04e-9d287ac8cc97",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_6a29264f-018a-42f3-a04e-9d287ac8cc97",
+          "razorpayOrderId": "order_fake_1788292163538"
+        },
+        "status": "EXECUTED",
+        "previousHash": "4f78be7e5c3e411e4a979dae0f3b9c7b00ba4cc5f20da9e63109ee37367a7e53",
+        "entryHash": "64be778aa79078004181adbb3459c6067759eafc9cd74a29d64f86e36d333777",
+        "createdAt": "2026-09-01T19:49:23.612Z"
+      },
+      {
+        "id": "db087eb5-1b42-449d-85b5-70817991f20a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "5b2495e7-db25-4a11-b0b8-48b22e41e40b",
+          "offerId": "bc34b3ff-30a9-4a77-aa6f-3e8bc19c204a",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "64be778aa79078004181adbb3459c6067759eafc9cd74a29d64f86e36d333777",
+        "entryHash": "b7edff9fb7a40cd6057bd8fbdae87d9ed4cf3ede06d81d6c30f92a569ba051e2",
+        "createdAt": "2026-09-01T19:49:23.835Z"
+      },
+      {
+        "id": "0fe1c2a2-53b3-4b41-98bb-42698d0cc326",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "f8439fda-e431-4ef7-a7e6-8057aa42acc9",
+          "offerId": "b562a1f1-378e-4a34-a90a-8d9cfc578681",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "b7edff9fb7a40cd6057bd8fbdae87d9ed4cf3ede06d81d6c30f92a569ba051e2",
+        "entryHash": "e1d0a2865d1ae712996ce2acfb7cdbb1e7bcd4709a7d8db4727ebd9db0d74015",
+        "createdAt": "2026-09-01T19:49:23.857Z"
+      },
+      {
+        "id": "98a1fe78-e16d-4a1a-907a-b49881d3a10d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "355048bc-e752-4aaf-84e6-b14c652ac53b",
+          "offerId": "40c21083-2451-44e7-80ed-6f0d6e1e36e0",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "476ee96e-4472-4c0a-897c-e799e19732e2",
+          "recommendedProductId": "071a4a04-cc31-4332-8315-38993719a4c4"
+        },
+        "status": "APPROVED",
+        "previousHash": "e1d0a2865d1ae712996ce2acfb7cdbb1e7bcd4709a7d8db4727ebd9db0d74015",
+        "entryHash": "2119870c955c5aab9e4666a39e50f91ba0b8db8d1abfd332eed6d9cc81724ba4",
+        "createdAt": "2026-09-01T19:49:24.084Z"
+      },
+      {
+        "id": "1519ba22-cfb4-4147-b834-c27dbd340305",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "283f7768-47ed-4bcb-8aff-0564cdc064e1",
+          "campaignId": "16dccb0d-fc54-4bb1-9328-ba8d9b2be434",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "1341b900-318a-4e84-94fe-5e895726003e"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "2119870c955c5aab9e4666a39e50f91ba0b8db8d1abfd332eed6d9cc81724ba4",
+        "entryHash": "03910845c3037b09f98aeb625d8b0301b39af509dc1e80fa8af537151e242191",
+        "createdAt": "2026-09-01T19:49:24.275Z"
+      },
+      {
+        "id": "7581181b-1155-4dc4-b7a6-6abe272085d6",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "9c5b3050-e983-45a5-8a90-61945b3ea803",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "078cf4e1-c055-495b-9184-01bd50bc4822"
+        },
+        "status": "APPROVED",
+        "previousHash": "03910845c3037b09f98aeb625d8b0301b39af509dc1e80fa8af537151e242191",
+        "entryHash": "c239fca2d9a67b278cb51755d553c1b9e8801e00649f08b4886c77eb34f0a983",
+        "createdAt": "2026-09-01T20:27:37.288Z"
+      },
+      {
+        "id": "483bb9ac-a002-4367-a8cd-4ac3b78dc5c4",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "9c5b3050-e983-45a5-8a90-61945b3ea803",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_9c5b3050-e983-45a5-8a90-61945b3ea803",
+          "razorpayOrderId": "order_fake_1788294457266"
+        },
+        "status": "EXECUTED",
+        "previousHash": "c239fca2d9a67b278cb51755d553c1b9e8801e00649f08b4886c77eb34f0a983",
+        "entryHash": "22971432208f21ccaba293343b88b7c6f14481d32862e6409357aeb021984168",
+        "createdAt": "2026-09-01T20:27:37.303Z"
+      },
+      {
+        "id": "47fd526d-d233-469c-84f5-3bb69c9d89ef",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "9c5b3050-e983-45a5-8a90-61945b3ea803",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788294457311",
+          "razorpayOrderId": "order_fake_1788294457266",
+          "razorpayPaymentId": "pay_1788294457311_0.13636500446871047",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "22971432208f21ccaba293343b88b7c6f14481d32862e6409357aeb021984168",
+        "entryHash": "e761afd092ab2bd2a27e63eb89c34730a7cc4a5211aa66fef59f228e6d62437f",
+        "createdAt": "2026-09-01T20:27:37.320Z"
+      },
+      {
+        "id": "c8c603c9-98db-4dde-8da9-b81001f56866",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "b3d317cf-579d-4fce-89d8-bbf09432109f",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "96572b00-7255-47fe-a548-273a3f90689c"
+        },
+        "status": "APPROVED",
+        "previousHash": "e761afd092ab2bd2a27e63eb89c34730a7cc4a5211aa66fef59f228e6d62437f",
+        "entryHash": "aabd77bf72cff522e37f1fdb3869f7580adde0c68315ec97d032e733dadbb5b9",
+        "createdAt": "2026-09-01T20:27:37.331Z"
+      },
+      {
+        "id": "46f5aece-2257-4d49-ace7-42bdc7dc4b06",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "b3d317cf-579d-4fce-89d8-bbf09432109f",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_b3d317cf-579d-4fce-89d8-bbf09432109f",
+          "razorpayOrderId": "order_fake_1788294457267"
+        },
+        "status": "EXECUTED",
+        "previousHash": "aabd77bf72cff522e37f1fdb3869f7580adde0c68315ec97d032e733dadbb5b9",
+        "entryHash": "af16bd3b18756d0c1ce5024697c1ee9456c56d0ff7e5b00399755ba30c5fcf40",
+        "createdAt": "2026-09-01T20:27:37.335Z"
+      },
+      {
+        "id": "41c1ef45-8bc3-4fc7-8b3e-9e19955bd327",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "b3d317cf-579d-4fce-89d8-bbf09432109f",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788294457338_failed",
+          "razorpayOrderId": "order_fake_1788294457267"
+        },
+        "status": "FAILED",
+        "previousHash": "af16bd3b18756d0c1ce5024697c1ee9456c56d0ff7e5b00399755ba30c5fcf40",
+        "entryHash": "cebe603cba2697f8afaff377afb920717f5d5056961569af2c921971ec3c9599",
+        "createdAt": "2026-09-01T20:27:37.340Z"
+      },
+      {
+        "id": "56aab944-1963-4e80-aa1a-119054fa09a5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "1f52dfe4-3b9c-44e4-9072-b2836af45487",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "083f751d-0d0a-4583-98e8-ca92a26f9fc1"
+        },
+        "status": "APPROVED",
+        "previousHash": "cebe603cba2697f8afaff377afb920717f5d5056961569af2c921971ec3c9599",
+        "entryHash": "a841c3758cbb0533aac9e785447b0c17059ab1ee8fab7c744680a63674861885",
+        "createdAt": "2026-09-01T20:27:37.348Z"
+      },
+      {
+        "id": "fae71817-c308-4136-923a-94e0f9767205",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "1f52dfe4-3b9c-44e4-9072-b2836af45487",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_1f52dfe4-3b9c-44e4-9072-b2836af45487",
+          "razorpayOrderId": "order_fake_1788294457268"
+        },
+        "status": "EXECUTED",
+        "previousHash": "a841c3758cbb0533aac9e785447b0c17059ab1ee8fab7c744680a63674861885",
+        "entryHash": "593e351c9c3fce2ea1a98fa81f6a360edfa662b51425749e21b19d4747e1cb6f",
+        "createdAt": "2026-09-01T20:27:37.351Z"
+      },
+      {
+        "id": "ad693a55-75f4-47bd-a7b1-d3a073d5ba71",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "166648c0-ee04-4cdb-b1ba-c3a3102e3018",
+          "offerId": "bf8b9901-aaa2-417a-9edd-aebb91e61b3a",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "593e351c9c3fce2ea1a98fa81f6a360edfa662b51425749e21b19d4747e1cb6f",
+        "entryHash": "6c2a1168c6c58af6c10476031aa33104ea0dc97d299c87592c8dd2920389f4c8",
+        "createdAt": "2026-09-01T20:27:37.582Z"
+      },
+      {
+        "id": "16908062-d501-423f-94b8-c2f0d7d6a356",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "5d76a232-809f-4fc7-b79e-1ebae619957f",
+          "offerId": "252c7dbe-5fac-45af-8454-2101b976cd00",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "6c2a1168c6c58af6c10476031aa33104ea0dc97d299c87592c8dd2920389f4c8",
+        "entryHash": "e2f7c7658f6d5141617bd6fe0dc3d52d4df955556de03cbb30558292f10163ef",
+        "createdAt": "2026-09-01T20:27:37.606Z"
+      },
+      {
+        "id": "2662e971-b62e-40ce-877e-20562376bb2a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "77842501-2195-48c4-9fbe-5e96b2a1fa13",
+          "offerId": "45d1720a-4c8b-4462-8942-0e307a6362cd",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "cec4f68a-8073-4510-9bdc-be50500aad67",
+          "recommendedProductId": "a70144fa-5172-4a45-9a4f-615b7b7b20f0"
+        },
+        "status": "APPROVED",
+        "previousHash": "e2f7c7658f6d5141617bd6fe0dc3d52d4df955556de03cbb30558292f10163ef",
+        "entryHash": "1d8c24a1b01f48461db572d6d08e7542ff112b808cde2b1bbcc7973a1fbfd750",
+        "createdAt": "2026-09-01T20:27:37.837Z"
+      },
+      {
+        "id": "bcafe186-405e-4089-add6-1f2111284c94",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "90890523-623b-4cc4-8e5b-06022bf2a76e",
+          "campaignId": "de0b6621-29d4-40c1-8d4a-0f9f4277182e",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "de5cac5d-ed6a-4564-a679-e98b2f3b93ea"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "1d8c24a1b01f48461db572d6d08e7542ff112b808cde2b1bbcc7973a1fbfd750",
+        "entryHash": "2c472a07a0a13d62665de99c38e30e39ec35b9a6e4ca362767d35e8aea35eb1b",
+        "createdAt": "2026-09-01T20:27:38.036Z"
+      },
+      {
+        "id": "16a06e20-0bfe-47bc-b5fb-88c43d76d46a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "5f24d75b-d591-4934-bc46-a60ff7a230c0",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "e2ce7f8d-f491-4adb-86aa-2c28a839b943"
+        },
+        "status": "APPROVED",
+        "previousHash": "2c472a07a0a13d62665de99c38e30e39ec35b9a6e4ca362767d35e8aea35eb1b",
+        "entryHash": "c392e5ed0f7d6fd9212d6913c3e691d97ba01b1e98c087561882c09ae03b4261",
+        "createdAt": "2026-09-01T20:28:23.371Z"
+      },
+      {
+        "id": "6e58f86d-6c7a-4325-a953-d17eb3ce9143",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "5f24d75b-d591-4934-bc46-a60ff7a230c0",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_5f24d75b-d591-4934-bc46-a60ff7a230c0",
+          "razorpayOrderId": "order_fake_1788294503332"
+        },
+        "status": "EXECUTED",
+        "previousHash": "c392e5ed0f7d6fd9212d6913c3e691d97ba01b1e98c087561882c09ae03b4261",
+        "entryHash": "5e19aef8c14b19d6c3797806380506d916bcd398939629dcfba791ab21e88c5f",
+        "createdAt": "2026-09-01T20:28:23.392Z"
+      },
+      {
+        "id": "7728a7cc-60ab-4c15-8ffb-6f857c427f5a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "5f24d75b-d591-4934-bc46-a60ff7a230c0",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788294503400",
+          "razorpayOrderId": "order_fake_1788294503332",
+          "razorpayPaymentId": "pay_1788294503400_0.5080295576783854",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "5e19aef8c14b19d6c3797806380506d916bcd398939629dcfba791ab21e88c5f",
+        "entryHash": "20ae07148c39cff40012081a852e5887ec98ba852605ba734215e2459574f3f3",
+        "createdAt": "2026-09-01T20:28:23.407Z"
+      },
+      {
+        "id": "3487fd1d-034d-403b-8c92-dc73083545e3",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "b11f6bfc-f0b9-48df-a437-eb6dab7340da",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "20fe5169-838a-4a11-8ca3-225310abaa64"
+        },
+        "status": "APPROVED",
+        "previousHash": "20ae07148c39cff40012081a852e5887ec98ba852605ba734215e2459574f3f3",
+        "entryHash": "0bc5490482a3bc04c525bf7910db6b4eb8f03a0c302c83a14cd3d281afc91566",
+        "createdAt": "2026-09-01T20:28:23.418Z"
+      },
+      {
+        "id": "c453e3cd-e7bb-4a80-9107-3537d68639c5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "b11f6bfc-f0b9-48df-a437-eb6dab7340da",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_b11f6bfc-f0b9-48df-a437-eb6dab7340da",
+          "razorpayOrderId": "order_fake_1788294503333"
+        },
+        "status": "EXECUTED",
+        "previousHash": "0bc5490482a3bc04c525bf7910db6b4eb8f03a0c302c83a14cd3d281afc91566",
+        "entryHash": "9ecc2aa8a06fc182b06e63b24ea4c48dbc28cd0ddcab9a29280d3d559327be11",
+        "createdAt": "2026-09-01T20:28:23.422Z"
+      },
+      {
+        "id": "c146cf54-0b4e-4251-afa7-e1e1d35c1463",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "b11f6bfc-f0b9-48df-a437-eb6dab7340da",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788294503424_failed",
+          "razorpayOrderId": "order_fake_1788294503333"
+        },
+        "status": "FAILED",
+        "previousHash": "9ecc2aa8a06fc182b06e63b24ea4c48dbc28cd0ddcab9a29280d3d559327be11",
+        "entryHash": "f62223da760e175b4eebc173454a3e214e21f8a528fbb7857bd4d9845a27f673",
+        "createdAt": "2026-09-01T20:28:23.427Z"
+      },
+      {
+        "id": "8ba09b2f-f4fa-41c0-8854-8f3659e3d95c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "f54d9002-3fee-454e-8135-3a1deaae46cf",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "c3f13f71-8817-4922-8c63-9522209d284e"
+        },
+        "status": "APPROVED",
+        "previousHash": "f62223da760e175b4eebc173454a3e214e21f8a528fbb7857bd4d9845a27f673",
+        "entryHash": "c2c818b53d9cf1150ed2972c43f857c550bf1dc4874db7bdf6dad1150758db41",
+        "createdAt": "2026-09-01T20:28:23.435Z"
+      },
+      {
+        "id": "8e41e95e-be17-4d29-bb05-460969eabd90",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "f54d9002-3fee-454e-8135-3a1deaae46cf",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_f54d9002-3fee-454e-8135-3a1deaae46cf",
+          "razorpayOrderId": "order_fake_1788294503334"
+        },
+        "status": "EXECUTED",
+        "previousHash": "c2c818b53d9cf1150ed2972c43f857c550bf1dc4874db7bdf6dad1150758db41",
+        "entryHash": "18fb1d8a0846aeb401352d9ee767614265934ef58f9128b866b6e0bab082ec85",
+        "createdAt": "2026-09-01T20:28:23.438Z"
+      },
+      {
+        "id": "6b3185ac-b93e-4a9b-a216-32742fd52b9c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "5bf10df5-bc2f-40fe-bdc1-462896bafaa3",
+          "offerId": "32995eb8-b23c-4863-9bb8-3a9ab66d7233",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "18fb1d8a0846aeb401352d9ee767614265934ef58f9128b866b6e0bab082ec85",
+        "entryHash": "63e1af009f922f62c5b4194c3f69019070a50d87ee027198c1d00a8d8660db34",
+        "createdAt": "2026-09-01T20:28:23.663Z"
+      },
+      {
+        "id": "7b7595c6-a04b-4bb2-80ab-4f6aa06ed381",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "9f8abb06-c4f3-4f46-b05c-ffd33ef45471",
+          "offerId": "c127917e-8f10-4e5b-a264-5cfe34be118a",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "63e1af009f922f62c5b4194c3f69019070a50d87ee027198c1d00a8d8660db34",
+        "entryHash": "ac671bad230d6a49848bd781f4570761285305fa66bf1c923a439fc964b9e2b5",
+        "createdAt": "2026-09-01T20:28:23.686Z"
+      },
+      {
+        "id": "239822de-0924-422d-96e6-d9d0110e0062",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "2c5e6aef-dc9d-48b0-99e4-26ce366ca1c6",
+          "offerId": "55f1b1e1-1012-48d5-9ed0-8c7670058911",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "3c299e09-9683-4a19-afcc-ca6b1cd46346",
+          "recommendedProductId": "ccae3541-4b85-4289-8da3-50fd4e1f9db9"
+        },
+        "status": "APPROVED",
+        "previousHash": "ac671bad230d6a49848bd781f4570761285305fa66bf1c923a439fc964b9e2b5",
+        "entryHash": "4a6c9992942d7c9feb7217b226ace385d21b09185b54c08e1b4cec6a40f5f50e",
+        "createdAt": "2026-09-01T20:28:23.914Z"
+      },
+      {
+        "id": "3deee41f-06b4-484e-bfb0-ff6f170d0f4d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "59b782b7-1360-479f-8568-bd7ccfb7aba3",
+          "campaignId": "45eaaf8f-bb2a-4aa7-a5ae-27d6ce018a90",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "2c4051c2-3f8b-4864-a7c3-44fafdda70d7"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "4a6c9992942d7c9feb7217b226ace385d21b09185b54c08e1b4cec6a40f5f50e",
+        "entryHash": "92417be6cb1d38eb891c548a55363a5705f8203eced5d0b51c49af0b43ddd692",
+        "createdAt": "2026-09-01T20:28:24.111Z"
+      },
+      {
+        "id": "cf2565d8-2b1e-44cb-9a16-6f526e59512a",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d2732c28-44d1-442c-ab87-96847a339ed0",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "6ecde316-698c-42e6-92fc-fbeb321ca3d1"
+        },
+        "status": "APPROVED",
+        "previousHash": "92417be6cb1d38eb891c548a55363a5705f8203eced5d0b51c49af0b43ddd692",
+        "entryHash": "de88eb4c8c668b7d9c0f4b34c616c703861ea420615df63946d557cb3f96bd68",
+        "createdAt": "2026-09-01T20:28:31.519Z"
+      },
+      {
+        "id": "6f140b65-9ecd-42dd-bc79-7d1a07e65db6",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d2732c28-44d1-442c-ab87-96847a339ed0",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_d2732c28-44d1-442c-ab87-96847a339ed0",
+          "razorpayOrderId": "order_fake_1788294511498"
+        },
+        "status": "EXECUTED",
+        "previousHash": "de88eb4c8c668b7d9c0f4b34c616c703861ea420615df63946d557cb3f96bd68",
+        "entryHash": "7de28b59ff28c7633faa62d6008d5f9473b78f95a243a71c9c232143da3615ff",
+        "createdAt": "2026-09-01T20:28:31.533Z"
+      },
+      {
+        "id": "56c03a4c-e673-48bb-8399-795fdae10ab0",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d2732c28-44d1-442c-ab87-96847a339ed0",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788294511541",
+          "razorpayOrderId": "order_fake_1788294511498",
+          "razorpayPaymentId": "pay_1788294511541_0.10634282780304205",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "7de28b59ff28c7633faa62d6008d5f9473b78f95a243a71c9c232143da3615ff",
+        "entryHash": "7220481de564e18563745107358799ea7078184cf4cc017b053b281bbcbfa64a",
+        "createdAt": "2026-09-01T20:28:31.549Z"
+      },
+      {
+        "id": "f186e7ea-8ddf-4499-8dc4-c66a02ede20b",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "dd064e05-62f7-4c7d-b2e7-65fb730f5075",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "83dc64af-271e-4799-9c71-6fabf21d87c5"
+        },
+        "status": "APPROVED",
+        "previousHash": "7220481de564e18563745107358799ea7078184cf4cc017b053b281bbcbfa64a",
+        "entryHash": "e8170c12dfa5719c44eccf80df627435549eb63a1660b73f98afcaf935d7ec04",
+        "createdAt": "2026-09-01T20:28:31.561Z"
+      },
+      {
+        "id": "0f9b1a45-da1c-4360-9a8d-a001da3c0736",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "dd064e05-62f7-4c7d-b2e7-65fb730f5075",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_dd064e05-62f7-4c7d-b2e7-65fb730f5075",
+          "razorpayOrderId": "order_fake_1788294511499"
+        },
+        "status": "EXECUTED",
+        "previousHash": "e8170c12dfa5719c44eccf80df627435549eb63a1660b73f98afcaf935d7ec04",
+        "entryHash": "595ec8ae3707c7f67930c1f5520faf16e8a763d1b686ec0decb68d8fb75f3b94",
+        "createdAt": "2026-09-01T20:28:31.564Z"
+      },
+      {
+        "id": "814a0208-be8f-41ca-9713-9522b8b507bb",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "dd064e05-62f7-4c7d-b2e7-65fb730f5075",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788294511567_failed",
+          "razorpayOrderId": "order_fake_1788294511499"
+        },
+        "status": "FAILED",
+        "previousHash": "595ec8ae3707c7f67930c1f5520faf16e8a763d1b686ec0decb68d8fb75f3b94",
+        "entryHash": "b4b5527c4f4cf80cef285d4fd8f96739b5e75974f0773ec84276d28daeabf558",
+        "createdAt": "2026-09-01T20:28:31.569Z"
+      },
+      {
+        "id": "89d55a14-fab0-48a1-bc68-8bfda6b8d3cd",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "2b946a45-0caf-48b0-a9b4-883d838b9ea4",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "27b79a09-4700-486f-9550-482d5143cf96"
+        },
+        "status": "APPROVED",
+        "previousHash": "b4b5527c4f4cf80cef285d4fd8f96739b5e75974f0773ec84276d28daeabf558",
+        "entryHash": "3c0756a1a67d999186f1f0c11584f2c2aa479a1f64459c8287ed67129c17f1bb",
+        "createdAt": "2026-09-01T20:28:31.577Z"
+      },
+      {
+        "id": "5be79406-ac44-4303-bb9e-0038693703fe",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "2b946a45-0caf-48b0-a9b4-883d838b9ea4",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_2b946a45-0caf-48b0-a9b4-883d838b9ea4",
+          "razorpayOrderId": "order_fake_1788294511500"
+        },
+        "status": "EXECUTED",
+        "previousHash": "3c0756a1a67d999186f1f0c11584f2c2aa479a1f64459c8287ed67129c17f1bb",
+        "entryHash": "087c50fbc1c8e04c7fa5226fda72b63c7c748f6525a834e5815d184da3ed786a",
+        "createdAt": "2026-09-01T20:28:31.580Z"
+      },
+      {
+        "id": "d20a8f14-6ef5-4115-a322-537715984749",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "9a955904-79e1-47fc-a235-84d4aafc0805",
+          "offerId": "7de9b0fe-4546-4dc7-8060-260716e13865",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "087c50fbc1c8e04c7fa5226fda72b63c7c748f6525a834e5815d184da3ed786a",
+        "entryHash": "a52867acb0009c5c10aa628f7a2815c49ed29274ca328d7b84664598b69977e1",
+        "createdAt": "2026-09-01T20:28:31.811Z"
+      },
+      {
+        "id": "2883dba4-4ac8-4720-ab5a-b3fa0d7190e5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "9cbc9537-cef7-4ef9-b1d2-b7a5a177ec89",
+          "offerId": "13738175-c478-4f27-80fe-8568ed4321ea",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "a52867acb0009c5c10aa628f7a2815c49ed29274ca328d7b84664598b69977e1",
+        "entryHash": "5b90c7b66c77b47666b3b45e8ec0aed0690c61bb4fb513a108ed77fde93a20b9",
+        "createdAt": "2026-09-01T20:28:31.835Z"
+      },
+      {
+        "id": "cddb884c-7eee-4472-9a6b-20731e108a58",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "a2e36b49-37d4-47b8-95b5-4f778e0fa0b9",
+          "offerId": "1b3a4b06-a56d-4318-8c77-01235a0e22d5",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "3566e97b-bba3-4a7a-a2ca-c62c1730dc6e",
+          "recommendedProductId": "36a52ea6-093f-4195-b027-12c3719a2f62"
+        },
+        "status": "APPROVED",
+        "previousHash": "5b90c7b66c77b47666b3b45e8ec0aed0690c61bb4fb513a108ed77fde93a20b9",
+        "entryHash": "20307e1be0cc665e3b1accf58eb72c3cd084a73a0e1fa4a09af650d0c77b1b67",
+        "createdAt": "2026-09-01T20:28:32.067Z"
+      },
+      {
+        "id": "6f6a14dd-3bcf-4f0e-b5d3-32bc7a40a474",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "c013a845-d82a-40a6-8bfe-30c7dae68ca2",
+          "campaignId": "25ff653a-3120-42c3-8349-95ddbcb3494e",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "82d34267-d1d0-4d41-9cd4-82b3f7d3febd"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "20307e1be0cc665e3b1accf58eb72c3cd084a73a0e1fa4a09af650d0c77b1b67",
+        "entryHash": "76029324a6fe4f636adaabd2d52963261912ad213b6597ccb1d62c91ffe407a5",
+        "createdAt": "2026-09-01T20:28:32.262Z"
+      },
+      {
+        "id": "b92f1125-5046-43ea-a7a4-eb1ef6ccd2f8",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "4a21fba1-9841-416e-b0d4-1fc11a7269c1",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "e9525842-44d4-42e0-9f6d-a5d7393972de"
+        },
+        "status": "APPROVED",
+        "previousHash": "76029324a6fe4f636adaabd2d52963261912ad213b6597ccb1d62c91ffe407a5",
+        "entryHash": "b7b79787f39b932ef752c087281536a61ab9010703e2dc99ca08cad08e5a229b",
+        "createdAt": "2026-09-01T20:28:46.906Z"
+      },
+      {
+        "id": "f9ae1cc8-84bb-421c-bc72-7f850352d517",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "4a21fba1-9841-416e-b0d4-1fc11a7269c1",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_4a21fba1-9841-416e-b0d4-1fc11a7269c1",
+          "razorpayOrderId": "order_fake_1788294526886"
+        },
+        "status": "EXECUTED",
+        "previousHash": "b7b79787f39b932ef752c087281536a61ab9010703e2dc99ca08cad08e5a229b",
+        "entryHash": "f84e4b63e4b2f21b0533278c39e418fd56faba5d42e220744a632b1987efb742",
+        "createdAt": "2026-09-01T20:28:46.920Z"
+      },
+      {
+        "id": "2c1571ff-fe9e-4c85-8b0b-2d5c84a6a59b",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "4a21fba1-9841-416e-b0d4-1fc11a7269c1",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788294526928",
+          "razorpayOrderId": "order_fake_1788294526886",
+          "razorpayPaymentId": "pay_1788294526928_0.5017910478822314",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "f84e4b63e4b2f21b0533278c39e418fd56faba5d42e220744a632b1987efb742",
+        "entryHash": "e38acc0f08c676313349e7c355bdb60c04e2f4ef965345fa802ef3a66d2805d1",
+        "createdAt": "2026-09-01T20:28:46.936Z"
+      },
+      {
+        "id": "bf08bc7b-f1b0-4c8a-b13d-9d0f80435d81",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "0ea5b5d8-eb70-4858-8769-ab20f63338f8",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "3118ccc0-2920-44ad-92c7-609903233787"
+        },
+        "status": "APPROVED",
+        "previousHash": "e38acc0f08c676313349e7c355bdb60c04e2f4ef965345fa802ef3a66d2805d1",
+        "entryHash": "855576009532e03b80c54d5724875a68e547f7bbec47511620125762d6dbd3b2",
+        "createdAt": "2026-09-01T20:28:46.946Z"
+      },
+      {
+        "id": "96b31f47-15ec-41c3-a5d2-a04dc91576e5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "0ea5b5d8-eb70-4858-8769-ab20f63338f8",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_0ea5b5d8-eb70-4858-8769-ab20f63338f8",
+          "razorpayOrderId": "order_fake_1788294526887"
+        },
+        "status": "EXECUTED",
+        "previousHash": "855576009532e03b80c54d5724875a68e547f7bbec47511620125762d6dbd3b2",
+        "entryHash": "5b42f93d3f1d5856bce2b42af0944fe04e34017a02dd07b26c133e1fef1f5171",
+        "createdAt": "2026-09-01T20:28:46.950Z"
+      },
+      {
+        "id": "c9fcb819-1a1d-4178-9eee-99cecb617956",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "0ea5b5d8-eb70-4858-8769-ab20f63338f8",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788294526953_failed",
+          "razorpayOrderId": "order_fake_1788294526887"
+        },
+        "status": "FAILED",
+        "previousHash": "5b42f93d3f1d5856bce2b42af0944fe04e34017a02dd07b26c133e1fef1f5171",
+        "entryHash": "0125a70c062448da6bd006260721d00d54a0de587e1bb4fe0e25ec8771d7a013",
+        "createdAt": "2026-09-01T20:28:46.955Z"
+      },
+      {
+        "id": "ef4b2041-82e2-42e8-82f0-8011eee185ed",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "ad76b3cb-56d3-453b-8dcc-44a5d1b20882",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "ac822568-2475-4251-855c-abb9b94f8b4c"
+        },
+        "status": "APPROVED",
+        "previousHash": "0125a70c062448da6bd006260721d00d54a0de587e1bb4fe0e25ec8771d7a013",
+        "entryHash": "c2602b763f61fb268f1d058a0d6a593d1034e14dc1af549578e309fc5903a244",
+        "createdAt": "2026-09-01T20:28:46.962Z"
+      },
+      {
+        "id": "7a79adab-7ef1-407d-b6ab-6dd317452ec1",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "ad76b3cb-56d3-453b-8dcc-44a5d1b20882",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_ad76b3cb-56d3-453b-8dcc-44a5d1b20882",
+          "razorpayOrderId": "order_fake_1788294526888"
+        },
+        "status": "EXECUTED",
+        "previousHash": "c2602b763f61fb268f1d058a0d6a593d1034e14dc1af549578e309fc5903a244",
+        "entryHash": "ffd3dce54177dd0e2eb8a36af1de6bb26249bcb915b4bf72248bf073ee2a6913",
+        "createdAt": "2026-09-01T20:28:46.965Z"
+      },
+      {
+        "id": "e8c2e461-bb72-4c05-a2b0-1d9e24c9fe3f",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "b960c565-4d2b-41df-8144-a9439a849290",
+          "offerId": "2303f2c8-1df2-43b8-98cc-0426c4d22fa2",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "ffd3dce54177dd0e2eb8a36af1de6bb26249bcb915b4bf72248bf073ee2a6913",
+        "entryHash": "2709930eef7900cbf1a7418d984554ba7d4f8c5955e8435e5c070fe3163cb10c",
+        "createdAt": "2026-09-01T20:28:47.197Z"
+      },
+      {
+        "id": "7993156a-0ad8-404f-b847-50d835c06f89",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "a731e672-dfa4-4a5b-b613-03042682ab88",
+          "offerId": "dbcb07f6-b9cf-4d36-907f-6787ce36af52",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "2709930eef7900cbf1a7418d984554ba7d4f8c5955e8435e5c070fe3163cb10c",
+        "entryHash": "fdf7b853d7f1609fddf810acc3b5e74a2657b4c01a14a762b5c97b7482317162",
+        "createdAt": "2026-09-01T20:28:47.218Z"
+      },
+      {
+        "id": "5de8e8ef-6642-4fab-9e8f-7e3a6a021009",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "45afd36e-00fa-4402-8af2-8a45322c1cca",
+          "offerId": "e1f58515-d85d-47a5-be37-66f634dcaff1",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "60a314a0-4918-4f43-bac1-e9ca0900ec87",
+          "recommendedProductId": "015040b0-d58b-4bee-87fc-2ce5d375c324"
+        },
+        "status": "APPROVED",
+        "previousHash": "fdf7b853d7f1609fddf810acc3b5e74a2657b4c01a14a762b5c97b7482317162",
+        "entryHash": "41513a29c48c8e572c773b4da43b4baf463b3fe72306b74db1330fa3e9f82609",
+        "createdAt": "2026-09-01T20:28:47.444Z"
+      },
+      {
+        "id": "51ac6d13-1dfa-41f5-82f3-a77ea2fa1250",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "aff9b685-b3cf-4926-a48a-2adbe86071d3",
+          "campaignId": "c580c2d9-d824-4479-88f3-6574dfea806b",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "4d82988d-ef90-4ec1-a26f-b403616c6b1d"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "41513a29c48c8e572c773b4da43b4baf463b3fe72306b74db1330fa3e9f82609",
+        "entryHash": "ceaced9d046dbf4ccd9024dfa31abf924677525acb03775d5dcfd684336482d4",
+        "createdAt": "2026-09-01T20:28:47.644Z"
+      },
+      {
+        "id": "03e6eaeb-f5d6-47a3-bcab-ce27d6aef632",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "92463a08-e635-4295-9f60-ea9bf95393a3",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "e7c3e320-28dc-4910-aa03-62f929c92002"
+        },
+        "status": "APPROVED",
+        "previousHash": "ceaced9d046dbf4ccd9024dfa31abf924677525acb03775d5dcfd684336482d4",
+        "entryHash": "79d852643e76447ecd88b51dda7c58f75ea3002b49d53b455c181db286eae748",
+        "createdAt": "2026-09-01T20:30:09.148Z"
+      },
+      {
+        "id": "1fb2cb77-0130-46ee-82a9-a177069c0e9d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "92463a08-e635-4295-9f60-ea9bf95393a3",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_92463a08-e635-4295-9f60-ea9bf95393a3",
+          "razorpayOrderId": "order_fake_1788294609107"
+        },
+        "status": "EXECUTED",
+        "previousHash": "62007f63b5471a1283529f66aef2bd4fa7b4da59ea312f57efee0ccf33e57c45",
+        "entryHash": "f4de90e71667ce9c9d048c02ea8d05dbb9e94cde9197a5eecb933ad4a85405c0",
+        "createdAt": "2026-09-01T20:30:09.187Z"
+      },
+      {
+        "id": "a38b8fc9-e259-42eb-8620-e7ecf4a30c9d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "91cc9b4f-e795-4dbf-a447-e68645ea92a0",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289703859",
+          "reconciliationId": "a6662732-6f85-41ed-aa44-133d6681b211"
+        },
+        "status": "PENDING",
+        "previousHash": "79d852643e76447ecd88b51dda7c58f75ea3002b49d53b455c181db286eae748",
+        "entryHash": "62007f63b5471a1283529f66aef2bd4fa7b4da59ea312f57efee0ccf33e57c45",
+        "createdAt": "2026-09-01T20:30:09.187Z"
+      },
+      {
+        "id": "fdfc0e7b-79ad-4edb-9d24-28fc57f4ddaf",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "882f4f54-7e49-4c34-9301-ea252acbfe32",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289703860",
+          "reconciliationId": "dcaa5bfb-8a10-40d7-91c3-76485c999752"
+        },
+        "status": "PENDING",
+        "previousHash": "62007f63b5471a1283529f66aef2bd4fa7b4da59ea312f57efee0ccf33e57c45",
+        "entryHash": "031344272c75c2d998894ddaa8d0dbe1900bbc36458e65833dd478870c6995da",
+        "createdAt": "2026-09-01T20:30:09.188Z"
+      },
+      {
+        "id": "84e31583-e84e-4b37-9630-d675df4e79fc",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "92463a08-e635-4295-9f60-ea9bf95393a3",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788294609192",
+          "razorpayOrderId": "order_fake_1788294609107",
+          "razorpayPaymentId": "pay_1788294609192_0.5967795819883894",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "031344272c75c2d998894ddaa8d0dbe1900bbc36458e65833dd478870c6995da",
+        "entryHash": "af654a5d3174c7d4a632a8e1d31058c67cff25054db224e21c7f272c8b41ba6d",
+        "createdAt": "2026-09-01T20:30:09.202Z"
+      },
+      {
+        "id": "4c83b1ca-0cea-4dc2-8aa5-ba5714bc6cea",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d84735b8-0db8-4376-a1da-034ceb0abd23",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "294fb704-4825-46ab-a8b5-5bd12466c2fa"
+        },
+        "status": "APPROVED",
+        "previousHash": "af654a5d3174c7d4a632a8e1d31058c67cff25054db224e21c7f272c8b41ba6d",
+        "entryHash": "227e4e1fe63eb20feb2489d6fa794e05e6bc2c0d13d215ada768a6c2f094281d",
+        "createdAt": "2026-09-01T20:30:09.212Z"
+      },
+      {
+        "id": "8c115036-68e5-4ee2-9aa9-601aa369dc90",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "ce8aaefb-dcab-4e81-b9ce-b82e84b0dfdc",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289724581",
+          "reconciliationId": "2cb2f94d-5e1b-479b-81cc-f5aa1a598ee9"
+        },
+        "status": "PENDING",
+        "previousHash": "e2cbce78892880a77415c74dd186fddbf01824beb8081d9525a630047dad5f08",
+        "entryHash": "d58c6aba06bd829d76128996d26615f62120bae40d575d0ac8a4bdca9fb85990",
+        "createdAt": "2026-09-01T20:30:09.218Z"
+      },
+      {
+        "id": "a3558054-cb02-410a-9620-81605708d9dd",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d84735b8-0db8-4376-a1da-034ceb0abd23",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_d84735b8-0db8-4376-a1da-034ceb0abd23",
+          "razorpayOrderId": "order_fake_1788294609108"
+        },
+        "status": "EXECUTED",
+        "previousHash": "e2cbce78892880a77415c74dd186fddbf01824beb8081d9525a630047dad5f08",
+        "entryHash": "abfd8718b4c3e6f5bc9a8055b947e7a8b6eeacea4ff72309a33b7728256443d7",
+        "createdAt": "2026-09-01T20:30:09.218Z"
+      },
+      {
+        "id": "ca4151a8-60a8-4d68-a1eb-61d51b9b0c49",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "3097b4bb-72f9-4a6d-b0a9-9e315e663443",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289703861",
+          "reconciliationId": "89b18939-ae74-4e0f-ac34-f246bda97fb6"
+        },
+        "status": "PENDING",
+        "previousHash": "227e4e1fe63eb20feb2489d6fa794e05e6bc2c0d13d215ada768a6c2f094281d",
+        "entryHash": "e2cbce78892880a77415c74dd186fddbf01824beb8081d9525a630047dad5f08",
+        "createdAt": "2026-09-01T20:30:09.218Z"
+      },
+      {
+        "id": "0668634b-650c-436e-81f1-c3a6ff2fecfe",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d84735b8-0db8-4376-a1da-034ceb0abd23",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788294609220_failed",
+          "razorpayOrderId": "order_fake_1788294609108"
+        },
+        "status": "FAILED",
+        "previousHash": "e2cbce78892880a77415c74dd186fddbf01824beb8081d9525a630047dad5f08",
+        "entryHash": "a0579afcbb85cab5c13d4d183055601295121f22029452b71f345dfe4a2373de",
+        "createdAt": "2026-09-01T20:30:09.223Z"
+      },
+      {
+        "id": "61a7a612-fe67-4644-a6aa-836490355303",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "1dbd45e2-e163-4c9a-8abc-2d9b49c3e8d0",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "bc51912e-0b8b-440e-a09b-4809d47f42be"
+        },
+        "status": "APPROVED",
+        "previousHash": "a0579afcbb85cab5c13d4d183055601295121f22029452b71f345dfe4a2373de",
+        "entryHash": "197f84625b63b2c82dd5294999efb024dbd35fa147bd28a0505a8fa99a13f1ea",
+        "createdAt": "2026-09-01T20:30:09.230Z"
+      },
+      {
+        "id": "26c70345-5532-4ab4-8a48-ae0f35e9734d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "ecc54dcb-03e7-4390-b946-1fbacee07d24",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289724583",
+          "reconciliationId": "3e94d65b-27e3-4d3f-adab-15b0787497dd"
+        },
+        "status": "PENDING",
+        "previousHash": "5249d698587838e9464693166a9d3a130d0fb89e3e2abc1519f73352a1439d75",
+        "entryHash": "04a0578197b7fe04bd17a6bed3f5f9e877ee83ec5ae2a82511187086eab1fb19",
+        "createdAt": "2026-09-01T20:30:09.235Z"
+      },
+      {
+        "id": "3e3edd7d-3be3-4a9d-9379-8795991d82db",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "1dbd45e2-e163-4c9a-8abc-2d9b49c3e8d0",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_1dbd45e2-e163-4c9a-8abc-2d9b49c3e8d0",
+          "razorpayOrderId": "order_fake_1788294609109"
+        },
+        "status": "EXECUTED",
+        "previousHash": "197f84625b63b2c82dd5294999efb024dbd35fa147bd28a0505a8fa99a13f1ea",
+        "entryHash": "5249d698587838e9464693166a9d3a130d0fb89e3e2abc1519f73352a1439d75",
+        "createdAt": "2026-09-01T20:30:09.235Z"
+      },
+      {
+        "id": "18f122db-0fe9-47af-a21a-6ea9fdc7cd94",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "fe7beca6-fad1-4e88-b318-9b65aed67172",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289724582",
+          "reconciliationId": "f55dd860-4b8a-44f1-843e-d088df12cf89"
+        },
+        "status": "PENDING",
+        "previousHash": "5249d698587838e9464693166a9d3a130d0fb89e3e2abc1519f73352a1439d75",
+        "entryHash": "506802cc2c06004944b47e2c24ea40e7653eba1bb73f2b3db959898685f168ce",
+        "createdAt": "2026-09-01T20:30:09.236Z"
+      },
+      {
+        "id": "6236222e-521d-498e-8e88-a082b258b535",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "baa20feb-b6b0-41d4-b97c-f5be9135255c",
+          "offerId": "1f24bbef-1dc0-4157-aa91-7018635ad53c",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "506802cc2c06004944b47e2c24ea40e7653eba1bb73f2b3db959898685f168ce",
+        "entryHash": "646d23f4104dbfdd2cf7cbc57430040e52d6f3ba92208e7a6d487cfc578875c0",
+        "createdAt": "2026-09-01T20:30:09.474Z"
+      },
+      {
+        "id": "3cc939d1-d4dd-423c-adc5-2f7526ef7aaf",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "87038f27-1ff4-4f97-82a1-7e41935eedf4",
+          "offerId": "52e1d799-de5d-4c84-899f-90b8575b26e0",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "646d23f4104dbfdd2cf7cbc57430040e52d6f3ba92208e7a6d487cfc578875c0",
+        "entryHash": "342fb43dd2512327e095c0753d8d259894ad4daa07f4feb281c1c82f1bb18e0c",
+        "createdAt": "2026-09-01T20:30:09.498Z"
+      },
+      {
+        "id": "01611658-5c94-4565-aecd-156e659f9306",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "7f396f76-ffef-415f-b23c-a9200a838230",
+          "offerId": "8bdb06bb-d6c4-482c-b2e3-f2dd135b38d6",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "76b514c9-aa08-469f-a2b5-c7cbdf33a2ae",
+          "recommendedProductId": "8ba0c287-a50e-456c-afc2-1f33257e666c"
+        },
+        "status": "APPROVED",
+        "previousHash": "342fb43dd2512327e095c0753d8d259894ad4daa07f4feb281c1c82f1bb18e0c",
+        "entryHash": "efda1a4b8c6d986fca135022ef45ef6b2501c5b2c138d37a0604a690fa43c79b",
+        "createdAt": "2026-09-01T20:30:09.735Z"
+      },
+      {
+        "id": "8c356763-f2c3-4c8b-9ae3-8438759e029e",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "373983fc-1ac6-4718-ab71-5add30b6ebfe",
+          "campaignId": "b8c64196-a630-4743-99a3-a9a77ff6dccd",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "3b429f85-a556-4eac-bdd6-26c6e5fb61f6"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "efda1a4b8c6d986fca135022ef45ef6b2501c5b2c138d37a0604a690fa43c79b",
+        "entryHash": "5116544f01128aea95e0cf0f61594a0aa2e869772c4796d32ccc4842f81fa42b",
+        "createdAt": "2026-09-01T20:30:09.962Z"
+      },
+      {
+        "id": "403eb69b-c008-4cdb-941d-b55e82969575",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "41b2219c-6d55-42df-bc0c-308cf975026f",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "2fa5bac2-244b-4383-9180-7b31210134ed"
+        },
+        "status": "APPROVED",
+        "previousHash": "5116544f01128aea95e0cf0f61594a0aa2e869772c4796d32ccc4842f81fa42b",
+        "entryHash": "2fac1202139429ffa39370dbd03557fbf9c2b309e0bbf015ff723f51b485fa3b",
+        "createdAt": "2026-09-01T20:32:30.837Z"
+      },
+      {
+        "id": "9f59d3e8-b97a-40c2-a009-a17dafe4e86d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "624ad122-0908-40a6-8987-479534f022f1",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289747055",
+          "reconciliationId": "65ec2fe0-1f80-4118-9378-2c299fdb419e"
+        },
+        "status": "PENDING",
+        "previousHash": "2fac1202139429ffa39370dbd03557fbf9c2b309e0bbf015ff723f51b485fa3b",
+        "entryHash": "75faa59b23d6e816658b2b56dac7809cc98bec04afa302d1bc036ca0fb587309",
+        "createdAt": "2026-09-01T20:32:30.873Z"
+      },
+      {
+        "id": "72840ab2-1e06-4975-aa8b-988e09a48f55",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "41b2219c-6d55-42df-bc0c-308cf975026f",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_41b2219c-6d55-42df-bc0c-308cf975026f",
+          "razorpayOrderId": "order_fake_1788294750800"
+        },
+        "status": "EXECUTED",
+        "previousHash": "75faa59b23d6e816658b2b56dac7809cc98bec04afa302d1bc036ca0fb587309",
+        "entryHash": "632106b2a31356d4b90cb63cef51cf379920262ddb3940b1e2d39cffc6be49ea",
+        "createdAt": "2026-09-01T20:32:30.876Z"
+      },
+      {
+        "id": "83fcc7bd-a22c-4d40-ae8d-f30701b972d9",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c909fcca-e6e1-4221-a226-b7890fc8d38d",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289747056",
+          "reconciliationId": "83592957-d213-4681-8918-8cab46cea736"
+        },
+        "status": "PENDING",
+        "previousHash": "632106b2a31356d4b90cb63cef51cf379920262ddb3940b1e2d39cffc6be49ea",
+        "entryHash": "854d6c0a25145ac542d97bfe6b9229c2995028e228e01bf2eb28111a612c7b55",
+        "createdAt": "2026-09-01T20:32:30.877Z"
+      },
+      {
+        "id": "f6c9af34-69ca-4cd9-8bbc-00e7ba0c741f",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "41b2219c-6d55-42df-bc0c-308cf975026f",
+        "actorUserId": null,
+        "action": "PAYMENT_CAPTURED",
+        "reason": "Razorpay confirmed payment capture; stock committed once",
+        "details": {
+          "eventType": "payment.captured",
+          "razorpayEventId": "evt_1788294750881",
+          "razorpayOrderId": "order_fake_1788294750800",
+          "razorpayPaymentId": "pay_1788294750881_0.08179675026436994",
+          "attributedRecoveryCampaignId": null
+        },
+        "status": "EXECUTED",
+        "previousHash": "854d6c0a25145ac542d97bfe6b9229c2995028e228e01bf2eb28111a612c7b55",
+        "entryHash": "f1a560b814e634590e48f64ec7072ffbee20a5addaa6a065ae39b8e7d34e59e5",
+        "createdAt": "2026-09-01T20:32:30.891Z"
+      },
+      {
+        "id": "947a7761-cb5d-40d1-a20e-86b66ac60bc9",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "9c94f440-1822-43b0-bc6b-a124670409a8",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "54c5995f-b89d-43ac-abfa-2e6872e6f3ca"
+        },
+        "status": "APPROVED",
+        "previousHash": "f1a560b814e634590e48f64ec7072ffbee20a5addaa6a065ae39b8e7d34e59e5",
+        "entryHash": "23563dacfb8e0251bb023147ffcc42acf7eb33e6f2fc61250b5db08ec6d8f43b",
+        "createdAt": "2026-09-01T20:32:30.901Z"
+      },
+      {
+        "id": "4bbf03ca-706b-42a7-9df0-01547cfa375c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "7686813e-d44a-45d7-8b88-9a76ae84d5a9",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289747057",
+          "reconciliationId": "a3b545da-09a7-467c-9654-3a02e29a186d"
+        },
+        "status": "PENDING",
+        "previousHash": "23563dacfb8e0251bb023147ffcc42acf7eb33e6f2fc61250b5db08ec6d8f43b",
+        "entryHash": "1a94a5c70bac2a503257a376e91d8c204346ce2a1865cddb7bc23c835060516f",
+        "createdAt": "2026-09-01T20:32:30.906Z"
+      },
+      {
+        "id": "21eb130a-bb8b-4191-b478-ec8e0fc2825c",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "9c94f440-1822-43b0-bc6b-a124670409a8",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_9c94f440-1822-43b0-bc6b-a124670409a8",
+          "razorpayOrderId": "order_fake_1788294750801"
+        },
+        "status": "EXECUTED",
+        "previousHash": "1a94a5c70bac2a503257a376e91d8c204346ce2a1865cddb7bc23c835060516f",
+        "entryHash": "0e7e15464ffbe309d9623ab8adb6b1ea067a2b1b0f96db1609a2853a60b60dcf",
+        "createdAt": "2026-09-01T20:32:30.907Z"
+      },
+      {
+        "id": "26e30f47-5ac1-4c3c-b10d-1aa9dc871312",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "08617297-f3ee-4184-ba2c-9e4cd61cfdd8",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289811007",
+          "reconciliationId": "bfb72450-353f-4a90-8431-ab9a89ed83f5"
+        },
+        "status": "PENDING",
+        "previousHash": "0e7e15464ffbe309d9623ab8adb6b1ea067a2b1b0f96db1609a2853a60b60dcf",
+        "entryHash": "bea82737f94fc502d65bb26d024d17b8ab3edf8cfa33dcb1be00274a57a63575",
+        "createdAt": "2026-09-01T20:32:30.907Z"
+      },
+      {
+        "id": "6dd83af4-1eb5-45c1-8ca1-04d31cb8d113",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "9c94f440-1822-43b0-bc6b-a124670409a8",
+        "actorUserId": null,
+        "action": "PAYMENT_FAILED",
+        "reason": "Razorpay reported payment failure",
+        "details": {
+          "razorpayEventId": "evt_1788294750909_failed",
+          "razorpayOrderId": "order_fake_1788294750801"
+        },
+        "status": "FAILED",
+        "previousHash": "0e7e15464ffbe309d9623ab8adb6b1ea067a2b1b0f96db1609a2853a60b60dcf",
+        "entryHash": "01780e2828faf4fb5d8a6f9d83a1e7c9e08a222817037967b81158f53b1dbbf6",
+        "createdAt": "2026-09-01T20:32:30.912Z"
+      },
+      {
+        "id": "33e9f687-36a2-4830-bb99-19ce63450c52",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d2c2b12a-56f9-4cef-b807-7bcf40672be2",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "ORDER_ACCEPTED",
+        "reason": "Offer revalidated before payment",
+        "details": {
+          "offerId": "39b8783a-97cb-4728-9a16-e6da570c6326"
+        },
+        "status": "APPROVED",
+        "previousHash": "01780e2828faf4fb5d8a6f9d83a1e7c9e08a222817037967b81158f53b1dbbf6",
+        "entryHash": "0ad7fd6d2449c0d9c8836863eedb2d36639844e5e740953e8df4a508cf918480",
+        "createdAt": "2026-09-01T20:32:30.919Z"
+      },
+      {
+        "id": "74634b46-03d6-4373-8366-7b3613306c13",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "d2c2b12a-56f9-4cef-b807-7bcf40672be2",
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RAZORPAY_ORDER_CREATED",
+        "reason": "Server created Razorpay order from validated internal order.",
+        "details": {
+          "receipt": "mso_d2c2b12a-56f9-4cef-b807-7bcf40672be2",
+          "razorpayOrderId": "order_fake_1788294750802"
+        },
+        "status": "EXECUTED",
+        "previousHash": "0ad7fd6d2449c0d9c8836863eedb2d36639844e5e740953e8df4a508cf918480",
+        "entryHash": "43fe77a356bf8f5335dcd5d67149cee7c3b1ed40bc4b0c3ffc5dcc1f386506d6",
+        "createdAt": "2026-09-01T20:32:30.921Z"
+      },
+      {
+        "id": "44f01e37-37c6-436a-9b3b-26351dcdb57e",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "e419656c-2f32-4575-be1f-3dd5a672eafb",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289811008",
+          "reconciliationId": "80799cc3-6ad4-4615-9c0d-982ca10faad3"
+        },
+        "status": "PENDING",
+        "previousHash": "43fe77a356bf8f5335dcd5d67149cee7c3b1ed40bc4b0c3ffc5dcc1f386506d6",
+        "entryHash": "b2e7f5eeb89f47a7cd84d22eb5323ca35c4f016dde45e5218c6e2658895505da",
+        "createdAt": "2026-09-01T20:32:30.924Z"
+      },
+      {
+        "id": "441ec33c-003e-4b84-97f1-388880c8d2e5",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": "c7534ec7-17b0-4aec-8bb2-6ba488b95c7a",
+        "actorUserId": null,
+        "action": "PAYMENT_RECONCILIATION_RETRY_SCHEDULED",
+        "reason": "Razorpay payment reconciliation did not reach a final outcome; retry scheduled with exponential backoff.",
+        "details": {
+          "lastError": "__vite_ssr_import_3__.razorpay.orders.fetchPayments is not a function",
+          "razorpayOrderId": "order_fake_1788289811009",
+          "reconciliationId": "95263c46-ae7c-427e-aa1b-ed096c9060e7"
+        },
+        "status": "PENDING",
+        "previousHash": "b2e7f5eeb89f47a7cd84d22eb5323ca35c4f016dde45e5218c6e2658895505da",
+        "entryHash": "685aa78ae43f040051fdea6f468f57e15631cc009fc99756670a037cf30fb9a5",
+        "createdAt": "2026-09-01T20:32:30.925Z"
+      },
+      {
+        "id": "49812cda-4d9d-4907-a623-06d6d3a1f955",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "60eb20a8-ce21-48a2-9e7d-bc655f1f2fb8",
+          "offerId": "e1cac7b7-7ac4-4b48-97e8-6b32a4462570",
+          "marginPercent": 38.97502840882411,
+          "discountPercent": 10,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "243f91f5-8e3c-4fbe-ae4f-2625ce751f24"
+        },
+        "status": "APPROVED",
+        "previousHash": "685aa78ae43f040051fdea6f468f57e15631cc009fc99756670a037cf30fb9a5",
+        "entryHash": "ac65897ca5e63b4025ed7df56b72b7b537ac2ef6a171f5370161673e78704e3c",
+        "createdAt": "2026-09-01T20:32:31.156Z"
+      },
+      {
+        "id": "2a92b6b5-ea2d-4abc-a242-f627772e8d69",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "UPSELL",
+          "cartId": "52861434-7bcd-472d-95f7-472bb35cf92f",
+          "offerId": "93ab0fcc-497b-436d-ba23-ecc926d86612",
+          "marginPercent": 34.840912167073554,
+          "discountPercent": 5,
+          "originalProductId": "5c8e040a-8551-4b85-8c96-ae0cbfdcbc08",
+          "recommendedProductId": "436ae568-fa04-40dd-b821-0029f722931c"
+        },
+        "status": "APPROVED",
+        "previousHash": "ac65897ca5e63b4025ed7df56b72b7b537ac2ef6a171f5370161673e78704e3c",
+        "entryHash": "a4b3f23074ee885cd37811327791233db94f26450b00ca6a4c3c82af23b4ecdb",
+        "createdAt": "2026-09-01T20:32:31.179Z"
+      },
+      {
+        "id": "564304be-9eb1-415b-9dd3-94cd096cf2ae",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "df916141-6b75-45e0-9479-c62e4117d8f9",
+        "action": "RECOMMENDATION_ACCEPTED",
+        "reason": "Recommendation accepted securely via unified authoritative transaction",
+        "details": {
+          "type": "CROSS_SELL",
+          "cartId": "e9bea075-72e7-466f-8962-12f79c20f607",
+          "offerId": "1096b9ad-f242-455d-b065-807748b1df8c",
+          "marginPercent": 100,
+          "discountPercent": 10,
+          "originalProductId": "88503aac-214c-42d6-ac9b-b3fe4f9ac6aa",
+          "recommendedProductId": "7e415614-dedf-46d3-bb0b-c86148e43c57"
+        },
+        "status": "APPROVED",
+        "previousHash": "a4b3f23074ee885cd37811327791233db94f26450b00ca6a4c3c82af23b4ecdb",
+        "entryHash": "bf5096e9bfa814e6a1c87da260f27cba2b48a681a3c89174925447b9f1c636eb",
+        "createdAt": "2026-09-01T20:32:31.409Z"
+      },
+      {
+        "id": "b58b46b9-2954-4148-bf45-23037be2662d",
+        "merchantId": "e6aa9e02-e4ad-4dec-9293-556bb923806c",
+        "orderId": null,
+        "actorUserId": "cc6db29c-bb2e-42b7-87ff-7e5cded306ae",
+        "action": "CLEARANCE_CAMPAIGN_DISPATCHED",
+        "reason": "Merchant-approved clearance campaign issued bounded offers to eligible recipients.",
+        "details": {
+          "productId": "c87f32b6-338a-4277-862c-a6778faa586e",
+          "campaignId": "e0b583c0-b78f-4544-bd36-8ecdc7fe6f2c",
+          "marginPercent": 44.44444444444444,
+          "campaignBudget": 10000,
+          "issuedDiscount": 10000,
+          "issuedOfferIds": [
+            "f9414ed7-ac1d-45d2-917a-e2fc473f39c4"
+          ]
+        },
+        "status": "EXECUTED",
+        "previousHash": "bf5096e9bfa814e6a1c87da260f27cba2b48a681a3c89174925447b9f1c636eb",
+        "entryHash": "2f6e6e313a28a681b7b9c553d5b378b26025b359a7824691d077ef0589d52352",
+        "createdAt": "2026-09-01T20:32:31.632Z"
+      }
+    ]
+  }
+}

@@ -18,13 +18,15 @@ const eslintConfig = defineConfig([
     // patch_payment.js, ...). They are plain CommonJS node scripts whose
     // edits are already applied to src/, so linting them as project TypeScript
     // only fails the build on `require()`. Same rationale as test-* above.
+    "patch.js",
     "patch_*.js",
     // Same category, different prefix -- these were producing 9 of the 10
     // `no-require-imports` errors from `npm run lint`.
     "fix_*.js",
     "check_edges.js",
-    // Ad-hoc debug scripts, not part of the app.
+    // Ad-hoc debug and proxy scripts, not part of the app.
     "scratch/**",
+    "proxy-server/**",
   ]),
 ]);
 

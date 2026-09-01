@@ -16,6 +16,11 @@ export function accountBudgetPeriods(now = new Date()) {
  * Enforces limits on the account, not on a conversation or BuyerIntent.
  * Taking the same Customer row lock used by cart mutation serializes two
  * concurrent checkout attempts before they can both reserve the same budget.
+ *
+ * Money Safety Invariant:
+ * This assertion evaluates reserved order spend. Orders that have been authoritatively
+ * expired by the expiry worker are excluded from RESERVED_ORDER_STATUSES.
+ * It never unilaterally expires pending orders without Razorpay verification.
  */
 export async function assertAccountSpendLimit(
   tx: BudgetClient,
@@ -29,6 +34,7 @@ export async function assertAccountSpendLimit(
     select: { dailySpendLimit: true, monthlySpendLimit: true },
   })
   if (!customer) throw new Error('Customer account not found')
+
   const { dayStart, monthStart } = accountBudgetPeriods(now)
   const [daily, monthly] = await Promise.all([
     tx.order.aggregate({

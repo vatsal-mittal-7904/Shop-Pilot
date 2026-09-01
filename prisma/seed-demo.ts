@@ -3,6 +3,12 @@ import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 import { hashPassword } from '../src/backend/auth/password'
+import {
+  assertDemoSeedAllowed,
+  DEFAULT_DEMO_CUSTOMER_EMAIL,
+  DEFAULT_DEMO_CUSTOMER_PASSWORD,
+  DEFAULT_DEMO_MERCHANT_EMAIL,
+} from '../src/backend/security/demoSafety'
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) })
@@ -11,7 +17,8 @@ const MINUTES = 60 * 1000
 const DAYS = 24 * 60 * MINUTES
 
 async function main() {
-  const adminEmail = (process.env.MERCHANT_ADMIN_EMAIL || 'admin@technest.com').toLowerCase()
+  assertDemoSeedAllowed()
+  const adminEmail = (process.env.MERCHANT_ADMIN_EMAIL || DEFAULT_DEMO_MERCHANT_EMAIL).toLowerCase()
   const admin = await prisma.user.findUnique({ where: { email: adminEmail } })
   if (!admin) {
     throw new Error(`Merchant admin "${adminEmail}" not found. Run "npm run db:seed" (prisma/seed.ts) first.`)
@@ -23,8 +30,8 @@ async function main() {
   const headphones = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, category: 'headphones' } })
 
   // --- Demo customer -------------------------------------------------------
-  const customerEmail = (process.env.DEMO_CUSTOMER_EMAIL || 'demo.customer@technest.com').toLowerCase()
-  const customerPassword = process.env.DEMO_CUSTOMER_PASSWORD || 'technest-customer-demo'
+  const customerEmail = (process.env.DEMO_CUSTOMER_EMAIL || DEFAULT_DEMO_CUSTOMER_EMAIL).toLowerCase()
+  const customerPassword = process.env.DEMO_CUSTOMER_PASSWORD || DEFAULT_DEMO_CUSTOMER_PASSWORD
   const customerUser = await prisma.user.upsert({
     where: { email: customerEmail },
     update: { role: 'CUSTOMER' },

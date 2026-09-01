@@ -71,7 +71,8 @@ describe('customer cart offer binding', () => {
   })
 
   test('derives offer lines only from the persisted active cart and signs them', async () => {
-    await createOfferFromActiveCart({ discountPercentage: 10 })
+    mocks.campaignFindFirst.mockResolvedValue({ id: CAMPAIGN, discountPercent: 10, status: 'APPROVED' })
+    await createOfferFromActiveCart({ discountPercentage: 10, campaignId: CAMPAIGN })
 
     expect(mocks.offerCreate).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
@@ -84,7 +85,7 @@ describe('customer cart offer binding', () => {
   })
 
   test('scopes the basket query to the merchant when one is supplied', async () => {
-    await createOfferFromActiveCart({ discountPercentage: 10, merchantId: MERCHANT_A })
+    await createOfferFromActiveCart({ discountPercentage: 0, merchantId: MERCHANT_A })
 
     expect(mocks.cartFindFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: { customerId: 'customer-1', merchantId: MERCHANT_A, status: 'ACTIVE' },
@@ -100,7 +101,7 @@ describe('customer cart offer binding', () => {
       cartFixture('cart-a', MERCHANT_A),
     ])
 
-    await expect(createOfferFromActiveCart({ discountPercentage: 10 }))
+    await expect(createOfferFromActiveCart({ discountPercentage: 0 }))
       .rejects.toThrow('more than one merchant')
     expect(mocks.offerCreate).not.toHaveBeenCalled()
   })
@@ -111,7 +112,7 @@ describe('customer cart offer binding', () => {
       cartFixture('cart-older', MERCHANT_A),
     ])
 
-    await createOfferFromActiveCart({ discountPercentage: 10 })
+    await createOfferFromActiveCart({ discountPercentage: 0 })
 
     expect(mocks.offerCreate).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ cartId: 'cart-newer' }),
@@ -127,7 +128,7 @@ describe('customer cart offer binding', () => {
   })
 
   test('checks campaign ownership against the basket merchant, not the caller', async () => {
-    mocks.campaignFindFirst.mockResolvedValue({ id: CAMPAIGN })
+    mocks.campaignFindFirst.mockResolvedValue({ id: CAMPAIGN, discountPercent: 10, status: 'APPROVED' })
 
     await createOfferFromActiveCart({ discountPercentage: 10, campaignId: CAMPAIGN })
 

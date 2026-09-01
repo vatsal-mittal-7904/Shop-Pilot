@@ -24,90 +24,25 @@ const productSchema = z.object({
   upgradeProducts: productRelationshipListSchema.default([]),
 })
 
-type Opportunity = {
-  id: 'abandoned-cart' | 'cross-sell' | 'clearance'
-  title: string
-  reason: string
-  estimatedImpact: number
-  budget: number
-  type: 'RECOVERY' | 'BUNDLE' | 'CLEARANCE'
-  configuration: Record<string, unknown>
-  policy: { allowed: boolean; reason: string }
-}
+import { generateAnalyticalCampaignProposals, Opportunity } from '@/backend/actions/campaignProposalEngine'
+import { triggerOpportunisticReconciliation } from '@/backend/actions/opportunisticReconciliation'
 
 async function opportunitiesForMerchant(merchantId: string): Promise<Opportunity[]> {
-  const [carts, policies] = await Promise.all([
-    // markAbandonedCarts already applies the inactivity policy before changing
-    // this status. Do not filter updatedAt again: Prisma updates that timestamp
-    // when the sweeper writes ABANDONED, which previously hid newly swept carts
-    // from the campaign generator for another 30 minutes.
-    prisma.cart.findMany({ where: { merchantId, status: 'ABANDONED' }, include: { items: { include: { product: true } } } }),
-    prisma.merchantPolicy.findMany({ where: { merchantId } }),
-  ])
-  const policy = Object.fromEntries(policies.map((entry) => [entry.key, entry.value]))
-  const maxBudget = policy.CAMPAIGN_BUDGET_LIMIT ?? 0
-  const opportunities: Opportunity[] = []
-  if (carts.length > 0) {
-    let estimatedImpact = 0
-    for (const cart of carts) {
-      for (const item of cart.items) {
-        estimatedImpact += item.product.price * item.quantity
-      }
-    }
-
-    const discountPercent = Math.min(10, policy.MAX_DISCOUNT_PERCENTAGE ?? 0)
-    const budget = Math.floor(estimatedImpact * (discountPercent / 100))
-    opportunities.push({
-      id: 'abandoned-cart', title: 'Abandoned-cart recovery', type: 'RECOVERY', estimatedImpact,
-      reason: `${carts.length} cart${carts.length === 1 ? '' : 's'} have been inactive for over 30 minutes. Offer a policy-safe follow-up incentive.`,
-      budget,
-      configuration: { cartIds: carts.map((cart) => cart.id), discountPercent },
-      policy: { allowed: budget <= maxBudget, reason: budget <= maxBudget ? 'Campaign discount budget is within the merchant limit.' : 'Campaign discount budget exceeds the merchant limit.' },
-    })
-  }
-
-  // Clearance has a concrete recipient and delivery path: choose one
-  // high-inventory SKU, then target existing customers who bought from this
-  // merchant but have not purchased that SKU. The resulting offers appear in
-  // their authenticated storefront; this is not a dashboard-only campaign.
-  const clearanceThreshold = Math.max(1, policy.CLEARANCE_INVENTORY_THRESHOLD ?? 20)
-  const clearanceCandidates = await prisma.product.findMany({
-    where: { merchantId, inventory: { gte: clearanceThreshold } },
-    orderBy: [{ inventory: 'desc' }, { createdAt: 'asc' }],
-    take: 5,
-  })
-  for (const product of clearanceCandidates) {
-    const recipients = await prisma.customer.findMany({
-      where: {
-        orders: {
-          some: { merchantId, status: 'PAID' },
-          none: { merchantId, items: { some: { productId: product.id } } },
-        },
-      },
-      select: { id: true },
-      take: 100,
-    })
-    if (recipients.length === 0) continue
-    const discountPercent = Math.min(10, policy.MAX_DISCOUNT_PERCENTAGE ?? 0)
-    const estimatedImpact = product.price * recipients.length
-    const budget = Math.floor(estimatedImpact * (discountPercent / 100))
-    opportunities.push({
-      id: 'clearance',
-      title: `Clearance: ${product.name}`,
-      type: 'CLEARANCE',
-      estimatedImpact,
-      budget,
-      reason: `${product.inventory} units are available. Target ${recipients.length} prior customer${recipients.length === 1 ? '' : 's'} who have not purchased this SKU.`,
-      configuration: { productId: product.id, customerIds: recipients.map((recipient) => recipient.id), discountPercent },
-      policy: { allowed: budget <= maxBudget, reason: budget <= maxBudget ? 'Campaign discount budget is within the merchant limit.' : 'Campaign discount budget exceeds the merchant limit.' },
-    })
-    break
-  }
-  return opportunities
+  return generateAnalyticalCampaignProposals(merchantId)
 }
 
 export async function getMerchantDashboardData() {
   const { merchant } = await requireMerchant()
+
+  // Tier 2 Self-Healing: Opportunistically heal due reconciliation tasks and refunds on dashboard access
+  await triggerOpportunisticReconciliation({
+    merchantId: merchant.id,
+    maxReconciliations: 5,
+    maxRefunds: 5,
+    sweepCarts: false,
+  }).catch((err) => {
+    console.error('[DASHBOARD_RECONCILIATION:NON_BLOCKING_ERROR]', err)
+  })
 
   // Execute sequentially to avoid saturating the pg connection pool
   const orders = await prisma.order.findMany({ where: { merchantId: merchant.id }, include: { items: true }, orderBy: { createdAt: 'desc' }, take: 25 })

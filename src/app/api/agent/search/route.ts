@@ -3,7 +3,11 @@ import { prisma } from '@/backend/db/prisma'
 import { requireCustomer } from '@/backend/auth/session'
 import { checkRateLimit } from '@/backend/utils/rateLimit'
 
-const schema = z.object({ query: z.string().trim().min(1).max(100) })
+const schema = z.object({
+  query: z.string().trim().min(1).max(100),
+  merchantId: z.string().uuid().optional(),
+})
+
 const searchProductSelect = {
   id: true,
   name: true,
@@ -33,20 +37,54 @@ export async function POST(request: Request) {
     )
   }
 
-  let query: string
+  let body: { query: string; merchantId?: string }
   try {
-    ({ query } = schema.parse(await request.json()))
+    body = schema.parse(await request.json())
   } catch {
     return Response.json({ error: 'A search query is required' }, { status: 400 })
   }
 
-  const merchant = await prisma.merchant.findFirst({ orderBy: { createdAt: 'asc' } })
-  if (!merchant) return Response.json({ error: 'Merchant unavailable' }, { status: 503 })
+  const url = new URL(request.url)
+  const requestedMerchantId = body.merchantId || url.searchParams.get('merchantId') || request.headers.get('x-merchant-id')
+
+  let merchantId: string
+  if (requestedMerchantId) {
+    const parsed = z.string().uuid().safeParse(requestedMerchantId)
+    if (!parsed.success) {
+      return Response.json({ error: 'Invalid merchant ID format' }, { status: 400 })
+    }
+    merchantId = parsed.data
+  } else {
+    const merchants = await prisma.merchant.findMany({ select: { id: true }, take: 2 })
+    if (merchants.length > 1) {
+      return Response.json(
+        { error: 'Merchant context is required when multiple merchants exist. Pass merchantId.' },
+        { status: 400 },
+      )
+    }
+    if (merchants.length === 0) {
+      return Response.json({ error: 'Merchant unavailable' }, { status: 503 })
+    }
+    merchantId = merchants[0].id
+  }
+
+  const merchant = await prisma.merchant.findUnique({ where: { id: merchantId } })
+  if (!merchant) return Response.json({ error: 'Merchant unavailable' }, { status: 404 })
+
   const products = await prisma.product.findMany({
-    where: { merchantId: merchant.id, inventory: { gt: 0 }, OR: [{ name: { contains: query, mode: 'insensitive' } }, { category: { contains: query, mode: 'insensitive' } }, { tags: { has: query.toLowerCase() } }] },
+    where: {
+      merchantId: merchant.id,
+      inventory: { gt: 0 },
+      OR: [
+        { name: { contains: body.query, mode: 'insensitive' } },
+        { category: { contains: body.query, mode: 'insensitive' } },
+        { tags: { has: body.query.toLowerCase() } },
+      ],
+    },
     take: 12,
     // Keep the search response buyer-safe; Product.cost is merchant-only.
     select: searchProductSelect,
   })
-  return Response.json({ products })
+  return Response.json({ merchant: { id: merchant.id, name: merchant.name }, products })
 }
+

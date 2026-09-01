@@ -193,4 +193,37 @@ describe('offer basket binding at acceptance', () => {
     await expect(acceptOfferForCheckout(OFFER_ID)).rejects.toThrow('missing its verified basket selection')
     expect(foreign.offer.update).not.toHaveBeenCalled()
   })
+
+  test('strictly rejects checkout order reuse if the offer has expired and no provider order exists', async () => {
+    const tx = {
+      offer: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: OFFER_ID,
+          customerId: 'customer-1',
+          status: 'ACCEPTED',
+          acceptedAt: new Date(),
+          acceptedByUserId: 'user-1',
+          expiresAt: new Date(Date.now() - 10_000), // Expired
+          items: [{ quantity: 1, product: { inventory: 10 } }],
+          order: { id: 'order-1', status: 'PAYMENT_PENDING', razorpayOrderId: null },
+        }),
+        update: vi.fn(),
+      },
+      order: {
+        update: vi.fn(),
+      },
+    }
+    mocks.transaction.mockImplementation(async (fn: (transaction: typeof tx) => Promise<unknown>) => fn(tx))
+
+    await expect(createOrReuseCheckoutOrder(OFFER_ID)).rejects.toThrow('This offer has expired')
+    expect(tx.order.update).toHaveBeenCalledWith({
+      where: { id: 'order-1' },
+      data: { status: 'EXPIRED' },
+    })
+    expect(tx.offer.update).toHaveBeenCalledWith({
+      where: { id: OFFER_ID },
+      data: { status: 'EXPIRED' },
+    })
+  })
 })
+

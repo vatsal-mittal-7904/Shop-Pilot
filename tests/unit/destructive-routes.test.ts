@@ -32,7 +32,7 @@ describe('destructive maintenance routes', () => {
     expect(mocks.transaction).not.toHaveBeenCalled()
   })
 
-  test('clears only the caller’s conversation messages and preserves financial records', async () => {
+  test('soft-archives caller’s active conversations, preserving messages for investigations', async () => {
     mocks.requireCustomer.mockResolvedValue({
       user: { id: 'user-1' },
       customer: { id: 'customer-1' },
@@ -50,10 +50,18 @@ describe('destructive maintenance routes', () => {
     const response = await clearChat()
 
     expect(response.status).toBe(200)
-    expect(tx.conversation.updateMany).toHaveBeenCalledWith({
-      where: { customerId: 'customer-1' },
-      data: { messages: [] },
+    expect(tx.conversation.findMany).toHaveBeenCalledWith({
+      where: { customerId: 'customer-1', clearedAt: null },
+      select: { id: true, merchantId: true },
     })
+    expect(tx.conversation.updateMany).toHaveBeenCalledWith({
+      where: { customerId: 'customer-1', clearedAt: null },
+      data: expect.objectContaining({ clearedAt: expect.any(Date) }),
+    })
+    // Crucial forensic guarantee: messages array is NOT overwritten/erased
+    expect(tx.conversation.updateMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: { messages: [] } })
+    )
     expect(tx.auditLog.createMany).toHaveBeenCalledTimes(1)
   })
 

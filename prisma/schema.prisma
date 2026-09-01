@@ -198,12 +198,14 @@ model Conversation {
   customerId      String
   customer        Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
   messages        Json
+  clearedAt       DateTime?
   agentActions    AgentAction[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   recommendations Recommendation[]
 
   @@index([customerId, merchantId, updatedAt])
+  @@index([customerId, merchantId, clearedAt])
 }
 
 model BuyerIntent {

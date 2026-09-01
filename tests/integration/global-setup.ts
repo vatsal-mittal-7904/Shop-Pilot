@@ -6,11 +6,12 @@ export default async function globalSetup() {
 
   process.env.DATABASE_URL = databaseUrl
   const env = { ...process.env, DATABASE_URL: databaseUrl }
-  console.log(`Seeding integration database${process.env.TEST_DATABASE_URL ? ' from TEST_DATABASE_URL' : ''}...`)
+  // Deploy pending database migrations to ensure the test database matches the full schema.
+  console.log('Applying Prisma database migrations...')
+  execFileSync('npx', ['prisma', 'migrate', 'deploy'], { stdio: 'inherit', env })
 
-  // Schema deployment belongs to the normal application migration step. These
-  // scripts only establish the deterministic rows the integration assertions
-  // require, and both are idempotent, so the test command never drops data.
+  // Seed the deterministic baseline rows required by integration assertions.
+  console.log('Seeding integration database...')
   execFileSync('npx', ['prisma', 'db', 'seed'], { stdio: 'inherit', env })
   execFileSync('npm', ['run', 'db:seed:demo'], { stdio: 'inherit', env })
 }

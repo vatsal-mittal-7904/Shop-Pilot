@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/backend/auth/session', () => ({ requireCustomer: mocks.requireCustomer }))
 vi.mock('@/backend/db/prisma', () => ({
   prisma: {
-    order: { findFirst: mocks.findFirst, updateMany: mocks.reserveReceipt },
+    order: { findFirst: mocks.findFirst, updateMany: mocks.reserveReceipt, update: vi.fn() },
+    offer: { update: vi.fn() },
     auditLog: { create: vi.fn() },
     $transaction: mocks.transaction,
   },
@@ -99,5 +100,16 @@ describe('Razorpay order reconciliation', () => {
     expect(recoveryTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ action: 'RAZORPAY_ORDER_RECONCILED' }),
     }))
+  })
+
+  test('strictly refuses to create Razorpay provider order if the underlying offer has expired', async () => {
+    const expiredOrder = {
+      ...baseOrder,
+      offer: { id: 'offer-1', expiresAt: new Date(Date.now() - 60_000), status: 'ACTIVE' },
+    }
+    mocks.findFirst.mockResolvedValue(expiredOrder)
+
+    await expect(createRazorpayOrder(INTERNAL_ORDER_ID)).rejects.toThrow('This offer has expired')
+    expect(mocks.providerCreate).not.toHaveBeenCalled()
   })
 })
