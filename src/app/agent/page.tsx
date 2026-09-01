@@ -1,13 +1,16 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport } from 'ai'
 import { useRef, useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
-import { addProductToCart } from '@/backend/actions/commerce'
-import { startCheckout } from '@/backend/actions/payment'
+import { ThemeToggle } from '@/frontend/components/ThemeToggle'
+import { addProductToCart } from '@/backend/actions/cart'
 import { ProductCards } from './_components/ProductCards'
 import { BundleOfferCard } from './_components/BundleOfferCard'
+import { UpsellOfferCard } from './_components/UpsellOfferCard'
 import { CheckoutButton } from './_components/CheckoutButton'
+import { OfferCheckoutControl } from './_components/OfferCheckoutControl'
 import PolicyBadge from './_components/PolicyBadge'
 import { useAgentSession } from './_components/AgentSessionProvider'
 // Type-only import: erased at compile time, so this does NOT create a server
@@ -19,8 +22,10 @@ import type { AgentActionSummary } from '@/backend/actions/explainability'
 // tools that return products (search_catalog, propose_products) now include them.
 type ProductCard = { id: string; name: string; category: string; price: number; inventory: number; imageUrl?: string | null; warrantyYears: number; deliveryDays: number; tags?: string[]; attributes: Record<string, unknown> }
 type CheckoutOffer = { items: Array<{ id: string; unitPrice: number; product: ProductCard }>; subtotal: number; discount: number; total: number }
+type CartItem = { id: string; quantity: number; product: ProductCard }
 type BuyerIntentUsed = { category: string[]; maximumAmount: number | null }
 type BundleAddon = { id: string; name: string; price: number; imageUrl?: string | null; category?: string }
+type UpsellUpgrade = { id: string; name: string; price: number; imageUrl?: string | null; category?: string }
 // What evaluateDiscount() (policyEngine.ts) returns, and what the chat route hands
 // back on every policy-gated path -- refused (route.ts:316, :366) and approved
 // (route.ts:334, :371) alike. PolicyBadge re-parses it with zod at the boundary
@@ -29,15 +34,40 @@ type PolicyResult = { checked: string[]; passed: boolean; limit: number; request
 // One flat optional-field bag covering every tool's result shape; `skipped`
 // through `bundleTotal` are the propose_bundle_addon fields, and `orderId`
 // through `currency` are generate_checkout_link's.
-type ToolInvocationView = { toolCallId: string; state: string; toolName: string; args?: { query?: string; category?: string; maximumAmount?: number }; result?: { products?: ProductCard[]; intentUsed?: BuyerIntentUsed; offer?: CheckoutOffer; offerId?: string; error?: string; skipped?: boolean; reason?: string; cartId?: string; addonProductId?: string; addon?: BundleAddon; pairedWith?: string; discountPercent?: number; bundleSubtotal?: number; bundleDiscount?: number; bundleTotal?: number; orderId?: string; razorpayOrderId?: string; amount?: number; currency?: string; policyResult?: PolicyResult } | ProductCard[] }
-type RazorpayOptions = { key: string; amount: number; currency: string; name: string; description: string; order_id: string; handler: (response: { razorpay_payment_id: string }) => void; prefill: { name: string; email: string } }
+type ToolOutput = { items?: CartItem[]; products?: ProductCard[]; intentUsed?: BuyerIntentUsed; offer?: CheckoutOffer; offerId?: string; error?: string; skipped?: boolean; reason?: string; recommendationId?: string; cartId?: string; addonProductId?: string; addon?: BundleAddon; pairedWith?: string; discountPercent?: number; bundleSubtotal?: number; bundleDiscount?: number; bundleTotal?: number; upgradeProductId?: string; upgrade?: UpsellUpgrade; replaces?: string; upsellSubtotal?: number; upsellDiscount?: number; upsellTotal?: number; orderId?: string; razorpayOrderId?: string; amount?: number; currency?: string; policyResult?: PolicyResult }
+type ToolInvocationView = {
+  type: `tool-${string}`
+  toolCallId: string
+  state: string
+  input?: { query?: string; category?: string; maximumAmount?: number }
+  output?: ToolOutput | ProductCard[]
+  errorText?: string
+}
 
+function getToolName(part: ToolInvocationView) {
+  return part.type.slice('tool-'.length)
+}
+
+/**
+ * The model often uses Markdown-style bold for product names and discounts.
+ * Render that one inline format deliberately instead of injecting arbitrary
+ * model output as HTML.
+ */
+function renderInlineBold(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((segment, index) => {
+    if (segment.startsWith('**') && segment.endsWith('**')) {
+      return <strong key={index}>{segment.slice(2, -2)}</strong>
+    }
+    return segment
+  })
+}
 // The AgentAction.type each policy-gated tool persists its decision under,
 // mirroring the chat route exactly (propose_bundle_addon route.ts:305,
 // generate_checkout_offer route.ts:354). Any other tool name yields no badge
 // rather than a guessed label.
 const POLICY_ACTION_TYPE: Record<string, string> = {
   propose_bundle_addon: 'BUNDLE_ADDON_OFFER',
+  propose_upsell: 'UPSELL_OFFER',
   generate_checkout_offer: 'DISCOUNT_OFFER',
 }
 
@@ -52,7 +82,7 @@ const POLICY_ACTION_TYPE: Record<string, string> = {
  * result instead:
  *
  *   1. The client has no conversationId to pass it. The chat route creates the id
- *      server-side (route.ts:148) and returns a plain toDataStreamResponse(), so
+ *      server-side and returns a UI message stream, so
  *      the id never crosses the boundary; AgentSessionProvider carries only
  *      { customerId, merchantId }. The fetcher is simply uncallable from here.
  *   2. Conversation scope still isn't message scope. Several DISCOUNT_OFFERs can
@@ -81,7 +111,7 @@ const RATE_LIMIT_COOLDOWN_MS = 5000
 const RATE_LIMIT_MESSAGE = "Woah there! You're chatting a bit too fast. Please wait a few seconds before sending another message."
 
 export default function AgentSimulation() {
-  const { customerId, merchantId } = useAgentSession()
+  const { customerId, merchantId, campaignOffers } = useAgentSession()
   const [rateLimited, setRateLimited] = useState(false)
   const rateLimitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastUserMessageRef = useRef<string>('')
@@ -103,19 +133,12 @@ export default function AgentSimulation() {
   const [input, setInput] = useState('')
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value)
 
-  const { messages, setMessages, status, stop, sendMessage, error } = useChat({
-    api: '/api/chat',
-    body: { merchantId },
-    maxToolRoundtrips: 5,
-    onResponse: (response) => {
-      if (response.status === 429) {
-        triggerRateLimitCooldown()
-        setInput(lastUserMessageRef.current)
-      }
-    },
+  const { messages, setMessages, status, sendMessage, error } = useChat({
+    transport: new DefaultChatTransport({ api: '/api/chat', body: { merchantId } }),
     onError: (error) => {
       if (!rateLimited && /rate limit/i.test(error.message)) {
         triggerRateLimitCooldown()
+        setInput(lastUserMessageRef.current)
       }
     },
   })
@@ -124,7 +147,7 @@ export default function AgentSimulation() {
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!input?.trim()) return
-    sendMessage({ text: input }, { body: { merchantId } })
+    sendMessage({ text: input })
     setInput('')
   }
 
@@ -140,8 +163,6 @@ export default function AgentSimulation() {
   }
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [checkingOut, setCheckingOut] = useState(false)
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -157,61 +178,70 @@ export default function AgentSimulation() {
         {
           id: 'greeting',
           role: 'assistant',
-          content: 'Hello! I am the TechNest AI Agent. How can I help you today? Please let me know what kind of product you are looking for, your requirements, and your budget.'
+          parts: [{ type: 'text', text: 'Hello! I am the TechNest AI Agent. How can I help you today? Please let me know what kind of product you are looking for, your requirements, and your budget.' }],
         }
       ])
     }
   }, [messages.length, setMessages])
 
-  const handleCheckout = async (offerId: string) => {
-    setCheckingOut(true)
-    try {
-      const { razorpayOrder } = await startCheckout(offerId)
-      
-      const options: RazorpayOptions = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_dummy',
-        amount: Number(razorpayOrder.amount),
-        currency: 'INR',
-        name: 'TechNest (Agent Negotiated)',
-        description: 'AI Autonomous Purchase',
-        order_id: razorpayOrder.id,
-        handler: function (response: { razorpay_payment_id: string }) {
-          alert(`Payment submitted. We are waiting for secure Razorpay webhook verification. Payment ID: ${response.razorpay_payment_id}`)
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Your payment was submitted. I will only confirm the order after the Razorpay webhook verifies it.', parts: [] }])
-        },
-        prefill: {
-          name: 'AI Agent Purchaser',
-          email: localStorage.getItem('customer_email') || 'agent@buyer.com'
-        }
-      }
-      
-      const Razorpay = (window as unknown as { Razorpay: new (options: RazorpayOptions) => { open: () => void } }).Razorpay
-      const rzp = new Razorpay(options)
-      rzp.open()
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Checkout failed.')
-    }
-    setCheckingOut(false)
-  }
-
   return (
-    <div className="flex flex-col h-screen bg-slate-50 font-sans selection:bg-indigo-100">
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+    <div className="flex flex-col h-screen font-sans selection:bg-indigo-100 transition-colors relative overflow-hidden">
+      
+      {/* ================= LIGHT MODE BACKDROP (Soft Diagonal Folds) ================= */}
+      <div 
+        className="absolute inset-0 block dark:hidden overflow-hidden bg-white -z-10 pointer-events-none"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at top right, rgba(255,255,255,0.6) 0%, transparent 60%),
+            repeating-linear-gradient(
+              112deg,
+              #ffffff 0px,
+              #f0f5fb 60px,
+              #dbe6f5 160px,
+              #bed1ed 275px,
+              #ffffff 280px
+            )
+          `
+        }}
+      ></div>
+
+      {/* ================= DARK MODE BACKDROP (Agent Studio Blue Slashes) ================= */}
+      <div 
+        className="absolute inset-0 hidden dark:block overflow-hidden bg-black -z-10 pointer-events-none"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 50% 50%, transparent 10%, #000 95%),
+            repeating-linear-gradient(
+              112deg,
+              #000 0px,
+              #01081a 80px,
+              #072075 190px,
+              #1342cc 275px,
+              #000 280px
+            )
+          `
+        }}
+      ></div>
+
+      <header className="bg-white/80 dark:bg-[#0B1221]/80 backdrop-blur-md border-b border-slate-200 dark:border-gray-800 px-6 py-4 flex justify-between items-center shadow-sm z-10 transition-colors">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-indigo-600 dark:bg-blue-600 rounded-xl flex items-center justify-center">
             <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
           <div>
-            <h1 className="text-lg font-bold text-slate-900 leading-tight">TechNest AI Sales Agent</h1>
-            <p className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+            <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">TechNest AI Sales Agent</h1>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Online & Ready to negotiate
+              Online · policy-protected checkout
             </p>
           </div>
         </div>
-        <Link href="/" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors bg-slate-100 hover:bg-indigo-50 px-4 py-2 rounded-lg">Exit Store</Link>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <Link href="/" className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-blue-400 transition-colors bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 px-4 py-2 rounded-lg">Exit Store</Link>
+        </div>
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -221,49 +251,87 @@ export default function AgentSimulation() {
               <span className="font-semibold">Chat Error:</span> {error.message}
             </div>
           )}
-          
+
           <div className="bg-indigo-50 border border-indigo-100 text-indigo-800 text-sm p-4 rounded-xl mb-8 flex gap-3">
             <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
-              <strong>Pro Tip:</strong> To get the best results, tell the agent your <strong>budget</strong>, <strong>category</strong> (e.g. keyboard), and <strong>specific requirements</strong> (e.g. wireless, mechanical). It will search the catalog and negotiate the best deal!
+              <strong>Pro Tip:</strong> Tell the agent your <strong>budget</strong>, <strong>category</strong> (e.g. keyboard), and <strong>specific requirements</strong> (e.g. wireless, mechanical). It will search the catalog and prepare a policy-checked offer for your approval.
             </div>
           </div>
 
+          {campaignOffers.length > 0 && (
+            <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Merchant recovery offer</p>
+              <div className="mt-3 space-y-3">
+                {campaignOffers.map((offer) => (
+                  <div key={offer.id} className="rounded-xl border border-emerald-200 bg-white p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h2 className="text-sm font-bold text-slate-900">{offer.campaignTitle}</h2>
+                        <p className="mt-1 text-xs text-slate-600">Expires {new Date(offer.expiresAt).toLocaleString('en-IN')}</p>
+                      </div>
+                      <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">
+                        Save {(offer.discount / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
+                      </span>
+                    </div>
+                    <ul className="mt-3 space-y-1 text-xs text-slate-600">
+                      {offer.items.map((item) => (
+                        <li key={item.id} className="flex justify-between gap-3">
+                          <span>{item.name} × {item.quantity}</span>
+                          <span>{(item.unitPrice * item.quantity / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                      <span className="text-sm font-bold text-slate-900">{(offer.total / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
+                      <OfferCheckoutControl
+                        offerId={offer.id}
+                        label="Accept offer & pay"
+                        merchantName="TechNest"
+                        className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {messages.map((m) => {
-            const hasContent = !!m.content || !!(m.parts && m.parts.length > 0);
-            const hasVisibleTool = m.toolInvocations?.some((raw) => {
-              const ti = raw as ToolInvocationView;
-              if (ti.state !== 'result') return true;
-              const res = Array.isArray(ti.result) ? undefined : ti.result;
-              if (ti.toolName === 'propose_bundle_addon' && res?.skipped) return false;
+            const text = m.parts.filter((part) => part.type === 'text').map((part) => part.text).join('')
+            const toolParts = m.parts
+              .filter((part) => part.type.startsWith('tool-'))
+              .map((part) => part as unknown as ToolInvocationView)
+            const hasVisibleTool = toolParts.some((toolInvocation) => {
+              const result = Array.isArray(toolInvocation.output) ? undefined : toolInvocation.output
+              if (getToolName(toolInvocation) === 'propose_bundle_addon' && result?.skipped) return false
               return true;
             });
-            if (!hasContent && !hasVisibleTool && m.role !== 'user') return null;
+            if (!text && !hasVisibleTool && m.role !== 'user') return null;
 
             return (
             <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl p-4 shadow-sm ${
-                m.role === 'user' 
-                  ? 'bg-indigo-600 text-white rounded-br-none' 
-                  : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
+              <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl p-4 shadow-sm transition-colors ${
+                m.role === 'user'
+                  ? 'bg-indigo-600 dark:bg-blue-600 text-white rounded-br-none'
+                  : 'bg-white dark:bg-[#1E2B4D]/95 dark:backdrop-blur-md border border-slate-200 dark:border-[#3B4D78]/80 text-slate-800 dark:text-slate-100 rounded-bl-none shadow-md dark:shadow-blue-900/10'
               }`}>
-                {m.content && <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{m.content}</p>}
-                {!m.content && m.parts && <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{m.parts.filter((p) => p.type === 'text').map((p) => p.text).join('')}</p>}
-                
+                {text && <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{renderInlineBold(text)}</p>}
+
                 {/* Render Tool Invocations inside the Chat! */}
-                {m.toolInvocations?.map((rawToolInvocation: unknown) => {
-                  const toolInvocation = rawToolInvocation as ToolInvocationView
-                  const result = Array.isArray(toolInvocation.result) ? undefined : toolInvocation.result
-                  if (toolInvocation.state !== 'result') {
+                {toolParts.map((toolInvocation) => {
+                  const toolName = getToolName(toolInvocation)
+                  const result = Array.isArray(toolInvocation.output) ? undefined : toolInvocation.output
+                  if (toolInvocation.state !== 'output-available') {
                     return (
                       <div key={toolInvocation.toolCallId} className="mt-2 text-xs font-mono text-slate-400 flex items-center gap-2">
                         <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Agent is using tool: {toolInvocation.toolName}...
+                        Agent is using tool: {toolName}...
                       </div>
                     )
                   }
@@ -271,11 +339,60 @@ export default function AgentSimulation() {
                   // Render search_catalog results as selectable sliding cards.
                   // The tool now returns { intentUsed, products }, not a bare
                   // array, so the count comes off result.products.
-                  if (toolInvocation.toolName === 'search_catalog') {
+                  // Render inline cart for basket tools
+                  if (toolName === 'show_basket') {
+                    if (!result || !result.items || result.items.length === 0) {
+                      return <div key={toolInvocation.toolCallId} className="mt-4 p-4 border border-slate-200 bg-white rounded-xl text-center text-sm text-slate-500 shadow-sm">Your basket is empty.</div>
+                    }
+
+                    const cartTotal = result.items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+
+                    return (
+                      <div key={toolInvocation.toolCallId} className="mt-4 border border-indigo-100 bg-white rounded-xl overflow-hidden shadow-sm">
+                        <div className="bg-indigo-50 px-4 py-3 flex justify-between items-center border-b border-indigo-100">
+                          <span className="font-semibold text-indigo-900 flex items-center gap-2">
+                            <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            Your Basket
+                          </span>
+                          <span className="text-xs font-bold bg-white px-2 py-1 rounded-full text-indigo-700 border border-indigo-200">
+                            {result.items.reduce((sum, item) => sum + item.quantity, 0)} items
+                          </span>
+                        </div>
+                        <div className="divide-y divide-slate-100">
+                          {result.items.map((item) => (
+                            <div key={item.id} className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
+                              {item.product.imageUrl ? (
+                                <img src={item.product.imageUrl} alt={item.product.name} className="w-16 h-16 rounded-lg object-cover border border-slate-100 shadow-sm" />
+                              ) : (
+                                <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 border border-slate-200">
+                                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </div>
+                              )}
+                              <div className="flex-1 flex flex-col justify-center">
+                                <h4 className="text-sm font-semibold text-slate-900 leading-tight">{item.product.name}</h4>
+                                <div className="mt-1 flex justify-between items-center text-sm">
+                                  <span className="text-slate-500 font-medium">Qty: {item.quantity}</span>
+                                  <span className="font-bold text-slate-900">{(item.product.price * item.quantity / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex justify-between items-center">
+                          <span className="text-sm font-medium text-slate-600">Subtotal</span>
+                          <span className="font-bold text-slate-900 text-base">{(cartTotal / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  if (toolName === 'search_catalog') {
                     const products = result?.products ?? []
                     const searchedFor =
-                      toolInvocation.args?.query ??
-                      toolInvocation.args?.category ??
+                      toolInvocation.input?.query ??
+                      toolInvocation.input?.category ??
                       result?.intentUsed?.category.join(', ')
 
                     return (
@@ -294,7 +411,28 @@ export default function AgentSimulation() {
                         </div>
                         {products.length > 0 && (
                           <div className="mt-3">
-                            <ProductCards products={products} customerId={customerId} merchantId={merchantId} onSelect={(p) => sendMessage({ text: `I added ${p.name} to my cart.` }, { body: { merchantId } })} />
+                            <ProductCards
+                              products={products}
+                              customerId={customerId}
+                              merchantId={merchantId}
+                              onSelect={(product) => {
+                                // Selection is already a successful server action in
+                                // ProductCards. Do not send a second LLM request just
+                                // to confirm it: that made a working Select button
+                                // appear to hang whenever the provider was slow.
+                                setMessages((previous) => [
+                                  ...previous,
+                                  {
+                                    id: `${Date.now()}-basket`,
+                                    role: 'assistant',
+                                    parts: [{
+                                      type: 'text',
+                                      text: `${product.name} has been added to your basket. You can keep shopping, ask for an upgrade, or ask me to prepare checkout.`,
+                                    }],
+                                  },
+                                ])
+                              }}
+                            />
                           </div>
                         )}
                       </div>
@@ -302,7 +440,7 @@ export default function AgentSimulation() {
                   }
 
                   // Render Sliding Cards for propose_products tool
-                  if (toolInvocation.toolName === 'propose_products' && result?.products) {
+                  if (toolName === 'propose_products' && result?.products) {
                     return (
                       <div key={toolInvocation.toolCallId} className="mt-4">
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Recommended Products</p>
@@ -328,7 +466,7 @@ export default function AgentSimulation() {
                                     {p.inventory > 0 ? 'In Stock' : 'Out of Stock'}
                                   </span>
                                 </div>
-                                <button type="button" onClick={async () => { await addProductToCart(p.id); setMessages(prev => [...prev, { id: `${Date.now()}-basket`, role: 'assistant', content: `${p.name} has been added to your basket. Ask me to compare options, negotiate, or create your final offer.`, parts: [] }]) }} className="mt-3 w-full rounded-lg border border-indigo-200 bg-white py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">Add to basket</button>
+                                <button type="button" onClick={async () => { let text = `${p.name} has been added to your basket. Ask me to compare options, negotiate, or create your final offer.`; try { await addProductToCart(p.id) } catch (error) { text = error instanceof Error ? error.message : `${p.name} could not be added to your basket.` } setMessages(prev => [...prev, { id: `${Date.now()}-basket`, role: 'assistant', parts: [{ type: 'text', text }] }]) }} className="mt-3 w-full rounded-lg border border-indigo-200 bg-white py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">Add to basket</button>
                               </div>
                             </div>
                           ))}
@@ -338,13 +476,13 @@ export default function AgentSimulation() {
                   }
 
                   // Render the interactive cross-sell card for propose_bundle_addon.
-                  if (toolInvocation.toolName === 'propose_bundle_addon') {
+                  if (toolName === 'propose_bundle_addon') {
                     // Nothing eligible to pitch (empty cart, or every candidate
                     // already proposed earlier in this conversation). Stay
                     // silent rather than surfacing plumbing to the shopper.
                     if (result?.skipped) return null
 
-                    const badgeAction = toPolicyBadgeAction(toolInvocation.toolCallId, toolInvocation.toolName, result?.policyResult)
+                    const badgeAction = toPolicyBadgeAction(toolInvocation.toolCallId, toolName, result?.policyResult)
 
                     if (result?.error) {
                       // This tool's only error return is the policy refusal at
@@ -360,13 +498,14 @@ export default function AgentSimulation() {
                       return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-lg text-sm border border-amber-200">Bundle blocked by policy: {result.error}</div>
                     }
 
-                    const { cartId, addonProductId, addon, pairedWith, discountPercent, bundleSubtotal, bundleDiscount, bundleTotal } = result ?? {}
-                    if (!cartId || !addonProductId || !addon || !pairedWith || discountPercent == null || bundleSubtotal == null || bundleDiscount == null || bundleTotal == null) return null
+                    const { recommendationId, cartId, addonProductId, addon, pairedWith, discountPercent, bundleSubtotal, bundleDiscount, bundleTotal } = result ?? {}
+                    if (!recommendationId || !cartId || !addonProductId || !addon || !pairedWith || discountPercent == null || bundleSubtotal == null || bundleDiscount == null || bundleTotal == null) return null
 
                     return (
                       <div key={toolInvocation.toolCallId} className="mt-4">
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Frequently bought together</p>
                         <BundleOfferCard
+                          recommendationId={recommendationId}
                           cartId={cartId}
                           addonProductId={addonProductId}
                           addon={addon}
@@ -375,17 +514,52 @@ export default function AgentSimulation() {
                           bundleSubtotal={bundleSubtotal}
                           bundleDiscount={bundleDiscount}
                           bundleTotal={bundleTotal}
-                          onDismiss={() => setMessages(prev => [...prev, { id: `${Date.now()}-bundle-declined`, role: 'assistant', content: `No problem, I will leave the ${addon.name} out. Shall I put together your final offer?`, parts: [] }])}
+                          onDismiss={() => setMessages(prev => [...prev, { id: `${Date.now()}-bundle-declined`, role: 'assistant', parts: [{ type: 'text', text: `No problem, I will leave the ${addon.name} out. Shall I put together your final offer?` }] }])}
                         />
-                        {/* Shows which policy cleared this bundle's discount, and to what limit. */}
+                        {/* Shows which policy cleared this bundle's discount, and to youths limit. */}
+                        {badgeAction && <div className="mt-3"><PolicyBadge action={badgeAction} /></div>}
+                      </div>
+                    )
+                  }
+
+                  if (toolName === 'propose_upsell') {
+                    if (result?.skipped) return null
+
+                    const badgeAction = toPolicyBadgeAction(toolInvocation.toolCallId, toolName, result?.policyResult)
+
+                    if (result?.error) {
+                      if (badgeAction) {
+                        return <div key={toolInvocation.toolCallId} className="mt-4"><PolicyBadge action={badgeAction} /></div>
+                      }
+                      return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-lg text-sm border border-amber-200">Upsell blocked by policy: {result.error}</div>
+                    }
+
+                    const { recommendationId, cartId, upgradeProductId, upgrade, replaces, discountPercent, upsellSubtotal, upsellDiscount, upsellTotal } = result ?? {}
+                    if (!recommendationId || !cartId || !upgradeProductId || !upgrade || !replaces || discountPercent == null || upsellSubtotal == null || upsellDiscount == null || upsellTotal == null) return null
+
+                    return (
+                      <div key={toolInvocation.toolCallId} className="mt-4">
+                        <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-2">Recommended Upgrade</p>
+                        <UpsellOfferCard
+                          recommendationId={recommendationId}
+                          cartId={cartId}
+                          upgradeProductId={upgradeProductId}
+                          upgrade={upgrade}
+                          replaces={replaces}
+                          discountPercent={discountPercent}
+                          upsellSubtotal={upsellSubtotal}
+                          upsellDiscount={upsellDiscount}
+                          upsellTotal={upsellTotal}
+                          onDismiss={() => setMessages(prev => [...prev, { id: `${Date.now()}-upsell-declined`, role: 'assistant', parts: [{ type: 'text', text: `Got it, keeping your current selection.` }] }])}
+                        />
                         {badgeAction && <div className="mt-3"><PolicyBadge action={badgeAction} /></div>}
                       </div>
                     )
                   }
 
                   // Render Checkout Button for a policy-checked checkout offer.
-                  if (toolInvocation.toolName === 'generate_checkout_offer') {
-                    const badgeAction = toPolicyBadgeAction(toolInvocation.toolCallId, toolInvocation.toolName, result?.policyResult)
+                  if (toolName === 'generate_checkout_offer') {
+                    const badgeAction = toPolicyBadgeAction(toolInvocation.toolCallId, toolName, result?.policyResult)
 
                     if (result?.error) {
                       // Two unrelated failures land here. route.ts:366 is a policy
@@ -436,13 +610,12 @@ export default function AgentSimulation() {
                               <span>{(offer.total / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
                             </div>
                           </div>
-                          <button
-                            onClick={() => handleCheckout(offerId)}
-                            disabled={checkingOut}
+                          <OfferCheckoutControl
+                            offerId={offerId}
+                            label={`Accept offer & pay ${(offer.total / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })} with Razorpay`}
+                            merchantName="TechNest (Agent Negotiated)"
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                          >
-                            {checkingOut ? 'Processing...' : `Pay ${(offer.total / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })} with Razorpay`}
-                          </button>
+                          />
                         </div>
                         {/* Sits outside the emerald card so an emerald-tinted badge keeps
                             its contrast, and so the policy verdict reads as a statement
@@ -456,7 +629,7 @@ export default function AgentSimulation() {
                   // created a real Razorpay order. Only the internal order id,
                   // Razorpay's order id, and the amount cross the boundary --
                   // the secret key stays server-side in the chat route.
-                  if (toolInvocation.toolName === 'generate_checkout_link') {
+                  if (toolName === 'generate_checkout_link') {
                     if (result?.error) {
                       return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">{result.error}</div>
                     }
@@ -478,7 +651,7 @@ export default function AgentSimulation() {
             </div>
             );
           })}
-          
+
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-none p-4 shadow-sm flex items-center gap-2">
@@ -506,14 +679,14 @@ export default function AgentSimulation() {
         </div>
       </main>
 
-      <footer className="bg-white border-t border-slate-200 p-4">
+      <footer className="bg-white/80 dark:bg-[#0B1221]/80 backdrop-blur-md border-t border-slate-200 dark:border-gray-800 p-4 transition-colors z-10">
         <div className="max-w-4xl mx-auto">
           <form onSubmit={onFormSubmit} className="flex gap-3">
             <input
               value={input || ''}
               onChange={handleInputChange}
               placeholder={rateLimited ? 'Please wait a moment before sending another message...' : 'E.g. I need a mechanical keyboard under 8000 rupees...'}
-              className="flex-1 border border-slate-300 rounded-xl px-5 py-4 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm bg-white disabled:bg-slate-50 disabled:text-slate-400"
+              className="flex-1 border border-slate-300 dark:border-[#3B4D78]/80 rounded-xl px-5 py-4 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-blue-400 shadow-sm bg-white dark:bg-[#1E2B4D]/95 dark:backdrop-blur-md disabled:bg-slate-50 dark:disabled:bg-[#151f38] disabled:text-slate-400 transition-colors"
               disabled={isLoading || rateLimited}
             />
             <button
@@ -527,12 +700,10 @@ export default function AgentSimulation() {
             </button>
           </form>
           <div className="text-center mt-3 text-xs text-slate-400">
-            Powered by Gemini 1.5 Pro & Razorpay
+            Powered by Groq & Razorpay
           </div>
         </div>
       </footer>
-      
-      <script src="https://checkout.razorpay.com/v1/checkout.js" async></script>
     </div>
   )
 }

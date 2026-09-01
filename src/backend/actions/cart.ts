@@ -4,6 +4,8 @@ import { z } from 'zod'
 import { prisma } from '@/backend/db/prisma'
 import { requireCustomer } from '@/backend/auth/session'
 
+const productIdSchema = z.string().uuid()
+
 const addToCartSchema = z.object({
   customerId: z.string().uuid(),
   merchantId: z.string().uuid(),
@@ -11,67 +13,128 @@ const addToCartSchema = z.object({
 })
 
 /**
- * Adds one unit of `productId` to the caller's ACTIVE cart for `merchantId`,
- * creating the cart if none exists. Safe to call repeatedly for the same
- * product: relies on the CartItem @@unique([cartId, productId]) constraint
- * via upsert, so it increments quantity instead of throwing or duplicating rows.
+ * The single cart-write implementation for the whole app.
+ *
+ * Every basket mutation funnels through here so there is exactly one place
+ * that holds the invariants. Previously a second, weaker copy lived in
+ * commerce.ts (`addProductToCart`) with no row lock and no inventory ceiling,
+ * and it was the one wired to the agent UI and /api/agent/cart -- so the
+ * hardened path was the one almost nothing called.
+ *
+ * The merchant is always DERIVED from the product row, never taken from the
+ * caller. A client-supplied merchantId can only ever be an assertion that we
+ * check and reject on mismatch; it can never widen what gets written.
  */
-export async function addToCart(customerId: string, merchantId: string, productId: string) {
-  // `customerId` is a parameter because this is invoked directly from a
-  // client component, but it is never trusted on its own -- the caller is
-  // re-resolved from the session and must match, or we reject. This keeps
-  // the requested signature while preventing one customer's client from
-  // modifying another customer's cart.
+async function addOneUnitToCart({
+  productId,
+  expectedCustomerId,
+  expectedMerchantId,
+}: {
+  productId: string
+  expectedCustomerId?: string
+  expectedMerchantId?: string
+}) {
   const { customer } = await requireCustomer()
-  const data = addToCartSchema.parse({ customerId, merchantId, productId })
-  if (data.customerId !== customer.id) {
+  const parsedProductId = productIdSchema.parse(productId)
+
+  // `expectedCustomerId` exists because one caller is a client component that
+  // already holds the id. It is never trusted on its own: the session is
+  // re-resolved above and must match, or we reject.
+  if (expectedCustomerId && expectedCustomerId !== customer.id) {
     throw new Error("You cannot modify another customer's cart")
   }
 
-  const product = await prisma.product.findFirst({
-    where: { id: data.productId, merchantId: data.merchantId },
+  const product = await prisma.product.findUnique({
+    where: { id: parsedProductId },
+    select: { id: true, merchantId: true, inventory: true },
   })
-  if (!product) throw new Error('This product is not available from this merchant')
+  if (!product) throw new Error('That product is no longer available')
+  if (expectedMerchantId && expectedMerchantId !== product.merchantId) {
+    throw new Error('This product is not available from this merchant')
+  }
   if (product.inventory < 1) throw new Error('This product is out of stock')
 
-  const item = await prisma.$transaction(async (tx) => {
-    // Acquire an exclusive row lock on the customer to serialize concurrent
-    // addToCart requests (like double-clicks). This forces the second request
-    // to wait for the first to finish, ensuring it correctly sees the newly
-    // created Cart instead of creating a duplicate, and serializing the inventory check.
-    await tx.$executeRaw`SELECT 1 FROM "Customer" WHERE id = ${data.customerId} FOR UPDATE`
+  // Authoritative: the product's own merchant, so a cart can never mix
+  // merchants and an offer built from it can never span two catalogues.
+  const merchantId = product.merchantId
 
-    let cart = await tx.cart.findFirst({
-      where: { customerId: data.customerId, merchantId: data.merchantId, status: 'ACTIVE' },
-      orderBy: { updatedAt: 'desc' },
+  return prisma.$transaction(async (tx) => {
+    // Exclusive row lock on the customer serializes concurrent adds (double
+    // clicks, or the agent and the shopper clicking at once). It forces the
+    // second request to observe the cart the first one created instead of
+    // creating a duplicate, and it serializes the inventory ceiling check
+    // below so two adds cannot both read the same pre-increment quantity.
+    await tx.$executeRaw`SELECT 1 FROM "Customer" WHERE id = ${customer.id} FOR UPDATE`
+
+    // Re-read inventory inside the lock: the pre-flight check above raced.
+    const locked = await tx.product.findUnique({
+      where: { id: parsedProductId },
+      select: { inventory: true },
     })
-    
-    if (!cart) {
-      cart = await tx.cart.create({
-        data: { customerId: data.customerId, merchantId: data.merchantId },
-      })
-    }
+    if (!locked || locked.inventory < 1) throw new Error('This product is out of stock')
 
-    let cartItem = await tx.cartItem.findUnique({
-      where: { cartId_productId: { cartId: cart.id, productId: data.productId } },
+    const cart =
+      (await tx.cart.findFirst({
+        where: { customerId: customer.id, merchantId, status: 'ACTIVE' },
+        orderBy: { updatedAt: 'desc' },
+      })) ?? (await tx.cart.create({ data: { customerId: customer.id, merchantId } }))
+
+    const existingItem = await tx.cartItem.findUnique({
+      where: { cartId_productId: { cartId: cart.id, productId: parsedProductId } },
     })
 
-    if (cartItem) {
-      if (cartItem.quantity + 1 > product.inventory) {
+    if (existingItem) {
+      if (existingItem.quantity + 1 > locked.inventory) {
         throw new Error('Cannot add more of this product than is in stock')
       }
-      cartItem = await tx.cartItem.update({
-        where: { id: cartItem.id },
-        data: { quantity: cartItem.quantity + 1 },
+      await tx.cartItem.update({
+        where: { id: existingItem.id },
+        data: { quantity: existingItem.quantity + 1 },
       })
     } else {
-      cartItem = await tx.cartItem.create({
-        data: { cartId: cart.id, productId: data.productId, quantity: 1 },
+      await tx.cartItem.create({
+        data: { cartId: cart.id, productId: parsedProductId, quantity: 1 },
       })
     }
 
-    return cartItem
-  })
+    // Touch the cart so `orderBy: { updatedAt: 'desc' }` on the read path
+    // reflects the most recently used basket. Writing CartItem rows does not
+    // bump the parent Cart's @updatedAt on its own. Setting status to the
+    // value it already holds is an idempotent way to trigger it.
+    await tx.cart.update({ where: { id: cart.id }, data: { status: 'ACTIVE' } })
 
-  return { cartId: item.cartId, productId: item.productId, quantity: item.quantity }
+    return tx.cart.findUniqueOrThrow({
+      where: { id: cart.id },
+      include: { items: { include: { product: true } } },
+    })
+  })
+}
+
+/**
+ * Adds one unit of `productId` to the caller's ACTIVE cart, resolving the
+ * merchant from the product. This is the preferred entry point: it takes no
+ * caller-supplied identity or merchant at all.
+ *
+ * Returns the full active cart (with items) because the agent UI and
+ * /api/agent/cart render it directly.
+ */
+export async function addProductToCart(productId: string) {
+  return addOneUnitToCart({ productId })
+}
+
+/**
+ * Client-component entry point, kept for `ProductCards`, which already holds
+ * both ids. Both are validated as assertions against the session and the
+ * product row rather than being used to select what gets written.
+ */
+export async function addToCart(customerId: string, merchantId: string, productId: string) {
+  const data = addToCartSchema.parse({ customerId, merchantId, productId })
+  const cart = await addOneUnitToCart({
+    productId: data.productId,
+    expectedCustomerId: data.customerId,
+    expectedMerchantId: data.merchantId,
+  })
+  const item = cart.items.find((cartItem) => cartItem.productId === data.productId)
+  if (!item) throw new Error('The basket could not be updated. Please try again.')
+  return { cartId: cart.id, productId: item.productId, quantity: item.quantity }
 }

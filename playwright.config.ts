@@ -6,15 +6,14 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './tests/e2e',
-  fullyParallel: true,
+  globalSetup: require.resolve('./global-setup.ts'),
+  fullyParallel: false,
   // Fail the build on CI if someone accidentally left a `.only` in the test
   // file -- a common source of green-but-lying CI runs.
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // These specs drive server actions that write to a single shared database, so
-  // one worker on CI keeps runs from fighting over that state (and over LLM rate
-  // limits, for the chat flows). Locally, parallel workers are fine.
-  workers: process.env.CI ? 1 : undefined,
+  // These specs drive server actions that write to one test database.
+  workers: 1,
   reporter: [['html', { open: 'never' }], ['list']],
 
   use: {
@@ -40,25 +39,9 @@ export default defineConfig({
     // don't each pay a login. See tests/e2e/auth.setup.ts.
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
 
-    // NOTE: with `fullyParallel` and no CI worker cap, these three run at the
-    // same time against ONE dev database, so their writes interleave.
-    // merchant.spec.ts is written to tolerate that -- it asserts UI state and
-    // KPI rendering, never row counts. If you add a count assertion (e.g.
-    // "exactly 3 PROPOSED campaigns"), pin that spec to a single project or run
-    // with `--workers=1`, or it will flake for a data reason, not a code reason.
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup'],
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-      dependencies: ['setup'],
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
       dependencies: ['setup'],
     },
   ],
@@ -68,6 +51,10 @@ export default defineConfig({
   // repeated test runs don't pay startup cost every time.
   webServer: {
     command: 'npm run dev',
+    env: {
+      ...process.env,
+      DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
+    },
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
+import { ThemeProvider } from "@/frontend/components/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MerchantOS AI",
-  description: "Governed agentic commerce for TechNest",
+  title: "Razorpay Clone",
+  description: "Payment gateway and dashboard clone",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>{children}</body>
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

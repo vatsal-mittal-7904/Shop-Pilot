@@ -146,10 +146,8 @@ async function clickAndSettle(page: Page, button: Locator, idleLabel: string, ti
  *
  * `heading` patterns are wider than the current copy so a wording tweak doesn't
  * fail the run, but each still names the metric it stands for -- notably the
- * fourth card, whose real title is "Margins Protected" with "Blocked policy
- * violations" as its description. A /policy\s*intervention/i pattern (the
- * metric's name as the task describes it) matches nothing on the page; both
- * spellings are accepted here.
+ * fourth card, which reports only discount-policy blocks rather than claiming
+ * every blocked action represents protected margin.
  *
  * `value` patterns exist because a card can render its label while the number
  * behind it is broken -- which is exactly what a shape mismatch between
@@ -163,11 +161,11 @@ const KPI_CARDS: ReadonlyArray<{ metric: string; heading: RegExp; value: RegExp 
   { metric: 'Revenue', heading: /revenue generated|total revenue/i, value: /₹/ },
   // .toLocaleString() on a count
   { metric: 'Carts Recovered', heading: /carts?\s+recovered|recovered\s+carts?/i, value: /\d/ },
-  // Renders an em-dash, not "0.0%", when bundleTotal === 0 -- so on an unseeded
-  // database the empty state is the CORRECT value here, not a failure. Accepting
-  // both is what keeps this assertion about rendering rather than about data.
+  // Cross-sell
+  { metric: 'Cross-Sell Rate', heading: /cross-sell/i, value: /\d+(\.\d+)?%|[—–]/ },
+  // Upsell
   { metric: 'Upsell Rate', heading: /upsell/i, value: /\d+(\.\d+)?%|[—–]/ },
-  { metric: 'Policy Interventions', heading: /margins?\s+protected|policy\s+(intervention|violation)/i, value: /\d/ },
+  { metric: 'Discount Policy Blocks', heading: /discount\s+policy\s+blocks?/i, value: /\d/ },
 ]
 
 /**

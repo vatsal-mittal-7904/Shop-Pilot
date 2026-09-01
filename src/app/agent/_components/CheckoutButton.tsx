@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 // Logs a client-side "payment submitted" audit event only. It must never set
 // Order.status to PAID -- that happens exclusively in the signature-verified
 // webhook at src/app/api/webhooks/razorpay/route.ts, which is also where the
 // inventory decrement happens.
-import { confirmPaymentPending } from '@/backend/actions/payment'
+import { confirmPaymentPending, getCustomerOrderStatus } from '@/backend/actions/payment'
 
 type CheckoutButtonProps = {
   // `orderId` is our *internal* Order id, distinct from Razorpay's, because
@@ -18,7 +18,7 @@ type CheckoutButtonProps = {
   merchantName?: string
 }
 
-type CheckoutState = 'idle' | 'opening' | 'submitted' | 'failed'
+type CheckoutState = 'idle' | 'opening' | 'submitted' | 'paid' | 'failed'
 
 type RazorpayHandlerResponse = {
   razorpay_payment_id: string
@@ -77,6 +77,43 @@ function formatInr(paise: number) {
 export function CheckoutButton({ orderId, razorpayOrderId, amount, currency = 'INR', merchantName = 'TechNest' }: CheckoutButtonProps) {
   const [state, setState] = useState<CheckoutState>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [verificationMessage, setVerificationMessage] = useState('Waiting for Razorpay’s signed payment confirmation…')
+  const cancelled = useRef(false)
+
+  useEffect(() => {
+    // Reset in setup as React development Strict Mode intentionally runs an
+    // effect setup/cleanup cycle before the component is used for real.
+    cancelled.current = false
+    return () => { cancelled.current = true }
+  }, [])
+
+  async function verifyPayment() {
+    // The checkout callback is only a browser signal. Poll a customer-scoped
+    // read model until the signature-verified webhook settles the order.
+    for (let attempt = 0; attempt < 15 && !cancelled.current; attempt += 1) {
+      try {
+        const order = await getCustomerOrderStatus(orderId)
+        if (order.status === 'PAID') {
+          setState('paid')
+          setVerificationMessage(`Verified payment${order.razorpayPaymentId ? ` (${order.razorpayPaymentId})` : ''}. Your order is confirmed.`)
+          return
+        }
+        if (order.status === 'PAYMENT_FAILED' || order.status === 'INVENTORY_FAILED') {
+          setState('failed')
+          setErrorMessage(order.status === 'INVENTORY_FAILED'
+            ? 'Stock changed before fulfillment. If payment was captured, a refund is being processed.'
+            : 'Razorpay reported that this payment failed. You have not been charged.')
+          return
+        }
+      } catch {
+        // A transient status-read failure is not a payment failure.
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+    }
+    if (!cancelled.current) {
+      setVerificationMessage('Payment is still awaiting signed confirmation. Keep this order open and do not pay again.')
+    }
+  }
 
   async function handlePay() {
     setState('opening')
@@ -121,6 +158,7 @@ export function CheckoutButton({ orderId, razorpayOrderId, amount, currency = 'I
           // itself is unaffected (the webhook is still the source of truth),
           // so there is nothing to roll back or retry here.
         })
+        void verifyPayment()
       },
       modal: {
         ondismiss: () => {
@@ -144,8 +182,17 @@ export function CheckoutButton({ orderId, razorpayOrderId, amount, currency = 'I
       <div className="w-full max-w-sm rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center">
         <p className="text-sm font-medium text-amber-800">Payment submitted</p>
         <p className="mt-1 text-xs text-amber-700">
-          Confirming with {merchantName}&rsquo;s payment system now. This can take a few seconds -- please don&rsquo;t refresh.
+          {verificationMessage}
         </p>
+      </div>
+    )
+  }
+
+  if (state === 'paid') {
+    return (
+      <div className="w-full max-w-sm rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
+        <p className="text-sm font-semibold text-emerald-800">Payment verified</p>
+        <p className="mt-1 text-xs text-emerald-700">{verificationMessage}</p>
       </div>
     )
   }

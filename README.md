@@ -71,7 +71,7 @@ const passed = requested <= limit
 ### 2. Autonomous Growth Queue
 The merchant side is agentic in the same bounded way: the system proposes, a human disposes, and the proposals are grounded in rows rather than vibes.
 
-**The campaign generator** ([`generateCampaigns()`](src/backend/actions/merchant.ts)) reads this merchant's real carts, orders, and inventory and emits `RECOVERY`, `BUNDLE`, and `CLEARANCE` opportunities. It is idempotent and deduplicated.
+**The campaign generator** ([`generateCampaigns()`](src/backend/actions/merchant.ts)) emits deterministic abandoned-cart `RECOVERY` and high-inventory `CLEARANCE` opportunities. Merchant approval revalidates policy, margin, inventory, recipient eligibility, and a reserved discount budget, then issues customer-specific expiring offers. Cross-sell and upsell remain buyer-initiated flows; they are not represented as “executed campaigns” without a recipient-delivery path.
 
 ---
 
@@ -100,6 +100,10 @@ RAZORPAY_KEY_ID="rzp_test_..."
 RAZORPAY_KEY_SECRET="your_key_secret"
 RAZORPAY_WEBHOOK_SECRET="your_webhook_secret"
 
+# Optional separate secret for the HMAC that binds a checkout offer to the
+# exact authenticated customer basket. Defaults to RAZORPAY_KEY_SECRET.
+OFFER_BINDING_SECRET="another-long-random-string"
+
 # Required by GET /api/cron/sweep-carts
 CRON_SECRET="any_long_random_string"
 ```
@@ -122,6 +126,33 @@ Open [http://localhost:3000](http://localhost:3000).
 | --- | --- | --- |
 | Merchant admin | `admin@technest.com` | `technest-demo-2026` |
 | Demo customer | `demo.customer@technest.com` | `technest-customer-demo` |
+
+### Test taxonomy and Razorpay test-mode proof
+
+`npm run test:state-transitions` uses a real disposable PostgreSQL database,
+but intentionally mocks Razorpay. It proves internal state transitions such as
+inventory commitment, idempotency, and webhook handling; it is not provider
+integration evidence. `npm run test:integration` remains a compatibility alias
+for that suite.
+
+`npm run test:razorpay:provider-contract` is the provider evidence. It is
+deliberately opt-in and uses no Razorpay mock: with a separate database plus
+`rzp_test_*` keys, it creates an order through the authenticated customer
+checkout path, then fetches that order and its empty payment list directly from
+Razorpay. It verifies provider id, amount, INR currency, durable
+`mso_<internal-order-id>` receipt, `created` status, and provider-side notes.
+
+```bash
+TEST_DATABASE_URL="postgresql://.../merchantos_e2e" npm run test:razorpay:provider-contract
+```
+
+`TEST_DATABASE_URL` must be different from `DATABASE_URL`; the harness resets
+and seeds it. This test proves real provider order creation and the payment-list
+read, not a simulated Razorpay response. For capture/webhook proof, expose
+`/api/webhooks/razorpay` through a public HTTPS tunnel, configure
+`RAZORPAY_WEBHOOK_SECRET` in Razorpay test mode, complete the checkout using a
+Razorpay test payment method, and confirm the merchant audit ledger contains
+`PAYMENT_CAPTURED` with the matching Razorpay payment id.
 
 ---
 
@@ -174,4 +205,11 @@ src/
 4. **Explain with the artifact, not a summary.** The UI shows the engine's own `reason` and raw verdict JSON.
 5. **Fail closed.** Missing policy row → limit `0`. Missing `CRON_SECRET` → `500`. Bad webhook signature → `400`.
 6. **Ground numbers in rows.** Campaign impact and dashboard KPIs are aggregates over real data.
-
+7. **Acceptance is a state transition.** A Razorpay order cannot be created until the authenticated customer explicitly accepts the exact persisted offer; the acceptance is audited with the offer amount and timestamp.
+8. **Basket selection is code-bound.** The agent cannot add items or send product IDs into checkout. Offers are derived only from the shopper's persisted basket and signed with a server-side HMAC over its exact lines.
+9. **Razorpay recovery is deterministic.** Every provider order uses a durable, unique receipt. A retry first looks up that receipt at Razorpay and reconciles it before it can create another order.
+10. **Tool data is untrusted.** Catalog/tool values are reduced to a safe DTO; instruction-shaped strings and open-ended attributes are excluded from model context on every turn.
+11. **Recovery attribution is strict.** “AI-Recovered Revenue” counts only paid orders linked to offers dispatched by a completed `RECOVERY` campaign—never generic paid orders or ordinary offer conversions.
+12. **Refunds use a durable outbox.** A captured payment with no inventory atomically records an `INVENTORY_FAILED` order and a pending refund row. The cron worker calls Razorpay only after commit, retries with the row's stable Razorpay idempotency key, and records the provider refund id in the audit ledger.
+13. **Payments have webhook-independent recovery.** Persisting a Razorpay order atomically queues a payment reconciliation task. The cron worker claims due work, reads the provider's authenticated payment list, routes a final captured/failed state through the same validated processor as webhooks, and uses exponential backoff for network or non-final outcomes.
+14. **Buyer limits are account policies.** Every customer has durable daily and monthly spend limits in paise. Checkout counts that customer's pending, captured, and paid orders across merchants and conversations, and serializes the budget reservation with the order creation transaction.

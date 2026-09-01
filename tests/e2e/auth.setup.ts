@@ -30,9 +30,7 @@ setup('authenticate as merchant', async ({ page }) => {
   await page.getByLabel('Email').fill(MERCHANT_EMAIL)
   await page.getByLabel('Password').fill(MERCHANT_PASSWORD)
 
-  // exact: true so this can't also match the mode-toggle button, whose label
-  // becomes "Already have an account? Sign in" in sign-up mode.
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
 
   // authenticate() resolves { role }, and the page pushes merchants to
   // /merchant/portal. Landing there proves the cookie was both set and honoured.

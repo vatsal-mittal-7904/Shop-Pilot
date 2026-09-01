@@ -50,6 +50,23 @@ const intentExtractionSchema = z.object({
 type ExtractedIntent = z.infer<typeof intentExtractionSchema>
 
 /**
+ * Extracts an explicitly stated customer budget in rupees and converts it to
+ * paise. Money must not rely solely on LLM extraction: a model returning 70
+ * for the text "budget 7000" silently turns a ₹7,000 limit into ₹70.
+ */
+export function extractExplicitBudgetInPaise(message: string): number | null {
+  const match = message.match(
+    /(?:\b(?:budget|under|below|upto|up\s+to|within)\b(?:\s+of)?\s*|₹\s*|\b(?:rs\.?|rupees?)\s*)([\d,]+(?:\.\d{1,2})?)/i,
+  )
+  if (!match) return null
+
+  const rupees = Number(match[1].replace(/,/g, ''))
+  if (!Number.isFinite(rupees) || rupees < 0) return null
+
+  return Math.round(rupees * 100)
+}
+
+/**
  * Parses a raw customer message into a structured BuyerIntent, merging into
  * the customer's most recent intent if it was updated within the refresh
  * window (treated as the same ongoing negotiation), or creating a new row
@@ -89,12 +106,16 @@ export async function parseBuyerIntent(customerId: string, rawMessage: string) {
   }
 
   if (!extracted.isActionable) return null
-  const hasSignal = extracted.category.length > 0 || extracted.requirements.length > 0 || extracted.maximumAmount != null || extracted.clearBudget || extracted.intentAction === 'REPLACE'
+  const explicitBudget = extractExplicitBudgetInPaise(trimmed)
+  const hasSignal = extracted.category.length > 0 || extracted.requirements.length > 0 || extracted.maximumAmount != null || explicitBudget != null || extracted.clearBudget || extracted.intentAction === 'REPLACE'
   if (!hasSignal) return null
 
-  // Convert stated rupees to the same unit as Product.price (paise), matching
-  // the existing regex-based parseIntent() convention in commerce.ts.
-  const maximumAmount = extracted.maximumAmount != null ? Math.round(extracted.maximumAmount * 100) : null
+  // Explicit customer text is authoritative for money. Keep the model's
+  // amount only as a fallback for formats the deterministic parser does not
+  // yet recognise; both values are stored in paise like Product.price.
+  const maximumAmount = explicitBudget ?? (
+    extracted.maximumAmount != null ? Math.round(extracted.maximumAmount * 100) : null
+  )
 
   try {
     const recent = await prisma.buyerIntent.findFirst({

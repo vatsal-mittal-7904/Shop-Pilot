@@ -4,12 +4,11 @@ import { z } from 'zod'
 import { razorpay } from '@/backend/services/razorpay'
 import { prisma } from '@/backend/db/prisma'
 import { requireCustomer } from '@/backend/auth/session'
-import { createOrderFromOffer } from '@/backend/actions/commerce'
+import { createOrReuseCheckoutOrder } from '@/backend/actions/order'
 
 export async function startCheckout(offerId: string) {
-  const order = await createOrderFromOffer(offerId)
-  const razorpayOrder = await createRazorpayOrder(order.id)
-  return { internalOrderId: order.id, razorpayOrder }
+  const { internalOrderId, razorpayOrder } = await createOrReuseCheckoutOrder(offerId)
+  return { internalOrderId, razorpayOrder }
 }
 
 export async function createRazorpayOrder(internalOrderId: string) {
@@ -29,22 +28,100 @@ export async function createRazorpayOrder(internalOrderId: string) {
     return { id: order.razorpayOrderId, amount: order.totalAmount, currency: order.currency }
   }
 
-  const rzpOrder = await razorpay.orders.create({
-    amount: order.totalAmount,
-    currency: order.currency,
-    receipt: order.id,
-    notes: { merchantId: order.merchantId, internalOrderId: order.id },
+  // Razorpay makes `receipt` unique and lets us query orders by that receipt.
+  // Persist it before calling the provider, then reconcile by it on every retry.
+  // This closes the dangerous gap where Razorpay succeeds but the process dies
+  // before the local `razorpayOrderId` write commits.
+  const receipt = `mso_${order.id}`
+  await prisma.order.updateMany({
+    where: { id: order.id, razorpayReceipt: null },
+    data: { razorpayReceipt: receipt },
   })
 
-  return await prisma.$transaction(async (tx) => {
+  const providerOrder = await findRazorpayOrderByReceipt(receipt)
+  if (providerOrder) {
+    assertProviderOrderMatches(order, providerOrder)
+    return persistRazorpayOrder({ order, providerOrder, actorUserId: user.id, reconciled: true })
+  }
+
+  let rzpOrder
+  try {
+    rzpOrder = await razorpay.orders.create({
+      amount: order.totalAmount,
+      currency: order.currency,
+      receipt,
+      notes: { merchantId: order.merchantId, internalOrderId: order.id },
+    })
+  } catch (error) {
+    // A timeout may conceal a successful create. Look up the unique receipt
+    // once more before surfacing the failure, never blindly issuing another.
+    const reconciled = await findRazorpayOrderByReceipt(receipt).catch(() => null)
+    if (reconciled) {
+      assertProviderOrderMatches(order, reconciled)
+      return persistRazorpayOrder({ order, providerOrder: reconciled, actorUserId: user.id, reconciled: true })
+    }
+    await prisma.auditLog.create({
+      data: {
+        orderId: order.id,
+        merchantId: order.merchantId,
+        actorUserId: user.id,
+        action: 'RAZORPAY_ORDER_CREATION_UNCERTAIN',
+        status: 'PENDING',
+        reason: 'Razorpay order creation did not return a usable response; retry will reconcile the unique receipt first.',
+        details: { receipt },
+      },
+    })
+    throw error
+  }
+
+  return persistRazorpayOrder({ order, providerOrder: rzpOrder, actorUserId: user.id, reconciled: false })
+}
+
+type InternalOrder = {
+  id: string
+  merchantId: string
+  totalAmount: number
+  currency: string
+}
+
+type ProviderOrder = {
+  id: string
+  amount: number | string
+  currency: string
+  receipt?: string
+}
+
+async function findRazorpayOrderByReceipt(receipt: string): Promise<ProviderOrder | null> {
+  const response = await razorpay.orders.all({ receipt, count: 1 })
+  return response.items.find((item) => item.receipt === receipt) ?? null
+}
+
+function assertProviderOrderMatches(order: InternalOrder, providerOrder: ProviderOrder) {
+  if (Number(providerOrder.amount) !== order.totalAmount || providerOrder.currency !== order.currency) {
+    throw new Error('Razorpay reconciliation found an order with a mismatched amount or currency. Payment is blocked.')
+  }
+}
+
+async function persistRazorpayOrder({
+  order,
+  providerOrder,
+  actorUserId,
+  reconciled,
+}: {
+  order: InternalOrder
+  providerOrder: ProviderOrder
+  actorUserId: string
+  reconciled: boolean
+}) {
+  return prisma.$transaction(async (tx) => {
     const updateResult = await tx.order.updateMany({
       where: { id: order.id, razorpayOrderId: null },
-      data: { razorpayOrderId: rzpOrder.id, status: 'PAYMENT_PENDING' }
+      data: { razorpayOrderId: providerOrder.id, status: 'PAYMENT_PENDING' }
     })
 
     if (updateResult.count === 0) {
-      // Race condition detected: another request already generated a Razorpay order.
-      // Fetch the existing one and return it, discarding our newly created rzpOrder.
+      // A parallel request won the persistence race. Its provider order is the
+      // one safe to return; the unique receipt prevents a second provider order.
       const existing = await tx.order.findUnique({ where: { id: order.id } })
       if (existing?.razorpayOrderId) {
         return { id: existing.razorpayOrderId, amount: order.totalAmount, currency: order.currency }
@@ -52,10 +129,28 @@ export async function createRazorpayOrder(internalOrderId: string) {
       throw new Error('Order was modified concurrently.')
     }
 
-    await tx.payment.update({ where: { orderId: order.id }, data: { razorpayOrderId: rzpOrder.id, status: 'PENDING' } })
-    await tx.auditLog.create({ data: { orderId: order.id, merchantId: order.merchantId, actorUserId: user.id, action: 'RAZORPAY_ORDER_CREATED', status: 'EXECUTED', reason: 'Server created Razorpay order from validated internal order', details: { razorpayOrderId: rzpOrder.id } } })
+    await tx.payment.update({ where: { orderId: order.id }, data: { razorpayOrderId: providerOrder.id, status: 'PENDING' } })
+    // This queue is deliberately persisted with the local provider order. If a
+    // webhook is delayed or lost, a worker can read the authoritative provider
+    // state and apply it through the same guarded payment processor.
+    await tx.paymentReconciliation.upsert({
+      where: { orderId: order.id },
+      create: { orderId: order.id },
+      update: { status: 'PENDING', nextAttemptAt: new Date(), processingToken: null, processingStartedAt: null, lastError: null, resolvedAt: null },
+    })
+    await tx.auditLog.create({ data: {
+      orderId: order.id,
+      merchantId: order.merchantId,
+      actorUserId,
+      action: reconciled ? 'RAZORPAY_ORDER_RECONCILED' : 'RAZORPAY_ORDER_CREATED',
+      status: 'EXECUTED',
+      reason: reconciled
+        ? 'Recovered Razorpay order by the persisted unique receipt after an uncertain boundary.'
+        : 'Server created Razorpay order from validated internal order.',
+      details: { razorpayOrderId: providerOrder.id, receipt: `mso_${order.id}` },
+    } })
 
-    return { id: rzpOrder.id, amount: order.totalAmount, currency: order.currency }
+    return { id: providerOrder.id, amount: order.totalAmount, currency: order.currency }
   })
 }
 
@@ -95,4 +190,17 @@ export async function confirmPaymentPending(internalOrderId: string) {
   })
 
   return { acknowledged: true as const, status: order.status }
+}
+
+/** Customer-scoped read model for the checkout UI. Webhooks remain the only
+ * authority that can transition an order into a final payment state. */
+export async function getCustomerOrderStatus(internalOrderId: string) {
+  const { customer } = await requireCustomer()
+  const orderId = z.string().uuid().parse(internalOrderId)
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, customerId: customer.id },
+    select: { id: true, status: true, totalAmount: true, currency: true, razorpayOrderId: true, razorpayPaymentId: true, updatedAt: true },
+  })
+  if (!order) throw new Error('Order not found')
+  return order
 }

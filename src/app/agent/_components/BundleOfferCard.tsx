@@ -1,10 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-// acceptBundle lives in offer.ts alongside the other offer-creation actions.
-import { acceptBundle } from '@/backend/actions/offer'
+// acceptRecommendation lives in offer.ts alongside the other offer-creation actions.
+import { acceptRecommendation, declineRecommendation } from '@/backend/actions/offer'
+
+import { startCheckout } from '@/backend/actions/payment'
+import { acceptOfferForCheckout } from '@/backend/actions/order'
+import { CheckoutButton } from './CheckoutButton'
 
 type BundleOfferCardProps = {
+  recommendationId: string
   cartId: string
   addonProductId: string
   addon: {
@@ -30,8 +35,10 @@ function formatInr(paise: number) {
 type CardState = 'idle' | 'loading' | 'success' | 'error' | 'dismissed'
 
 export function BundleOfferCard({
+  recommendationId,
   cartId,
-  addonProductId,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  addonProductId: _addonProductId,
   addon,
   pairedWith,
   discountPercent,
@@ -42,12 +49,25 @@ export function BundleOfferCard({
 }: BundleOfferCardProps) {
   const [state, setState] = useState<CardState>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [checkoutData, setCheckoutData] = useState<{ internalOrderId: string, razorpayOrderId: string, amount: number, currency: string } | null>(null)
+  const [finalTotal, setFinalTotal] = useState<number | null>(null)
+  const [finalDiscount, setFinalDiscount] = useState<number | null>(null)
 
   async function handleAccept() {
     setState('loading')
     setErrorMessage(null)
     try {
-      await acceptBundle(cartId, addonProductId, discountPercent)
+      const offer = await acceptRecommendation(recommendationId, cartId)
+      await acceptOfferForCheckout(offer.id)
+      const checkout = await startCheckout(offer.id)
+      setCheckoutData({
+        internalOrderId: checkout.internalOrderId,
+        razorpayOrderId: checkout.razorpayOrder.id,
+        amount: checkout.razorpayOrder.amount,
+        currency: checkout.razorpayOrder.currency
+      })
+      setFinalTotal(offer.total)
+      setFinalDiscount(offer.discount)
       setState('success')
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Could not add this bundle')
@@ -55,13 +75,17 @@ export function BundleOfferCard({
     }
   }
 
-  // Reject is a pure client-side dismissal -- no server call, no Offer
-  // mutation. The chat continues normally; the loop guard that stops this
-  // same addon being re-pitched lives server-side in route.ts, scanning
-  // conversation history, not here.
-  function handleReject() {
-    onDismiss?.()
-    setState('dismissed')
+  async function handleReject() {
+    setState('loading')
+    setErrorMessage(null)
+    try {
+      await declineRecommendation(recommendationId)
+      onDismiss?.()
+      setState('dismissed')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Could not decline')
+      setState('idle')
+    }
   }
 
   if (state === 'dismissed') return null
@@ -91,19 +115,27 @@ export function BundleOfferCard({
         </div>
         <div className="flex items-center justify-between text-xs text-green-600">
           <span>Bundle discount ({discountPercent}%)</span>
-          <span>-{formatInr(bundleDiscount)}</span>
+          <span>-{formatInr(finalDiscount ?? bundleDiscount)}</span>
         </div>
         <div className="mt-1 flex items-center justify-between text-sm font-semibold text-neutral-900">
           <span>New total</span>
-          <span>{formatInr(bundleTotal)}</span>
+          <span>{formatInr(finalTotal ?? bundleTotal)}</span>
         </div>
       </div>
 
       <div className="border-t border-neutral-100 p-3">
-        {state === 'success' ? (
-          <p className="rounded-lg bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-700">
-            Bundle added -- new total {formatInr(bundleTotal)}
-          </p>
+        {state === 'success' && checkoutData ? (
+          <div className="space-y-3">
+            <p className="rounded-lg bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-700">
+              Bundle added -- new total {formatInr(finalTotal ?? bundleTotal)}
+            </p>
+            <CheckoutButton
+              orderId={checkoutData.internalOrderId}
+              razorpayOrderId={checkoutData.razorpayOrderId}
+              amount={checkoutData.amount}
+              currency={checkoutData.currency}
+            />
+          </div>
         ) : (
           <div className="flex gap-2">
             <button

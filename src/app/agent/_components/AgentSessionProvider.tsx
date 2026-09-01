@@ -5,6 +5,17 @@ import { createContext, useContext, type ReactNode } from 'react'
 type AgentSession = {
   customerId: string
   merchantId: string
+  campaignOffers: CampaignOffer[]
+}
+
+export type CampaignOffer = {
+  id: string
+  campaignTitle: string
+  subtotal: number
+  discount: number
+  total: number
+  expiresAt: string
+  items: Array<{ id: string; name: string; quantity: number; unitPrice: number }>
 }
 
 const AgentSessionContext = createContext<AgentSession | null>(null)
@@ -22,10 +33,11 @@ const AgentSessionContext = createContext<AgentSession | null>(null)
 export function AgentSessionProvider({
   customerId,
   merchantId,
+  campaignOffers,
   children,
 }: AgentSession & { children: ReactNode }) {
   return (
-    <AgentSessionContext.Provider value={{ customerId, merchantId }}>
+    <AgentSessionContext.Provider value={{ customerId, merchantId, campaignOffers }}>
       {children}
     </AgentSessionContext.Provider>
   )

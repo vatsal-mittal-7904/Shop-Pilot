@@ -29,7 +29,7 @@ export async function destroySession() {
 export async function getCurrentSession() {
   const store = await cookies()
   let token = store.get(SESSION_COOKIE)?.value
-  
+
   if (!token) {
     const headersList = await headers()
     const authHeader = headersList.get('authorization')
@@ -47,7 +47,7 @@ export async function getCurrentSession() {
     if (session) await prisma.session.delete({ where: { id: session.id } })
     try {
       store.delete(SESSION_COOKIE)
-    } catch (e) {
+    } catch {
       // Ignore in Server Components where cookie mutation is forbidden
     }
     return null

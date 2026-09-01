@@ -46,6 +46,21 @@ enum PaymentStatus {
   FAILED
 }
 
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  REFUNDED
+}
+
+// A provider-read reconciliation task is independent of webhook delivery.
+// It lets a scheduled worker recover a payment outcome when a signed webhook
+// was delayed or failed to reach this application.
+enum PaymentReconciliationStatus {
+  PENDING
+  PROCESSING
+  RESOLVED
+}
+
 enum CampaignStatus {
   PROPOSED
   APPROVED
@@ -59,6 +74,19 @@ enum AgentActionStatus {
   BLOCKED
   EXECUTED
   REJECTED
+}
+
+enum RecommendationType {
+  CROSS_SELL
+  UPSELL
+}
+
+enum RecommendationStatus {
+  PROPOSED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  UNAVAILABLE
 }
 
 model User {
@@ -95,12 +123,13 @@ model Merchant {
   products           Product[]
   orders             Order[]
   logs               AuditLog[]
+  auditExports       AuditExport[]
   conversations      Conversation[]
   carts              Cart[]
   offers             Offer[]
   campaigns          Campaign[]
   agentActions       AgentAction[]
-  aiRecoveredRevenue Int              @default(0)
+  recommendations    Recommendation[]
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 }
@@ -118,53 +147,61 @@ model MerchantPolicy {
 }
 
 model Product {
-  id              String      @id @default(uuid())
-  merchantId      String
-  merchant        Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  name            String
-  category        String
-  price           Int
-  cost            Int         @default(0)
-  inventory       Int
-  attributes      Json
-  imageUrl        String?
-  warrantyYears   Int         @default(0)
-  deliveryDays    Int         @default(3)
-  tags            String[]    @default([])
-  relatedProducts String[]    @default([])
-  offerItems      OfferItem[]
-  cartItems       CartItem[]
-  orderItems      OrderItem[]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id                    String      @id @default(uuid())
+  merchantId            String
+  merchant              Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  name                  String
+  category              String
+  price                 Int
+  cost                  Int         @default(0)
+  inventory             Int
+  attributes            Json
+  imageUrl              String?
+  warrantyYears         Int         @default(0)
+  deliveryDays          Int         @default(3)
+  tags                  String[]    @default([])
+  relatedProducts       String[]    @default([])
+  complementaryProducts String[]    @default([])
+  upgradeProducts       String[]    @default([])
+  offerItems            OfferItem[]
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
   @@index([merchantId, category])
 }
 
 model Customer {
-  id              String         @id @default(uuid())
-  userId          String         @unique
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String           @id @default(uuid())
+  userId          String           @unique
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Durable account-level limits in paise. These are independent from an
+  // ephemeral chat intent and apply across every merchant and conversation.
+  dailySpendLimit Int              @default(5000000)
+  monthlySpendLimit Int            @default(20000000)
   deliveryProfile Json?
   orders          Order[]
   conversations   Conversation[]
   intents         BuyerIntent[]
   carts           Cart[]
   offers          Offer[]
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  recommendations Recommendation[]
 }
 
 model Conversation {
-  id         String   @id @default(uuid())
-  merchantId String
-  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  customerId String
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  messages   Json
-  agentActions AgentAction[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String           @id @default(uuid())
+  merchantId      String
+  merchant        Merchant         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  customerId      String
+  customer        Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  messages        Json
+  agentActions    AgentAction[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  recommendations Recommendation[]
 
   @@index([customerId, merchantId, updatedAt])
 }
@@ -212,26 +249,37 @@ model CartItem {
 }
 
 model Offer {
-  id              String       @id @default(uuid())
+  id              String           @id @default(uuid())
   merchantId      String
-  merchant        Merchant     @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchant        Merchant         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   customerId      String
-  customer        Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer        Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
   buyerIntentId   String?
-  buyerIntent     BuyerIntent? @relation(fields: [buyerIntentId], references: [id], onDelete: SetNull)
+  buyerIntent     BuyerIntent?     @relation(fields: [buyerIntentId], references: [id], onDelete: SetNull)
   cartId          String?
   subtotal        Int
   discount        Int
   total           Int
   discountPercent Float
-  status          OfferStatus  @default(ACTIVE)
+  status          OfferStatus      @default(ACTIVE)
   expiresAt       DateTime
+  // A Razorpay order may only be created after this exact offer has been
+  // accepted by its owner through the server-side acceptance action.
+  acceptedAt      DateTime?
+  acceptedByUserId String?
+  // HMAC of the server-side cart selection that produced this buyer offer.
+  // Campaign offers do not use a cart selection binding.
+  cartSnapshotHash String?
+  campaignId      String?
+  campaign        Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   items           OfferItem[]
   order           Order?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  recommendations Recommendation[]
 
   @@index([customerId, status, expiresAt])
+  @@index([campaignId])
 }
 
 model OfferItem {
@@ -259,15 +307,63 @@ model Order {
   currency          String       @default("INR")
   deliveryAddress   Json?
   razorpayOrderId   String?      @unique
+  // `mso_<internal UUID>` is unique at Razorpay and lets retries recover an
+  // order whose provider response arrived before our database write did.
+  razorpayReceipt   String?      @unique
   razorpayPaymentId String?      @unique
   items             OrderItem[]
   payment           Payment?
+  refund            Refund?
+  paymentReconciliation PaymentReconciliation?
   logs              AuditLog[]
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
   @@index([merchantId, status])
   @@index([customerId, createdAt])
+}
+
+// Durable queue for Razorpay payment-status reconciliation. The provider call
+// occurs only after a row has been claimed, and failed reads are retried with
+// exponential backoff rather than relying on browser state or webhook luck.
+model PaymentReconciliation {
+  id                String                      @id @default(uuid())
+  orderId           String                      @unique
+  order             Order                       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status            PaymentReconciliationStatus @default(PENDING)
+  attemptCount      Int                         @default(0)
+  nextAttemptAt     DateTime                    @default(now())
+  processingToken   String?
+  processingStartedAt DateTime?
+  lastError         String?
+  resolvedAt        DateTime?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  @@index([status, nextAttemptAt])
+}
+
+// Durable outbox for provider-side refunds. A webhook transaction only queues
+// a refund; the worker performs the external HTTP call after that transaction
+// commits and retries it with this row's stable idempotency key.
+model Refund {
+  id                String       @id @default(uuid())
+  orderId           String       @unique
+  order             Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  razorpayPaymentId String       @unique
+  amount            Int
+  currency          String       @default("INR")
+  status            RefundStatus @default(PENDING)
+  providerRefundId  String?      @unique
+  attemptCount      Int          @default(0)
+  nextAttemptAt     DateTime     @default(now())
+  processingToken   String?
+  processingStartedAt DateTime?
+  lastError         String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([status, nextAttemptAt])
 }
 
 model OrderItem {
@@ -316,25 +412,29 @@ model Campaign {
   discountPercent Float?
   status          CampaignStatus @default(PROPOSED)
   configuration   Json
+  offers          Offer[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+  agentActions    AgentAction[]
 }
 
 model AgentAction {
-  id             String            @id @default(uuid())
-  merchantId     String
-  merchant       Merchant          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
-  type           String
-  reason         String
-  input          Json
-  policyResult   Json
-  expectedImpact Int?
-  status         AgentActionStatus @default(PROPOSED)
-  campaignId     String?
-  conversationId String?
-  conversation   Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id              String            @id @default(uuid())
+  merchantId      String
+  merchant        Merchant          @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  type            String
+  reason          String
+  input           Json
+  policyResult    Json
+  expectedImpact  Int?
+  status          AgentActionStatus @default(PROPOSED)
+  conversationId  String?
+  conversation    Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  campaignId      String?
+  campaign        Campaign?         @relation(fields: [campaignId], references: [id])
+  recommendation Recommendation?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 }
 
 model AuditLog {
@@ -349,8 +449,50 @@ model AuditLog {
   reason      String?
   details     Json?
   status      String
+  // Written by a PostgreSQL trigger. Database-side chaining means callers
+  // cannot choose or rewrite the ledger hash through Prisma.
+  previousHash String @default("")
+  entryHash    String @default("")
   createdAt   DateTime  @default(now())
 
   @@index([merchantId, createdAt])
   @@index([orderId, createdAt])
+}
+
+// Immutable evidence snapshot for a merchant investigator or external archive.
+// A database trigger rejects UPDATE/DELETE, giving this a WORM-like retention
+// boundary within Postgres; external archival can store the signed JSON blob.
+model AuditExport {
+  id          String   @id @default(uuid())
+  merchantId  String
+  merchant    Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  payload     Json
+  chainHead   String
+  signature   String
+  createdAt   DateTime @default(now())
+
+  @@index([merchantId, createdAt])
+}
+
+model Recommendation {
+  id                   String               @id @default(uuid())
+  merchantId           String
+  merchant             Merchant             @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  customerId           String
+  customer             Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  conversationId       String
+  conversation         Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  type                 RecommendationType
+  status               RecommendationStatus @default(PROPOSED)
+  originalProductId    String?
+  recommendedProductId String
+  offerId              String?
+  offer                Offer?               @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  agentActionId        String?               @unique
+  agentAction          AgentAction?         @relation(fields: [agentActionId], references: [id], onDelete: SetNull)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@index([customerId, conversationId])
+  @@index([merchantId, type, status])
 }

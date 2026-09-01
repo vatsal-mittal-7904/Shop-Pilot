@@ -9,26 +9,26 @@ export default async function MerchantAnalyticsPage() {
   const roiData = await getMerchantROI(merchant.id)
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans">
-      <header className="bg-indigo-900 text-white px-8 py-5 flex items-center justify-between sticky top-0 z-10 shadow-md">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">MerchantOS AI <span className="font-light text-indigo-300">| Analytics</span></h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link href="/merchant" className="text-sm font-medium text-indigo-200 hover:text-white">Back to Dashboard</Link>
-          <div className="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center font-bold">TN</div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-extrabold text-slate-900">AI Performance ROI</h1>
-          <p className="text-slate-500 mt-2 text-lg">Track the direct revenue impact of automated campaigns, cross-sells, and recoveries.</p>
+    <div className="min-h-screen bg-transparent pt-24 pb-12 transition-colors text-slate-800 dark:text-slate-200 font-sans">
+      <main className="max-w-6xl mx-auto px-6 lg:px-8">
+        
+        <div className="mb-6">
+          <Link href="/merchant" className="inline-flex items-center text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors">
+            <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Dashboard
+          </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <MetricCard 
-            title="Total Revenue Generated" 
+        <div className="mb-10">
+          <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">AI Performance ROI</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">Recovery revenue includes only paid orders attributable to issued recovery offers; cross-sell and upsell metrics are reported separately.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <MetricCard
+            title="Total Revenue Generated"
             value={(roiData.totalRevenueGenerated / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
             description="Overall merchant revenue"
             accentColor="emerald"
@@ -39,10 +39,10 @@ export default async function MerchantAnalyticsPage() {
             }
           />
 
-          <MetricCard 
-            title="Abandoned Carts Recovered" 
+          <MetricCard
+            title="Abandoned Carts Recovered"
             value={roiData.abandonedCartsRecovered.toLocaleString()}
-            description="Carts saved from abandonment"
+            description="Paid recovery-offer orders only"
             accentColor="sky"
             icon={
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -51,10 +51,10 @@ export default async function MerchantAnalyticsPage() {
             }
           />
 
-          <MetricCard 
-            title="Bundle Upsell Conversion" 
-            value={roiData.bundleTotal === 0 ? "—" : `${roiData.bundleUpsellConversionRate.toFixed(1)}%`}
-            description={roiData.bundleTotal === 0 ? "No bundles proposed yet" : "Acceptance rate of AI bundles"}
+          <MetricCard
+            title="Cross-Sell Paid Rate"
+            value={roiData.crossSellTotal === 0 ? "—" : `${roiData.crossSellPaidRate.toFixed(1)}%`}
+            description={roiData.crossSellTotal === 0 ? "No cross-sells yet" : `${roiData.crossSellAccepted} accepted (+${(roiData.crossSellIncrementalRevenue / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })})`}
             accentColor="indigo"
             icon={
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -63,10 +63,22 @@ export default async function MerchantAnalyticsPage() {
             }
           />
 
-          <MetricCard 
-            title="Margins Protected" 
-            value={roiData.blockedPolicyViolations.toLocaleString()}
-            description="Blocked policy violations"
+          <MetricCard
+            title="Upsell Paid Rate"
+            value={roiData.upsellTotal === 0 ? "—" : `${roiData.upsellPaidRate.toFixed(1)}%`}
+            description={roiData.upsellTotal === 0 ? "No upsells yet" : `${roiData.upsellAccepted} accepted (+${(roiData.upsellIncrementalRevenue / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })})`}
+            accentColor="rose"
+            icon={
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            }
+          />
+
+          <MetricCard
+            title="Discount Policy Blocks"
+            value={roiData.blockedDiscountPolicyRequests.toLocaleString()}
+            description="Requests stopped for exceeding the merchant discount limit"
             accentColor="amber"
             icon={
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -76,9 +88,9 @@ export default async function MerchantAnalyticsPage() {
           />
         </div>
 
-        <ImpactBar 
-          aiRevenue={roiData.aiRecoveredRevenue} 
-          totalRevenue={roiData.totalRevenueGenerated} 
+        <ImpactBar
+          aiRevenue={roiData.aiRecoveredRevenue}
+          totalRevenue={roiData.totalRevenueGenerated}
         />
       </main>
     </div>

@@ -3,12 +3,17 @@
 import { z } from 'zod'
 import { prisma } from '@/backend/db/prisma'
 import { requireCustomer } from '@/backend/auth/session'
+import { cartSelectionBinding } from '@/backend/utils/cartSelectionBinding'
+import { assertAccountSpendLimit } from '@/backend/actions/accountBudget'
 
-const productIdsSchema = z.array(z.string().uuid()).min(1).max(10)
 const offerInputSchema = z.object({
-  productIds: productIdsSchema,
   discountPercentage: z.number().finite().min(0).max(100).default(0),
   buyerIntentId: z.string().uuid().optional(),
+  campaignId: z.string().uuid().optional(),
+  // Scopes the basket lookup to one merchant. Optional so autonomous-agent
+  // callers that only hold a session can still transact, but supplying it is
+  // strongly preferred -- see resolveActiveCart for what happens without it.
+  merchantId: z.string().uuid().optional(),
 })
 
 type PolicyMap = Record<string, number>
@@ -18,122 +23,117 @@ export async function policyMap(merchantId: string): Promise<PolicyMap> {
   return Object.fromEntries(policies.map((policy) => [policy.key, policy.value]))
 }
 
-function parseIntent(rawRequest: string) {
-  const budget = rawRequest.match(/(?:under|below|budget(?:\s+of)?|₹|rs\.?|rupees?)\s*([\d,]+)/i)
-  const maximumAmount = budget ? Math.round(Number(budget[1].replace(/,/g, '')) * 100) : null
-  const categories = ['keyboard', 'mouse', 'headphones', 'monitor', 'webcam', 'accessory']
-    .filter((category) => rawRequest.toLowerCase().includes(category))
-  return {
-    maximumAmount: Number.isFinite(maximumAmount) ? maximumAmount : null,
-    category: categories,
-    requirements: { raw: rawRequest },
-    autonomousPurchase: /autonom(?:ous|ously)|buy it automatically|without asking/i.test(rawRequest),
+const activeCartInclude = { items: { include: { product: true } } } as const
+
+/**
+ * Resolves the one basket a request is about.
+ *
+ * When `merchantId` is supplied the query is scoped to it, which is the only
+ * way to be certain which catalogue the resulting offer prices against.
+ *
+ * When it is not supplied we refuse to guess. The previous behaviour was
+ * `findFirst({ customerId, status: 'ACTIVE' }, orderBy: updatedAt desc)`, which
+ * silently returned whichever basket happened to be touched last -- so a
+ * shopper with an active basket at two merchants could add to one and be sold
+ * the other. Falling back to "most recent" makes that a data-dependent bug
+ * that only shows up under exactly the conditions nobody tests. Erroring is
+ * recoverable; charging for the wrong basket is not.
+ */
+async function resolveActiveCart(customerId: string, merchantId?: string) {
+  if (merchantId) {
+    return prisma.cart.findFirst({
+      where: { customerId, merchantId, status: 'ACTIVE' },
+      include: activeCartInclude,
+      orderBy: { updatedAt: 'desc' },
+    })
   }
-}
 
-export async function captureBuyerIntent(rawRequest: string) {
-  const { customer } = await requireCustomer()
-  const parsed = parseIntent(rawRequest.trim())
-  return prisma.buyerIntent.create({
-    data: {
-      customerId: customer.id,
-      rawRequest: rawRequest.trim(),
-      category: parsed.category,
-      requirements: parsed.requirements,
-      maximumAmount: parsed.maximumAmount,
-      autonomousPurchase: parsed.autonomousPurchase,
-      requiresConfirmation: !parsed.autonomousPurchase,
-    },
-  })
-}
-
-export async function searchProducts(query: string) {
-  const normalized = z.string().trim().min(1).max(100).parse(query)
-  return prisma.product.findMany({
-    where: {
-      OR: [
-        { name: { contains: normalized, mode: 'insensitive' } },
-        { category: { contains: normalized, mode: 'insensitive' } },
-        { tags: { has: normalized.toLowerCase() } },
-      ],
-      inventory: { gt: 0 },
-    },
-    take: 12,
-  })
-}
-
-export async function checkInventory(productId: string) {
-  const product = await prisma.product.findUnique({ where: { id: z.string().uuid().parse(productId) }, select: { inventory: true } })
-  return product?.inventory ?? 0
-}
-
-export async function getRelatedProducts(productId: string) {
-  const product = await prisma.product.findUnique({ where: { id: z.string().uuid().parse(productId) } })
-  if (!product?.relatedProducts.length) return []
-  return prisma.product.findMany({ where: { id: { in: product.relatedProducts }, merchantId: product.merchantId } })
-}
-
-export async function addProductToCart(productId: string) {
-  const { customer } = await requireCustomer()
-  const product = await prisma.product.findUnique({ where: { id: z.string().uuid().parse(productId) } })
-  if (!product || product.inventory < 1) throw new Error('That product is no longer available')
-
-  const cart = await prisma.cart.findFirst({
-    where: { customerId: customer.id, merchantId: product.merchantId, status: 'ACTIVE' },
+  const carts = await prisma.cart.findMany({
+    where: { customerId, status: 'ACTIVE' },
+    include: activeCartInclude,
     orderBy: { updatedAt: 'desc' },
-  }) ?? await prisma.cart.create({ data: { customerId: customer.id, merchantId: product.merchantId } })
-
-  await prisma.cartItem.upsert({
-    where: { cartId_productId: { cartId: cart.id, productId: product.id } },
-    update: { quantity: { increment: 1 } },
-    create: { cartId: cart.id, productId: product.id },
+    take: 2,
   })
-  return getActiveCart()
+
+  // Two ACTIVE carts at the same merchant is benign (historical rows, or a
+  // race that predates the cart lock) -- the newest wins. Two at *different*
+  // merchants is genuinely ambiguous and must not be resolved by guessing.
+  if (carts.length > 1 && carts[0].merchantId !== carts[1].merchantId) {
+    throw new Error(
+      'You have active baskets with more than one merchant. Reopen the storefront you want to check out from so the basket can be scoped to a single merchant.',
+    )
+  }
+
+  return carts[0] ?? null
 }
 
-export async function getActiveCart() {
+export async function getActiveCart(merchantId?: string) {
   const { customer } = await requireCustomer()
-  return prisma.cart.findFirst({
-    where: { customerId: customer.id, status: 'ACTIVE' },
-    include: { items: { include: { product: true } } },
-    orderBy: { updatedAt: 'desc' },
-  })
+  const parsedMerchantId = merchantId ? z.string().uuid().parse(merchantId) : undefined
+  return resolveActiveCart(customer.id, parsedMerchantId)
 }
 
-export async function createOfferForCustomer(input: z.infer<typeof offerInputSchema>) {
+/**
+ * Builds a checkout offer only from the authenticated shopper's persisted
+ * basket. This is the boundary that prevents an LLM (or a crafted request)
+ * from turning arbitrary catalog IDs into a payable offer.
+ */
+export async function createOfferFromActiveCart(input: z.input<typeof offerInputSchema>) {
   const { user, customer } = await requireCustomer()
   const data = offerInputSchema.parse(input)
-  const products = await prisma.product.findMany({ where: { id: { in: data.productIds } } })
-  const counts = data.productIds.reduce((acc, id) => { acc[id] = (acc[id] || 0) + 1; return acc; }, {} as Record<string, number>)
-  if (products.length !== Object.keys(counts).length) throw new Error('One or more selected products do not exist')
-  const merchantId = products[0]?.merchantId
-  if (!merchantId || products.some((product) => product.merchantId !== merchantId)) {
-    throw new Error('An offer can contain products from only one merchant')
+  const cart = await resolveActiveCart(customer.id, data.merchantId)
+  if (!cart?.items.length) throw new Error('Your basket is empty. Add a product yourself before requesting checkout.')
+  if (cart.items.some((item) => item.quantity < 1 || item.product.merchantId !== cart.merchantId)) {
+    throw new Error('Your basket has an invalid merchant selection. Please refresh and select products again.')
   }
-  if (products.some((product) => product.inventory < counts[product.id])) throw new Error('An item is out of stock')
+  if (cart.items.some((item) => item.product.inventory < item.quantity)) throw new Error('An item in your basket is out of stock')
+
+  // Authoritative merchant: the basket's own, not the caller's claim.
+  const merchantId = cart.merchantId
+
+  // `campaignId` arrives from the caller (the chat tool passes through a value
+  // the model produced). It grants nothing on its own, but it is persisted on
+  // the Offer and downstream code reads it, so it has to be a real APPROVED
+  // campaign belonging to THIS merchant. Without this check any valid campaign
+  // UUID could be stapled to any offer.
+  if (data.campaignId) {
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: data.campaignId, merchantId, status: 'APPROVED' },
+      select: { id: true },
+    })
+    if (!campaign) {
+      throw new Error('That campaign is not an approved campaign for this merchant.')
+    }
+  }
 
   const policies = await policyMap(merchantId)
   const maxDiscount = policies.MAX_DISCOUNT_PERCENTAGE ?? 0
   if (data.discountPercentage > maxDiscount) throw new Error(`Discount exceeds the ${maxDiscount}% merchant limit`)
 
-  const subtotal = products.reduce((sum, product) => sum + product.price * counts[product.id], 0)
+  const subtotal = cart.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
   const discount = Math.floor(subtotal * (data.discountPercentage / 100))
   const total = subtotal - discount
-  const cost = products.reduce((sum, product) => sum + product.cost * counts[product.id], 0)
+  const cost = cart.items.reduce((sum, item) => sum + item.product.cost * item.quantity, 0)
   const marginPercent = total > 0 ? ((total - cost) / total) * 100 : -Infinity
   if (marginPercent < (policies.MIN_MARGIN_PERCENTAGE ?? 0)) {
     throw new Error('Offer would violate the minimum merchant margin')
   }
 
+  // Early, buyer-friendly forecast. The definitive reservation is repeated in
+  // createOrReuseCheckoutOrder inside its serializable transaction.
+  await assertAccountSpendLimit(prisma, customer.id, total)
+
   const intent = data.buyerIntentId
     ? await prisma.buyerIntent.findFirst({ where: { id: data.buyerIntentId, customerId: customer.id } })
-    : await prisma.buyerIntent.findFirst({ where: { customerId: customer.id }, orderBy: { createdAt: 'desc' } })
+    // Intent refinements update the existing row, so createdAt is not a
+    // reliable indicator of the currently active budget.
+    : await prisma.buyerIntent.findFirst({ where: { customerId: customer.id }, orderBy: { updatedAt: 'desc' } })
   if (intent?.maximumAmount) {
-    const pastOrders = await prisma.order.aggregate({
+    const pastOrders = await prisma.order.findMany({
       where: { buyerIntentId: intent.id, status: { notIn: ['DRAFT', 'PAYMENT_FAILED', 'CANCELLED', 'EXPIRED'] } },
-      _sum: { totalAmount: true }
+      select: { totalAmount: true },
     })
-    const currentSpend = pastOrders._sum.totalAmount || 0;
+    const currentSpend = pastOrders.reduce((sum, order) => sum + order.totalAmount, 0)
     if (currentSpend + total > intent.maximumAmount) {
       throw new Error('Offer exceeds the cumulative buyer intent budget')
     }
@@ -142,19 +142,31 @@ export async function createOfferForCustomer(input: z.infer<typeof offerInputSch
     throw new Error('Offer exceeds the merchant autonomous-payment limit')
   }
 
-  const cart = await prisma.cart.findFirst({ where: { customerId: customer.id, merchantId, status: 'ACTIVE' }, orderBy: { updatedAt: 'desc' } })
+  const offerItems = cart.items.map((item) => ({
+    productId: item.productId,
+    quantity: item.quantity,
+    unitPrice: item.product.price - Math.floor(item.product.price * (data.discountPercentage / 100)),
+  }))
+  const cartSnapshotHash = cartSelectionBinding({
+    customerId: customer.id,
+    merchantId,
+    cartId: cart.id,
+    items: offerItems,
+  })
   const offer = await prisma.offer.create({
     data: {
       merchantId,
       customerId: customer.id,
       buyerIntentId: intent?.id,
-      cartId: cart?.id,
+      cartId: cart.id,
+      campaignId: data.campaignId,
+      cartSnapshotHash,
       subtotal,
       discount,
       total,
       discountPercent: data.discountPercentage,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      items: { create: products.map((product) => ({ productId: product.id, quantity: counts[product.id], unitPrice: product.price - Math.floor(product.price * (data.discountPercentage / 100)) })) },
+      items: { create: offerItems },
     },
     include: { items: { include: { product: true } } },
   })
@@ -164,101 +176,9 @@ export async function createOfferForCustomer(input: z.infer<typeof offerInputSch
       actorUserId: user.id,
       action: 'OFFER_CREATED',
       status: 'APPROVED',
-      reason: 'Catalog, buyer intent, inventory, discount, and margin checks passed',
-      details: { offerId: offer.id, discountPercent: data.discountPercentage, marginPercent },
+      reason: 'Customer-selected cart, buyer intent, inventory, discount, and margin checks passed',
+      details: { offerId: offer.id, cartId: cart.id, discountPercent: data.discountPercentage, marginPercent, cartBinding: 'HMAC-SHA256' },
     },
   })
   return offer
-}
-
-export async function createOrderFromOffer(offerId: string) {
-  const { user, customer } = await requireCustomer()
-  const parsedOfferId = z.string().uuid().parse(offerId)
-  return prisma.$transaction(async (tx) => {
-    const offer = await tx.offer.findFirst({
-      where: { id: parsedOfferId, customerId: customer.id },
-      include: { items: { include: { product: true } }, buyerIntent: true, order: true },
-    })
-    if (!offer) throw new Error('Offer not found')
-    if (offer.order) return offer.order
-    if (offer.status !== 'ACTIVE' || offer.expiresAt <= new Date()) {
-      await tx.offer.update({ where: { id: offer.id }, data: { status: 'EXPIRED' } })
-      throw new Error('This offer has expired. Please ask the agent for a new offer.')
-    }
-    if (offer.buyerIntent?.maximumAmount) {
-      const pastOrders = await tx.order.aggregate({
-        where: { buyerIntentId: offer.buyerIntentId, status: { notIn: ['DRAFT', 'PAYMENT_FAILED', 'CANCELLED', 'EXPIRED'] } },
-        _sum: { totalAmount: true }
-      })
-      const currentSpend = pastOrders._sum.totalAmount || 0;
-      if (currentSpend + offer.total > offer.buyerIntent.maximumAmount) {
-        throw new Error('Offer exceeds cumulative buyer budget')
-      }
-    }
-    if (offer.items.some((item) => item.product.inventory < item.quantity)) throw new Error('An item is out of stock')
-
-    const order = await tx.order.create({
-      data: {
-        merchantId: offer.merchantId,
-        customerId: customer.id,
-        buyerIntentId: offer.buyerIntentId,
-        offerId: offer.id,
-        totalAmount: offer.total,
-        status: 'ACCEPTED',
-        items: { create: offer.items.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice })) },
-        payment: { create: { amount: offer.total } },
-      },
-    })
-    await tx.offer.update({ where: { id: offer.id }, data: { status: 'ACCEPTED' } })
-    if (offer.cartId) {
-      // Find all current items in the cart
-      const currentItems = await tx.cartItem.findMany({ where: { cartId: offer.cartId } })
-      
-      // Mark the original cart as CONVERTED without destroying its items
-      await tx.cart.update({ where: { id: offer.cartId }, data: { status: 'CONVERTED' } })
-      
-      // Calculate what wasn't purchased
-      const leftovers = []
-      for (const cItem of currentItems) {
-        const bought = offer.items.find(o => o.productId === cItem.productId)
-        const boughtQty = bought ? bought.quantity : 0
-        const remaining = cItem.quantity - boughtQty
-        if (remaining > 0) {
-          leftovers.push({ productId: cItem.productId, quantity: remaining })
-        }
-      }
-      
-      // If there are leftovers, create a new ACTIVE cart to hold them
-      if (leftovers.length > 0) {
-        await tx.cart.create({
-          data: {
-            merchantId: offer.merchantId,
-            customerId: customer.id,
-            status: 'ACTIVE',
-            items: {
-              create: leftovers
-            }
-          }
-        })
-      }
-    }
-    await tx.auditLog.create({ data: { merchantId: offer.merchantId, orderId: order.id, actorUserId: user.id, action: 'ORDER_ACCEPTED', status: 'APPROVED', reason: 'Offer revalidated before payment', details: { offerId: offer.id } } })
-    return order
-  }, { isolationLevel: 'Serializable' })
-}
-
-// Compatibility wrappers for the old manual testing screen. New buyer flows use persisted offers.
-export async function proposeOffer(_merchantId: string, productIds: string[], requestedDiscountPct = 0) {
-  try {
-    const offer = await createOfferForCustomer({ productIds, discountPercentage: requestedDiscountPct })
-    return { status: 'APPROVED' as const, offer: { items: offer.items.map((item) => ({ productId: item.productId, price: item.unitPrice })), subtotal: offer.subtotal, discount: offer.discount, total: offer.total, profit: 0 } }
-  } catch (error) {
-    return { status: 'BLOCKED' as const, reason: error instanceof Error ? error.message : 'Offer blocked', offer: null }
-  }
-}
-
-export async function createInternalOrder(_merchantId: string, _items: { productId: string; quantity: string; price: number }[]): Promise<{ id: string; status: string }> {
-  void _merchantId
-  void _items
-  throw new Error('Orders must be created from a server-persisted offer')
 }

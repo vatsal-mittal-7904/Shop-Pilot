@@ -58,7 +58,7 @@ const PAID_EVENTS = new Set(['payment.captured', 'order.paid'])
  * and the processedAt finalization -- happens in one Prisma transaction:
  * either the whole delivery is applied, or none of it is.
  */
-export async function processRazorpayEvent(payload: unknown) {
+async function processProviderPaymentEvent(payload: unknown) {
   const parsed = webhookPayloadSchema.parse(payload)
   const razorpayEventId = parsed.razorpayEventId
   const eventType = parsed.event
@@ -132,7 +132,7 @@ export async function processRazorpayEvent(payload: unknown) {
         throw new Error(`${eventType} event ${razorpayEventId} is missing payload.payment.entity.id`)
       }
 
-      if (order.status !== 'PAID') {
+      if (order.status !== 'PAID' && order.status !== 'INVENTORY_FAILED') {
         let inventoryAvailable = true
         for (const item of order.items) {
           const product = await tx.product.findUnique({ where: { id: item.productId } })
@@ -163,12 +163,36 @@ export async function processRazorpayEvent(payload: unknown) {
             where: { id: order.id },
             data: { status: 'PAID', razorpayPaymentId },
           })
-          
+
+          let attributedRecoveryCampaignId: string | null = null
           if (order.offerId) {
-            await tx.merchant.update({
-              where: { id: order.merchantId },
-              data: { aiRecoveredRevenue: { increment: order.totalAmount } }
-            })
+            const offer = await tx.offer.findUnique({ where: { id: order.offerId }, include: { campaign: true } })
+            if (offer?.cartId) {
+              const cart = await tx.cart.findUnique({ where: { id: offer.cartId }, include: { items: true } })
+              if (cart && cart.status === 'ACTIVE') {
+                for (const orderItem of order.items) {
+                  const cartItem = cart.items.find(ci => ci.productId === orderItem.productId)
+                  if (cartItem) {
+                    if (cartItem.quantity <= orderItem.quantity) {
+                      await tx.cartItem.delete({ where: { id: cartItem.id } })
+                    } else {
+                      await tx.cartItem.update({
+                        where: { id: cartItem.id },
+                        data: { quantity: cartItem.quantity - orderItem.quantity }
+                      })
+                    }
+                  }
+                }
+                const remainingItems = await tx.cartItem.count({ where: { cartId: cart.id } })
+                if (remainingItems === 0) {
+                  await tx.cart.update({ where: { id: cart.id }, data: { status: 'CONVERTED' } })
+                }
+              }
+            }
+
+            if (offer?.campaign?.type === 'RECOVERY' && offer.campaign.status === 'COMPLETED') {
+              attributedRecoveryCampaignId = offer.campaign.id
+            }
           }
           await tx.auditLog.create({
             data: {
@@ -177,7 +201,7 @@ export async function processRazorpayEvent(payload: unknown) {
               action: 'PAYMENT_CAPTURED',
               status: 'EXECUTED',
               reason: 'Razorpay confirmed payment capture; stock committed once',
-              details: { razorpayEventId, razorpayPaymentId, razorpayOrderId, eventType } as Prisma.InputJsonValue,
+              details: { razorpayEventId, razorpayPaymentId, razorpayOrderId, eventType, attributedRecoveryCampaignId } as Prisma.InputJsonValue,
             },
           })
         } else {
@@ -189,47 +213,24 @@ export async function processRazorpayEvent(payload: unknown) {
             where: { id: order.payment.id },
             data: { status: 'FAILED', razorpayPaymentId },
           })
+          const refund = await tx.refund.create({
+            data: {
+              orderId: order.id,
+              razorpayPaymentId,
+              amount: order.totalAmount,
+              currency: order.currency,
+            },
+          })
           await tx.auditLog.create({
             data: {
               merchantId: order.merchantId,
               orderId: order.id,
               action: 'PAYMENT_CAPTURED',
               status: 'FAILED',
-              reason: 'Payment captured but inventory sold out. Automated refund issued.',
-              details: { razorpayEventId, razorpayPaymentId, razorpayOrderId, eventType } as Prisma.InputJsonValue,
+              reason: 'Payment captured but inventory sold out. Refund queued for durable asynchronous processing.',
+              details: { razorpayEventId, razorpayPaymentId, razorpayOrderId, eventType, refundId: refund.id } as Prisma.InputJsonValue,
             },
           })
-          
-                    // Execute refund INSIDE the transaction so that if it fails, the transaction rolls back
-          // and Razorpay's webhook retry mechanism will attempt it again.
-          const { razorpay } = await import('@/backend/services/razorpay')
-          try {
-            await razorpay.payments.refund(razorpayPaymentId, {
-              amount: order.totalAmount,
-              notes: { reason: 'Inventory unavailable at time of capture' }
-            })
-          } catch (error) {
-            // If Razorpay says it's already refunded, this is likely a retry after a previous
-            // successful refund where the DB commit failed. We can safely ignore it and proceed
-            // to commit the INVENTORY_FAILED state.
-            //
-            // The SDK throws untyped errors, so narrow to just the fields this
-            // handler reads instead of widening to `any`. Still optional-chained
-            // throughout: a thrown null must not turn this into a TypeError and
-            // mask the refund failure. `message` is read off the cast rather than
-            // via `instanceof Error` (the idiom elsewhere in this repo) because
-            // Razorpay's SDK rejects with plain objects, which that check would
-            // treat as messageless.
-            const rzpError = error as { statusCode?: number; message?: string; error?: { description?: string } } | null | undefined
-            const isAlreadyRefunded =
-              rzpError?.statusCode === 400 &&
-              (rzpError?.error?.description?.includes('already been fully refunded') ?? false)
-            if (!isAlreadyRefunded) {
-              // Any other error (network, rate limit, etc) MUST throw to roll back the transaction
-              // and return 500, so Razorpay will retry the webhook.
-              throw new Error(`Failed to refund payment ${razorpayPaymentId}: ${rzpError?.message || 'Unknown error'}`)
-            }
-          }
         }
       }
     } else if (eventType === 'payment.failed') {
@@ -271,4 +272,40 @@ export async function processRazorpayEvent(payload: unknown) {
       data: { processedAt: new Date() },
     })
   }, { isolationLevel: 'Serializable' })
+}
+
+/** Applies a delivery that was authenticated by Razorpay's webhook signature. */
+export async function processRazorpayEvent(payload: unknown) {
+  return processProviderPaymentEvent(payload)
+}
+
+/**
+ * Applies a payment found by an authenticated server-to-server Razorpay API
+ * read. This is intentionally server-only (this module has no `use server`)
+ * and constructs the same strictly validated shape used for webhooks; browser
+ * payment callbacks never reach this path.
+ */
+export async function processTrustedRazorpayReconciliation(payment: {
+  id: string
+  orderId: string
+  amount: number
+  currency: string
+  status: 'captured' | 'failed'
+  errorDescription?: string | null
+}) {
+  return processProviderPaymentEvent({
+    razorpayEventId: `reconcile:${payment.id}`,
+    event: payment.status === 'captured' ? 'payment.captured' : 'payment.failed',
+    payload: {
+      payment: {
+        entity: {
+          id: payment.id,
+          order_id: payment.orderId,
+          amount: payment.amount,
+          currency: payment.currency,
+          error_description: payment.errorDescription ?? null,
+        },
+      },
+    },
+  })
 }

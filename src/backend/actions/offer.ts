@@ -4,130 +4,259 @@ import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/backend/db/prisma'
 import { requireCustomer } from '@/backend/auth/session'
+import { cartSelectionBinding } from '@/backend/utils/cartSelectionBinding'
+import { assertAccountSpendLimit } from '@/backend/actions/accountBudget'
 
-const acceptBundleSchema = z.object({
+const acceptRecommendationSchema = z.object({
+  recommendationId: z.string().uuid(),
   cartId: z.string().uuid(),
-  addonProductId: z.string().uuid(),
-  discountPercent: z.number().finite().min(0).max(100),
 })
 
-/**
- * Accepts a cross-sell bundle: adds `addonProductId` to the customer's cart
- * and turns the resulting cart contents into a persisted, time-limited Offer.
- *
- * The discountPercent the UI shows the customer is never trusted on its own --
- * it is re-checked against the merchant's live MAX_DISCOUNT_PERCENTAGE policy
- * here, server-side, before any Offer is created.
- */
-export async function acceptBundle(cartId: string, addonProductId: string, discountPercent: number) {
+export async function acceptRecommendation(recommendationId: string, cartId: string) {
   const { user, customer } = await requireCustomer()
-  const data = acceptBundleSchema.parse({ cartId, addonProductId, discountPercent })
+  const data = acceptRecommendationSchema.parse({ recommendationId, cartId })
 
-  // Scoped by customerId, so one customer's client can never convert another
-  // customer's cart into an offer.
-  const cart = await prisma.cart.findFirst({ where: { id: data.cartId, customerId: customer.id } })
-  if (!cart) throw new Error('Cart not found')
-  if (cart.status !== 'ACTIVE') throw new Error('This cart is no longer active')
+  return prisma.$transaction(async (tx) => {
+    const cart = await tx.cart.findFirst({ where: { id: data.cartId, customerId: customer.id } })
+    if (!cart) throw new Error('Cart not found')
+    if (cart.status !== 'ACTIVE') throw new Error('This cart is no longer active')
 
-  // 1. Verify the discount was actually authorized by the agent for this specific bundle.
-  // We cannot blindly trust evaluateDiscount here because the client could forge a
-  // discount up to the global MAX_DISCOUNT_PERCENTAGE, bypassing the LLM's negotiation.
-  const recentActions = await prisma.agentAction.findMany({
-    where: { merchantId: cart.merchantId, type: 'BUNDLE_ADDON_OFFER', status: 'APPROVED' },
-    orderBy: { createdAt: 'desc' },
-    take: 10,
-  })
-  const authorizedAction = recentActions.find((a) => {
-    const input = a.input as { cartId?: string; addonProductId?: string; requestedDiscount?: number }
-    return input?.cartId === data.cartId && input?.addonProductId === data.addonProductId && input?.requestedDiscount === data.discountPercent
-  })
-
-  if (!authorizedAction) {
-    throw new Error('This specific bundle discount was never authorized by the agent.')
-  }
-  
-  // policyResult is stored as Json, so narrow it to the fields evaluateDiscount
-  // actually writes rather than casting to `any`.
-  const policyResult = authorizedAction.policyResult as { passed?: boolean; limit?: number; requested?: number; reason?: string } | null
-
-  const addonProduct = await prisma.product.findFirst({
-    where: { id: data.addonProductId, merchantId: cart.merchantId },
-  })
-  if (!addonProduct) throw new Error('This add-on is not available from this merchant')
-  if (addonProduct.inventory < 1) throw new Error('This add-on is out of stock')
-
-  const offer = await prisma.$transaction(async (tx) => {
-    // 2. Add the addon to the cart. Upsert against the (cartId, productId)
-    // unique constraint so a repeat call increments quantity instead of
-    // throwing or duplicating the row.
-    await tx.cartItem.upsert({
-      where: { cartId_productId: { cartId: cart.id, productId: data.addonProductId } },
-      update: { quantity: { increment: 1 } },
-      create: { cartId: cart.id, productId: data.addonProductId, quantity: 1 },
+    const recommendation = await tx.recommendation.findUnique({
+      where: { id: data.recommendationId },
+      include: { agentAction: true }
     })
 
-    const cartItems = await tx.cartItem.findMany({
+    if (!recommendation || recommendation.customerId !== customer.id) {
+      throw new Error('Recommendation not found.')
+    }
+    if (recommendation.merchantId !== cart.merchantId) {
+      throw new Error('Recommendation does not match cart merchant.')
+    }
+    if (recommendation.status === 'ACCEPTED' && recommendation.offerId) {
+      const existingOffer = await tx.offer.findUnique({ where: { id: recommendation.offerId }, include: { items: { include: { product: true } } } })
+      if (existingOffer) return existingOffer
+    }
+    if (recommendation.status !== 'PROPOSED') {
+      throw new Error('This recommendation is no longer active.')
+    }
+    if (Date.now() - recommendation.createdAt.getTime() > 15 * 60 * 1000) {
+      await tx.recommendation.update({ where: { id: recommendation.id }, data: { status: 'EXPIRED' } })
+      throw new Error('This recommendation has expired.')
+    }
+
+    const authorizedAction = recommendation.agentAction
+    if (!authorizedAction || authorizedAction.status !== 'APPROVED') {
+      throw new Error('This specific discount was never authorized by the agent.')
+    }
+
+    const policyResult = authorizedAction.policyResult as { requested?: number } | null
+    const discountPercent = policyResult?.requested ?? 0
+
+    const recommendedProduct = await tx.product.findFirst({
+      where: { id: recommendation.recommendedProductId, merchantId: cart.merchantId },
+    })
+
+    if (!recommendedProduct) {
+      await tx.recommendation.update({ where: { id: recommendation.id }, data: { status: 'UNAVAILABLE' } })
+      throw new Error('This product is not available from this merchant')
+    }
+    if (recommendedProduct.inventory < 1) {
+      await tx.recommendation.update({ where: { id: recommendation.id }, data: { status: 'UNAVAILABLE' } })
+      throw new Error('This product is out of stock')
+    }
+
+    const rawPolicies = await tx.merchantPolicy.findMany({ where: { merchantId: cart.merchantId } })
+    const policies = Object.fromEntries(rawPolicies.map((p) => [p.key, p.value]))
+    const maxDiscount = policies.MAX_DISCOUNT_PERCENTAGE ?? 0
+    if (discountPercent > maxDiscount) {
+      throw new Error(`Discount exceeds the ${maxDiscount}% merchant limit`)
+    }
+
+    const initialCartItems = await tx.cartItem.findMany({
       where: { cartId: cart.id },
       include: { product: true },
     })
-    if (cartItems.length === 0) throw new Error('Cart is empty')
-    if (cartItems.some((item) => item.product.inventory < item.quantity)) {
+    if (initialCartItems.length === 0) throw new Error('Cart is empty')
+
+    if (initialCartItems.some((item) => item.product.inventory < item.quantity)) {
       throw new Error('An item in the cart is out of stock')
     }
 
-    // 3. Offer financials, computed from the live cart contents.
-    const subtotal = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
-    const cost = cartItems.reduce((sum, item) => sum + item.product.cost * item.quantity, 0)
-    const discount = Math.floor(subtotal * (data.discountPercent / 100))
-    const total = subtotal - discount
+    if (!recommendation.originalProductId) throw new Error('Original product ID missing from recommendation')
+    const originalProductItem = initialCartItems.find(i => i.productId === recommendation.originalProductId)
+    if (!originalProductItem) throw new Error('Original product not found in cart')
+
+    let subtotal = 0, discount = 0, total = 0, offerItems: Array<{ productId: string; quantity: number; unitPrice: number; lineTotal: number }> = []
+    let cost = 0
+
+    if (recommendation.type === 'CROSS_SELL') {
+      if (!originalProductItem.product.complementaryProducts.includes(recommendedProduct.id) && !originalProductItem.product.relatedProducts.includes(recommendedProduct.id)) {
+        throw new Error('These products are no longer complementary')
+      }
+
+      const { calculateCrossSellPricing } = await import('@/backend/utils/recommendationPricing')
+      const pricing = calculateCrossSellPricing({
+        cartItems: initialCartItems,
+        addonProduct: recommendedProduct,
+        discountPercent
+      })
+      subtotal = pricing.subtotal
+      discount = pricing.discountAmount
+      total = pricing.total
+      offerItems = pricing.offerItems
+
+      cost = initialCartItems.reduce((sum, item) => sum + item.product.cost * item.quantity, 0) + (recommendedProduct.cost || 0)
+
+      const existingAddonItem = initialCartItems.find(i => i.productId === recommendation.recommendedProductId)
+      if (!existingAddonItem) {
+        await tx.cartItem.create({ data: { cartId: cart.id, productId: recommendation.recommendedProductId, quantity: 1 } })
+      } else {
+        await tx.cartItem.update({
+          where: { id: existingAddonItem.id },
+          data: { quantity: existingAddonItem.quantity + 1 }
+        })
+      }
+
+    } else if (recommendation.type === 'UPSELL') {
+      if (recommendedProduct.price <= originalProductItem.product.price) {
+        throw new Error('Upgrade product price must be strictly greater than original product price')
+      }
+
+      if (!originalProductItem.product.upgradeProducts.includes(recommendedProduct.id)) {
+        throw new Error('This product is no longer a valid upgrade')
+      }
+
+      const { calculateUpsellPricing } = await import('@/backend/utils/recommendationPricing')
+      const pricing = calculateUpsellPricing({
+        cartItems: initialCartItems,
+        originalProduct: originalProductItem.product,
+        upgradeProduct: recommendedProduct,
+        discountPercent
+      })
+      subtotal = pricing.subtotal
+      discount = pricing.discountAmount
+      total = pricing.total
+      offerItems = pricing.offerItems
+
+      cost = initialCartItems.reduce((sum, item) => {
+        if (item.productId === recommendation.originalProductId) {
+          return sum + item.product.cost * (item.quantity - 1)
+        }
+        return sum + item.product.cost * item.quantity
+      }, 0) + (recommendedProduct.cost || 0)
+
+      if (originalProductItem.quantity > 1) {
+        await tx.cartItem.update({
+          where: { id: originalProductItem.id },
+          data: { quantity: originalProductItem.quantity - 1 }
+        })
+      } else {
+        await tx.cartItem.delete({
+          where: { id: originalProductItem.id }
+        })
+      }
+
+      const existingUpgradeItem = initialCartItems.find(i => i.productId === recommendation.recommendedProductId)
+      if (!existingUpgradeItem) {
+        await tx.cartItem.create({ data: { cartId: cart.id, productId: recommendation.recommendedProductId, quantity: 1 } })
+      } else {
+        await tx.cartItem.update({
+          where: { id: existingUpgradeItem.id },
+          data: { quantity: existingUpgradeItem.quantity + 1 }
+        })
+      }
+    } else {
+      throw new Error('Invalid recommendation type')
+    }
+
     const marginPercent = total > 0 ? ((total - cost) / total) * 100 : -Infinity
+    if (marginPercent < (policies.MIN_MARGIN_PERCENTAGE ?? 0)) {
+      throw new Error('Offer would violate the minimum merchant margin')
+    }
+
+    await assertAccountSpendLimit(tx, customer.id, total)
+
+    // Keep checkout validation aligned with catalog search: a refined intent
+    // updates an existing record without changing createdAt.
+    const intent = await tx.buyerIntent.findFirst({ where: { customerId: customer.id }, orderBy: { updatedAt: 'desc' } })
+    if (intent?.maximumAmount) {
+      const pastOrders = await tx.order.findMany({
+        where: { buyerIntentId: intent.id, status: { notIn: ['DRAFT', 'PAYMENT_FAILED', 'CANCELLED', 'EXPIRED'] } },
+        select: { totalAmount: true },
+      })
+      const currentSpend = pastOrders.reduce((sum, order) => sum + order.totalAmount, 0)
+      if (currentSpend + total > intent.maximumAmount) {
+        throw new Error('Offer exceeds the cumulative buyer intent budget')
+      }
+    }
 
     const created = await tx.offer.create({
       data: {
         merchantId: cart.merchantId,
         customerId: customer.id,
+        buyerIntentId: intent?.id,
         cartId: cart.id,
+        cartSnapshotHash: cartSelectionBinding({
+          customerId: customer.id,
+          merchantId: cart.merchantId,
+          cartId: cart.id,
+          items: offerItems.map((item) => ({ productId: item.productId, quantity: item.quantity, unitPrice: item.unitPrice })),
+        }),
         subtotal,
         discount,
         total,
-        discountPercent: data.discountPercent,
+        discountPercent,
         status: 'ACTIVE',
         expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-        // 4. One OfferItem per CartItem. unitPrice carries the discount, the
-        // same way createOfferForCustomer writes it (commerce.ts:147):
-        // createOrderFromOffer copies unitPrice straight into OrderItem while
-        // taking totalAmount from offer.total, so a list-price unitPrice here
-        // would make a bundle order's line items sum to more than the order.
         items: {
-          create: cartItems.map((item) => ({
+          create: offerItems.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
-            unitPrice: item.product.price - Math.floor(item.product.price * (data.discountPercent / 100)),
+            unitPrice: item.unitPrice,
           })),
         },
       },
       include: { items: { include: { product: true } } },
     })
 
+    await tx.recommendation.update({
+      where: { id: recommendation.id },
+      data: { status: 'ACCEPTED', offerId: created.id }
+    })
+
     await tx.auditLog.create({
       data: {
         merchantId: cart.merchantId,
         actorUserId: user.id,
-        action: 'BUNDLE_OFFER_CREATED',
+        action: 'RECOMMENDATION_ACCEPTED',
         status: 'APPROVED',
-        reason: policyResult?.reason ?? 'Bundle offer created from an agent-authorized bundle proposal',
+        reason: 'Recommendation accepted securely via unified authoritative transaction',
         details: {
           offerId: created.id,
           cartId: cart.id,
-          addonProductId: data.addonProductId,
-          discountPercent: data.discountPercent,
+          recommendedProductId: recommendation.recommendedProductId,
+          originalProductId: recommendation.originalProductId,
+          discountPercent,
           marginPercent,
+          type: recommendation.type
         } as Prisma.InputJsonValue,
       },
     })
 
     return created
   }, { isolationLevel: 'Serializable' })
+}
 
-  return offer
+export async function declineRecommendation(recommendationId: string) {
+  const { customer } = await requireCustomer()
+  const recommendation = await prisma.recommendation.findUnique({ where: { id: recommendationId } })
+  if (!recommendation || recommendation.customerId !== customer.id) {
+    throw new Error('Recommendation not found.')
+  }
+  if (recommendation.status !== 'PROPOSED') return recommendation
+
+  return prisma.recommendation.update({
+    where: { id: recommendationId },
+    data: { status: 'DECLINED' }
+  })
 }

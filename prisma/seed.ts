@@ -56,6 +56,12 @@ async function main() {
       imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=80',
     },
     {
+      name: 'Pro Wireless Mechanical Keyboard', category: 'keyboard', price: 1049900, cost: 649900, inventory: 10,
+      warrantyYears: 3, deliveryDays: 2, tags: ['programming', 'productivity', 'pro'],
+      attributes: { wireless: true, switch_type: 'mechanical', battery_hours: 200, rgb: true },
+      imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=80',
+    },
+    {
       name: 'Ergonomic Wireless Mouse', category: 'mouse', price: 349900, cost: 199900, inventory: 50,
       warrantyYears: 1, deliveryDays: 2, tags: ['productivity', 'ergonomic'],
       attributes: { wireless: true, battery_hours: 200, dpi: 4000 },
@@ -74,10 +80,24 @@ async function main() {
     if (!existing) await prisma.product.create({ data: { merchantId: merchant.id, ...product } })
   } 
 
-  const keyboard = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, category: 'keyboard' } })
+  const keyboard = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Wireless Mechanical Keyboard' } })
+  const proKeyboard = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Pro Wireless Mechanical Keyboard' } })
   const mouse = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, category: 'mouse' } })
-  await prisma.product.update({ where: { id: keyboard.id }, data: { relatedProducts: [mouse.id] } })
-  await prisma.product.update({ where: { id: mouse.id }, data: { relatedProducts: [keyboard.id] } })
+  await prisma.product.update({ 
+    where: { id: keyboard.id }, 
+    data: { 
+      relatedProducts: [mouse.id],
+      complementaryProducts: [mouse.id],
+      upgradeProducts: [proKeyboard.id] 
+    } 
+  })
+  await prisma.product.update({ 
+    where: { id: mouse.id }, 
+    data: { 
+      relatedProducts: [keyboard.id],
+      complementaryProducts: [keyboard.id]
+    } 
+  })
 
   console.log(`Seeded TechNest. Merchant login: ${adminEmail}`)
 }

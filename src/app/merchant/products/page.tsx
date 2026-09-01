@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { getMerchantDashboardData, addProduct, updateProduct, deleteProduct } from '@/backend/actions/merchant'
+import { MultiSelect } from './MultiSelect'
 
 type Product = Awaited<ReturnType<typeof getMerchantDashboardData>>['products'][number]
 
 export default function ProductAdder() {
   const [products, setProducts] = useState<Product[]>([])
   const [addingProduct, setAddingProduct] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<any>(null)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
@@ -27,7 +28,7 @@ export default function ProductAdder() {
     setAddingProduct(true)
     const form = e.currentTarget
     const formData = new FormData(form)
-    
+
     const productData = {
       name: formData.get('name') as string,
       category: formData.get('category') as string,
@@ -39,6 +40,9 @@ export default function ProductAdder() {
       imageUrl: (formData.get('imageUrl') as string) || undefined,
       tags: (formData.get('tags') as string).split(',').map((tag) => tag.trim()).filter(Boolean),
       attributes: { highlights: formData.get('highlights') as string },
+      relatedProducts: ((formData.get('relatedProducts') as string) || '').split(',').map((id) => id.trim()).filter(Boolean),
+      complementaryProducts: ((formData.get('complementaryProducts') as string) || '').split(',').map((id) => id.trim()).filter(Boolean),
+      upgradeProducts: ((formData.get('upgradeProducts') as string) || '').split(',').map((id) => id.trim()).filter(Boolean),
     }
 
     try {
@@ -63,7 +67,7 @@ export default function ProductAdder() {
     try {
       await deleteProduct(id)
       await refreshData()
-    } catch (err) {
+    } catch {
       alert('Could not delete product. It might be used in existing carts or orders.')
     } finally {
       setIsDeleting(null)
@@ -71,8 +75,8 @@ export default function ProductAdder() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans selection:bg-indigo-100">
-      <header className="bg-slate-900 border-b border-slate-800 px-8 py-5 flex justify-between items-center shadow-lg sticky top-0 z-10">
+    <div className="min-h-screen bg-transparent pt-16 transition-colors font-sans selection:bg-indigo-100">
+      <header className="bg-slate-900/90 dark:bg-[#0B1221]/90 backdrop-blur-md border-b border-slate-800 dark:border-gray-800 px-8 py-5 flex justify-between items-center shadow-lg sticky top-0 z-10">
         <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
           MerchantOS <span className="text-indigo-400 font-medium">| Product Catalog</span>
         </h1>
@@ -86,56 +90,88 @@ export default function ProductAdder() {
           <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <h2 className="text-2xl font-bold text-slate-900">Manage Inventory</h2>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Manage Inventory</h2>
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Add Product Form */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 self-start sticky top-28">
+          <div className="bg-white/90 dark:bg-[#0f1629]/80 dark:backdrop-blur-xl dark:border-slate-800/80 dark:text-slate-200/90 dark:bg-[#0f1629]/80 dark:backdrop-blur-xl dark:border-slate-800/80 dark:text-slate-200 p-6 rounded-2xl shadow-sm border border-slate-200 self-start sticky top-28">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-slate-900">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
               {editingProduct && (
-                <button onClick={() => setEditingProduct(null)} className="text-sm text-slate-500 hover:text-slate-700">Cancel</button>
+                <button onClick={() => setEditingProduct(null)} className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700">Cancel</button>
               )}
             </div>
             <form key={editingProduct?.id || 'new'} onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
-                <input required defaultValue={editingProduct?.name} name="name" type="text" className="w-full px-3 py-2 border rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Wireless Mouse" />
+                <input required defaultValue={editingProduct?.name} name="name" type="text" className="w-full px-3 py-2 border rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Wireless Mouse" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-                <input required defaultValue={editingProduct?.category} name="category" type="text" className="w-full px-3 py-2 border rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" placeholder="e.g. mouse" />
+                <input required defaultValue={editingProduct?.category} name="category" type="text" className="w-full px-3 py-2 border rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" placeholder="e.g. mouse" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Price (INR)</label>
-                  <input required defaultValue={editingProduct ? editingProduct.price / 100 : ''} name="price" type="number" min="1" className="w-full px-3 py-2 border rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" placeholder="1500" />
+                  <input required defaultValue={editingProduct ? editingProduct.price / 100 : ''} name="price" type="number" min="1" className="w-full px-3 py-2 border rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" placeholder="1500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Cost (INR)</label>
-                  <input required defaultValue={editingProduct ? editingProduct.cost / 100 : ''} name="cost" type="number" min="0" className="w-full px-3 py-2 border rounded-lg text-slate-900" placeholder="900" />
+                  <input required defaultValue={editingProduct ? editingProduct.cost / 100 : ''} name="cost" type="number" min="0" className="w-full px-3 py-2 border rounded-lg text-slate-900 dark:text-white" placeholder="900" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Inventory</label>
-                  <input required defaultValue={editingProduct?.inventory} name="inventory" type="number" min="1" className="w-full px-3 py-2 border rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" placeholder="50" />
+                  <input required defaultValue={editingProduct?.inventory} name="inventory" type="number" min="1" className="w-full px-3 py-2 border rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" placeholder="50" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Warranty years<input required defaultValue={editingProduct?.warrantyYears ?? 1} name="warrantyYears" type="number" min="0" className="mt-1 w-full px-3 py-2 border rounded-lg text-slate-900" /></label>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Delivery days<input required defaultValue={editingProduct?.deliveryDays ?? 3} name="deliveryDays" type="number" min="0" className="mt-1 w-full px-3 py-2 border rounded-lg text-slate-900" /></label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Warranty years<input required defaultValue={editingProduct?.warrantyYears ?? 1} name="warrantyYears" type="number" min="0" className="mt-1 w-full px-3 py-2 border rounded-lg text-slate-900 dark:text-white" /></label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Delivery days<input required defaultValue={editingProduct?.deliveryDays ?? 3} name="deliveryDays" type="number" min="0" className="mt-1 w-full px-3 py-2 border rounded-lg text-slate-900 dark:text-white" /></label>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Tags</label>
-                <input required defaultValue={editingProduct?.tags?.join(', ')} name="tags" type="text" className="w-full px-3 py-2 border rounded-lg text-slate-900" placeholder="programming, wireless" />
+                <input required defaultValue={editingProduct?.tags?.join(', ')} name="tags" type="text" className="w-full px-3 py-2 border rounded-lg text-slate-900 dark:text-white" placeholder="programming, wireless" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Feature highlights</label>
-                <input required defaultValue={editingProduct?.attributes?.highlights || ''} name="highlights" type="text" className="w-full px-3 py-2 border rounded-lg text-slate-900" placeholder="Wireless, mechanical switches" />
+                <input required defaultValue={(editingProduct?.attributes as Record<string, string>)?.highlights || ''} name="highlights" type="text" className="w-full px-3 py-2 border rounded-lg text-slate-900 dark:text-white" placeholder="Wireless, mechanical switches" />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Related Products</label>
+                  <MultiSelect
+                    key={`related-${editingProduct?.id || 'new'}`}
+                    name="relatedProducts"
+                    options={products.filter(p => p.id !== editingProduct?.id).map(p => ({ id: p.id, name: p.name }))}
+                    initialSelectedIds={editingProduct?.relatedProducts || []}
+                    placeholder="Select related products..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Complementary Products</label>
+                  <MultiSelect
+                    key={`complementary-${editingProduct?.id || 'new'}`}
+                    name="complementaryProducts"
+                    options={products.filter(p => p.id !== editingProduct?.id).map(p => ({ id: p.id, name: p.name }))}
+                    initialSelectedIds={editingProduct?.complementaryProducts || []}
+                    placeholder="Select complementary products..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Upgrade Products</label>
+                  <MultiSelect
+                    key={`upgrade-${editingProduct?.id || 'new'}`}
+                    name="upgradeProducts"
+                    options={products.filter(p => p.id !== editingProduct?.id).map(p => ({ id: p.id, name: p.name }))}
+                    initialSelectedIds={editingProduct?.upgradeProducts || []}
+                    placeholder="Select upgrade products..."
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Image URL (Optional)</label>
-                <input defaultValue={editingProduct?.imageUrl || ''} name="imageUrl" type="url" className="w-full px-3 py-2 border rounded-lg text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" placeholder="https://..." />
+                <input defaultValue={editingProduct?.imageUrl || ''} name="imageUrl" type="url" className="w-full px-3 py-2 border rounded-lg text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500" placeholder="https://..." />
               </div>
               <button type="submit" disabled={addingProduct} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition-colors">
                 {addingProduct ? 'Saving...' : (editingProduct ? 'Update Product' : 'Add Product')}
@@ -144,22 +180,22 @@ export default function ProductAdder() {
           </div>
 
           {/* Product List */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200">
+          <div className="lg:col-span-2 bg-white/90 dark:bg-[#0f1629]/80 dark:backdrop-blur-xl dark:border-slate-800/80 dark:text-slate-200/90 dark:bg-[#0f1629]/80 dark:backdrop-blur-xl dark:border-slate-800/80 dark:text-slate-200 rounded-2xl shadow-sm border border-slate-200">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider rounded-tl-2xl">Product</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Stock</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider rounded-tr-2xl">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider rounded-tl-2xl">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Price</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Stock</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider rounded-tr-2xl">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
                 {products && products.length > 0 ? (
                   products.map((p) => (
                     <tr key={p.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 flex items-center gap-3">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-white flex items-center gap-3">
                         {p.imageUrl ? (
                           <img src={p.imageUrl} alt="" className="w-10 h-10 rounded-md object-cover border border-slate-200" />
                         ) : (
@@ -169,18 +205,18 @@ export default function ProductAdder() {
                         )}
                         {p.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{p.category}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{(p.price / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{p.category}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900 dark:text-white">{(p.price / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${p.inventory > 10 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
                           {p.inventory} in stock
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                         <div className="relative inline-block text-left">
-                          <button 
-                            onClick={() => setOpenDropdown(openDropdown === p.id ? null : p.id)} 
-                            className="p-1 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100 focus:outline-none transition-colors"
+                          <button
+                            onClick={() => setOpenDropdown(openDropdown === p.id ? null : p.id)}
+                            className="p-1 rounded-full text-slate-400 hover:text-slate-900 dark:text-white hover:bg-slate-100 focus:outline-none transition-colors"
                           >
                             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                               <circle cx="5" cy="12" r="2" />
@@ -188,21 +224,21 @@ export default function ProductAdder() {
                               <circle cx="19" cy="12" r="2" />
                             </svg>
                           </button>
-                          
+
                           {openDropdown === p.id && (
                             <>
                               <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)}></div>
                               <div className="absolute left-8 top-0 z-50 w-44 bg-[#262626] rounded-xl shadow-2xl py-2 flex flex-col border border-slate-700 overflow-hidden">
-                                <button 
-                                  onClick={() => { setEditingProduct(p); setOpenDropdown(null); }} 
+                                <button
+                                  onClick={() => { setEditingProduct(p); setOpenDropdown(null); }}
                                   className="w-full text-left px-5 py-3 text-sm font-medium text-white hover:bg-white/10 transition-colors"
                                 >
                                   Edit
                                 </button>
                                 <div className="border-t border-slate-700/50 my-0"></div>
-                                <button 
-                                  onClick={() => { handleDelete(p.id); setOpenDropdown(null); }} 
-                                  disabled={isDeleting === p.id} 
+                                <button
+                                  onClick={() => { handleDelete(p.id); setOpenDropdown(null); }}
+                                  disabled={isDeleting === p.id}
                                   className="w-full text-left px-5 py-3 text-sm font-medium text-[#ED4956] hover:bg-white/10 transition-colors disabled:opacity-50"
                                 >
                                   {isDeleting === p.id ? 'Deleting...' : 'Delete'}
@@ -216,7 +252,7 @@ export default function ProductAdder() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-slate-500">No products found. Add one on the left!</td>
+                    <td colSpan={5} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">No products found. Add one on the left!</td>
                   </tr>
                 )}
               </tbody>
