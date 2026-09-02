@@ -19,6 +19,7 @@ import {
   verifyAuditExportSignature,
   AuditLogEntry,
 } from '../src/backend/security/auditChainVerifier'
+import { exportAuditLedgerCSV } from '../src/backend/actions/auditExport'
 
 // --- ANSI Colors ---
 const c = {
@@ -38,6 +39,7 @@ const c = {
 async function runAuditCli() {
   const args = process.argv.slice(2)
   const isVerifyOnly = args.includes('--verify')
+  const isCsvExport = args.includes('--csv')
   const targetFile = args.find((a) => a.endsWith('.json'))
 
   console.log(`\n${c.bold}${c.cyan}================================================================================${c.reset}`)
@@ -72,6 +74,7 @@ async function runAuditCli() {
       chainHead: chainResult.chainHead,
       genesisValid: chainResult.genesisVerified,
       chainValid: chainResult.valid,
+      contentValid: chainResult.contentDigestVerified,
       signatureValid: sigResult.valid,
       errors: chainResult.errors,
     })
@@ -146,14 +149,19 @@ async function runAuditCli() {
     orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
   })
 
-  // Cryptographically verify every link
+  // Cryptographically verify every link and recompute all entry digests
   const verification = verifyAuditChain(activeLogs)
 
-  // In export mode, create signed export record and write to disk
   let exportRecord: { id: string; merchantId: string; chainHead: string; signature: string; createdAt: Date } | null = null
   let signatureValid = true
 
-  if (!isVerifyOnly) {
+  if (isCsvExport) {
+    console.log(`\n  ${c.dim}[Generating RFC-4180 CSV Audit Trail...]${c.reset}`)
+    const csvContent = await exportAuditLedgerCSV({ merchantId: merchant.id })
+    const csvPath = path.join(process.cwd(), `merchantos-audit-trail-${merchant.id.slice(0, 8)}-${Date.now()}.csv`)
+    fs.writeFileSync(csvPath, csvContent, 'utf-8')
+    console.log(`  ${c.green}✔ Exported RFC-4180 CSV audit trail to:${c.reset} ${csvPath}`)
+  } else if (!isVerifyOnly) {
     console.log(`\n  ${c.dim}[Generating immutable signed AuditExport snapshot...]${c.reset}`)
     const payload = {
       format: 'merchantos.audit-export.v1',
@@ -200,6 +208,7 @@ async function runAuditCli() {
     chainHead: verification.chainHead,
     genesisValid: verification.genesisVerified,
     chainValid: verification.valid,
+    contentValid: verification.contentDigestVerified,
     signatureValid,
     errors: verification.errors,
   })
@@ -214,6 +223,7 @@ function printScorecard(results: {
   chainHead: string
   genesisValid: boolean
   chainValid: boolean
+  contentValid: boolean
   signatureValid: boolean
   errors: string[]
 }) {
@@ -228,17 +238,22 @@ function printScorecard(results: {
       Details: results.genesisValid ? "First block is rooted at 'GENESIS'" : 'Root block mismatch',
     },
     {
-      Check: '2. SHA-256 Hash Progression',
+      Check: '2. Hash Link Continuity',
       Status: results.chainValid ? 'PASSED' : 'FAILED',
       Details: `Verified ${results.totalEntries} sequential cryptographic links`,
     },
     {
-      Check: '3. Chain Head Integrity',
+      Check: '3. Content Digest Recomputation',
+      Status: results.contentValid ? 'PASSED' : 'FAILED',
+      Details: 'Recomputed SHA-256 for each row matches stored entryHash 100%',
+    },
+    {
+      Check: '4. Chain Head Integrity',
       Status: results.chainHead ? 'PASSED' : 'FAILED',
       Details: `Head Hash: ${results.chainHead.slice(0, 16)}...`,
     },
     {
-      Check: '4. Non-Repudiation HMAC',
+      Check: '5. Non-Repudiation HMAC',
       Status: results.signatureValid ? 'PASSED' : 'FAILED',
       Details: 'HMAC-SHA256 signature cryptographically matches payload',
     },

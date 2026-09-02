@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { prisma } from '@/backend/db/prisma'
 import { requireCustomer } from '@/backend/auth/session'
-import { checkRateLimit } from '@/backend/utils/rateLimit'
+import { checkDistributedRateLimit } from '@/backend/utils/rateLimit'
 
 const schema = z.object({
   query: z.string().trim().min(1).max(100),
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Customer authentication required' }, { status: 401 })
   }
 
-  const rateLimit = checkRateLimit(`agent-search:${customerId}`)
+  const rateLimit = await checkDistributedRateLimit(`agent-search:${customerId}`)
   if (!rateLimit.allowed) {
     return Response.json(
       { error: 'Rate limit exceeded. Please wait a moment.' },

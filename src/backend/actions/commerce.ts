@@ -10,13 +10,72 @@ const offerInputSchema = z.object({
   discountPercentage: z.number().finite().min(0).max(100).default(0),
   buyerIntentId: z.string().uuid().optional(),
   campaignId: z.string().uuid().optional(),
-  // Scopes the basket lookup to one merchant. Optional so autonomous-agent
-  // callers that only hold a session can still transact, but supplying it is
-  // strongly preferred -- see resolveActiveCart for what happens without it.
-  merchantId: z.string().uuid().optional(),
+  // Scopes the basket lookup to one merchant. Must be explicitly provided by the caller.
+  merchantId: z.string().uuid(),
 })
 
 type PolicyMap = Record<string, number>
+
+// Campaign configuration is merchant-authored data, so it must be validated
+// again at the financial boundary. The chat prompt can help the model choose
+// the right campaign, but it is never the authorization mechanism.
+const recoveryCampaignEligibilitySchema = z.object({
+  cartIds: z.array(z.string().min(1)).min(1).max(100),
+  discountPercent: z.number().finite().min(0).max(100).optional(),
+}).passthrough()
+
+const clearanceCampaignEligibilitySchema = z.object({
+  productId: z.string().min(1),
+  customerIds: z.array(z.string().min(1)).min(1).max(100),
+  discountPercent: z.number().finite().min(0).max(100).optional(),
+}).passthrough()
+
+type CartForCampaignEligibility = {
+  id: string
+  items: Array<{ productId: string; quantity: number }>
+}
+
+/**
+ * Validates that a campaign is authorized for this exact customer selection.
+ *
+ * This deliberately lives beside offer creation rather than in the chat/tool
+ * layer: any future route or server action that creates an offer receives the
+ * same authorization boundary. A campaign ID alone is never a discount grant.
+ */
+function assertCampaignEligibleForCart({
+  campaign,
+  customerId,
+  cart,
+}: {
+  campaign: { type: string; configuration: unknown }
+  customerId: string
+  cart: CartForCampaignEligibility
+}) {
+  if (campaign.type === 'RECOVERY') {
+    const configuration = recoveryCampaignEligibilitySchema.safeParse(campaign.configuration)
+    if (!configuration.success || !configuration.data.cartIds.includes(cart.id)) {
+      throw new Error('This recovery campaign is not authorized for the selected basket.')
+    }
+    return
+  }
+
+  if (campaign.type === 'CLEARANCE') {
+    const configuration = clearanceCampaignEligibilitySchema.safeParse(campaign.configuration)
+    if (!configuration.success || !configuration.data.customerIds.includes(customerId)) {
+      throw new Error('This clearance campaign is not authorized for this customer.')
+    }
+
+    // Clearance campaigns issue a discount for one pre-approved SKU, not a
+    // blanket discount for every line a shopper happens to put in their cart.
+    const [item] = cart.items
+    if (cart.items.length !== 1 || item.productId !== configuration.data.productId || item.quantity !== 1) {
+      throw new Error('This clearance campaign is only authorized for its designated product.')
+    }
+    return
+  }
+
+  throw new Error('This campaign type is not authorized for customer checkout offers.')
+}
 
 export async function policyMap(merchantId: string): Promise<PolicyMap> {
   const policies = await prisma.merchantPolicy.findMany({ where: { merchantId } })
@@ -28,48 +87,19 @@ const activeCartInclude = { items: { include: { product: true } } } as const
 /**
  * Resolves the one basket a request is about.
  *
- * When `merchantId` is supplied the query is scoped to it, which is the only
- * way to be certain which catalogue the resulting offer prices against.
- *
- * When it is not supplied we refuse to guess. The previous behaviour was
- * `findFirst({ customerId, status: 'ACTIVE' }, orderBy: updatedAt desc)`, which
- * silently returned whichever basket happened to be touched last -- so a
- * shopper with an active basket at two merchants could add to one and be sold
- * the other. Falling back to "most recent" makes that a data-dependent bug
- * that only shows up under exactly the conditions nobody tests. Erroring is
- * recoverable; charging for the wrong basket is not.
+ * `merchantId` is strictly required to ensure the cart is scoped to a single merchant.
  */
-async function resolveActiveCart(customerId: string, merchantId?: string) {
-  if (merchantId) {
-    return prisma.cart.findFirst({
-      where: { customerId, merchantId, status: 'ACTIVE' },
-      include: activeCartInclude,
-      orderBy: { updatedAt: 'desc' },
-    })
-  }
-
-  const carts = await prisma.cart.findMany({
-    where: { customerId, status: 'ACTIVE' },
+async function resolveActiveCart(customerId: string, merchantId: string) {
+  return prisma.cart.findFirst({
+    where: { customerId, merchantId, status: 'ACTIVE' },
     include: activeCartInclude,
     orderBy: { updatedAt: 'desc' },
-    take: 2,
   })
-
-  // Two ACTIVE carts at the same merchant is benign (historical rows, or a
-  // race that predates the cart lock) -- the newest wins. Two at *different*
-  // merchants is genuinely ambiguous and must not be resolved by guessing.
-  if (carts.length > 1 && carts[0].merchantId !== carts[1].merchantId) {
-    throw new Error(
-      'You have active baskets with more than one merchant. Reopen the storefront you want to check out from so the basket can be scoped to a single merchant.',
-    )
-  }
-
-  return carts[0] ?? null
 }
 
-export async function getActiveCart(merchantId?: string) {
+export async function getActiveCart(merchantId: string) {
   const { customer } = await requireCustomer()
-  const parsedMerchantId = merchantId ? z.string().uuid().parse(merchantId) : undefined
+  const parsedMerchantId = z.string().uuid().parse(merchantId)
   return resolveActiveCart(customer.id, parsedMerchantId)
 }
 
@@ -102,6 +132,7 @@ export async function createOfferFromActiveCart(input: z.input<typeof offerInput
     if (!campaign) {
       throw new Error('That campaign is not an approved campaign for this merchant.')
     }
+    assertCampaignEligibleForCart({ campaign, customerId: customer.id, cart })
     const config = campaign.configuration as Record<string, unknown> | null
     const authorizedDiscount = campaign.discountPercent ?? (typeof config?.discountPercent === 'number' ? config.discountPercent : 0)
     if (data.discountPercentage > authorizedDiscount) {
@@ -126,7 +157,7 @@ export async function createOfferFromActiveCart(input: z.input<typeof offerInput
 
   // Early, buyer-friendly forecast. The definitive reservation is repeated in
   // createOrReuseCheckoutOrder inside its serializable transaction.
-  await assertAccountSpendLimit(prisma, customer.id, total)
+  await assertAccountSpendLimit(prisma, customer.id, merchantId, total)
 
   const intent = data.buyerIntentId
     ? await prisma.buyerIntent.findFirst({ where: { id: data.buyerIntentId, customerId: customer.id } })

@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { RefundStatus } from '@prisma/client'
 import { prisma } from '@/backend/db/prisma'
+import { dispatchOperatorAlert } from '@/backend/notifications/operatorNotifier'
 
 const CLAIM_LEASE_MS = 5 * 60 * 1000
 const MAX_BACKOFF_MS = 6 * 60 * 60 * 1000
+const MAX_REFUND_ATTEMPTS = 5
 
 type RazorpayRefund = { id?: unknown }
 
@@ -136,28 +138,69 @@ async function processOneRefund(refundId: string, now: Date, staleBefore: Date):
     })
   } catch (error) {
     const lastError = safeError(error)
+    const isExhausted = refund.attemptCount >= MAX_REFUND_ATTEMPTS
+
     await prisma.$transaction(async (tx) => {
-      const rescheduled = await tx.refund.updateMany({
-        where: { id: refund.id, status: RefundStatus.PROCESSING, processingToken },
-        data: {
-          status: RefundStatus.PENDING,
-          processingToken: null,
-          processingStartedAt: null,
-          nextAttemptAt: nextRetry(refund.attemptCount),
-          lastError,
-        },
-      })
-      if (rescheduled.count !== 1) return
-      await tx.auditLog.create({
-        data: {
-          orderId: refund.orderId,
-          action: 'REFUND_RETRY_SCHEDULED',
-          status: 'PENDING',
-          reason: 'Razorpay refund attempt failed; retry is scheduled with the same idempotency key.',
-          details: { refundId: refund.id, razorpayPaymentId: refund.razorpayPaymentId, lastError },
-        },
-      })
+      if (isExhausted) {
+        // Move to Dead-Letter Queue (DLQ) state: 24h quarantine so worker is not blocked
+        const failed = await tx.refund.updateMany({
+          where: { id: refund.id, status: RefundStatus.PROCESSING, processingToken },
+          data: {
+            status: RefundStatus.PENDING,
+            processingToken: null,
+            processingStartedAt: null,
+            nextAttemptAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            lastError,
+          },
+        })
+        if (failed.count !== 1) return
+
+        await tx.auditLog.create({
+          data: {
+            orderId: refund.orderId,
+            action: 'REFUND_MOVED_TO_DEAD_LETTER_QUEUE',
+            status: 'FAILED',
+            reason: `Refund attempt threshold reached (${refund.attemptCount}/${MAX_REFUND_ATTEMPTS}). Quarantined for manual operator resolution.`,
+            details: { refundId: refund.id, razorpayPaymentId: refund.razorpayPaymentId, lastError, attemptCount: refund.attemptCount },
+          },
+        })
+      } else {
+        const rescheduled = await tx.refund.updateMany({
+          where: { id: refund.id, status: RefundStatus.PROCESSING, processingToken },
+          data: {
+            status: RefundStatus.PENDING,
+            processingToken: null,
+            processingStartedAt: null,
+            nextAttemptAt: nextRetry(refund.attemptCount),
+            lastError,
+          },
+        })
+        if (rescheduled.count !== 1) return
+
+        await tx.auditLog.create({
+          data: {
+            orderId: refund.orderId,
+            action: 'REFUND_RETRY_SCHEDULED',
+            status: 'PENDING',
+            reason: 'Razorpay refund attempt failed; retry is scheduled with the same idempotency key.',
+            details: { refundId: refund.id, razorpayPaymentId: refund.razorpayPaymentId, lastError, attemptCount: refund.attemptCount },
+          },
+        })
+      }
     })
+
+    if (isExhausted) {
+      // Non-blocking critical operator alerting
+      dispatchOperatorAlert([
+        {
+          queue: 'REFUND',
+          count: 1,
+          oldestAgeMinutes: Math.floor((now.getTime() - refund.createdAt.getTime()) / 60000),
+          severity: 'CRITICAL',
+          message: `Refund ${refund.id} for order ${refund.orderId} failed after ${refund.attemptCount} attempts. Last error: ${lastError}`,
+        },
+      ]).catch(() => {})
+    }
   }
   return 'attempted'
 }

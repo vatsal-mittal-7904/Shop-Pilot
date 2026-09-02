@@ -105,7 +105,12 @@ async function processOnePaymentReconciliation(
 
   try {
     if (!razorpayOrderId) throw new Error('Internal order has no persisted Razorpay order id')
-    const response = await razorpay.orders.fetchPayments(razorpayOrderId)
+    
+    // Protect against daemon lock exhaustion if the Razorpay API hangs
+    const response = await Promise.race([
+      razorpay.orders.fetchPayments(razorpayOrderId),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Razorpay API connection timed out during reconciliation.')), 10000))
+    ])
     const payments = Array.isArray(response.items) ? response.items as ProviderPayment[] : []
     const payment = payments.map((item) => finalProviderPayment(item, razorpayOrderId)).find(Boolean)
     if (!payment) throw new Error('Razorpay has not reported a final payment outcome yet')

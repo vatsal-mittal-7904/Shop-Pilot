@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   requireCustomer: vi.fn(),
   checkRateLimit: vi.fn(),
+  checkDistributedRateLimit: vi.fn(),
   merchantFindMany: vi.fn(),
   merchantFindUnique: vi.fn(),
   productFindMany: vi.fn(),
@@ -14,6 +15,7 @@ vi.mock('@/backend/auth/session', () => ({
 
 vi.mock('@/backend/utils/rateLimit', () => ({
   checkRateLimit: mocks.checkRateLimit,
+  checkDistributedRateLimit: mocks.checkDistributedRateLimit,
 }))
 
 vi.mock('@/backend/db/prisma', () => ({
@@ -39,6 +41,7 @@ describe('Catalog & Search Multi-Merchant Scoping', () => {
     vi.resetAllMocks()
     mocks.requireCustomer.mockResolvedValue({ customer: { id: 'cust-1' } })
     mocks.checkRateLimit.mockReturnValue({ allowed: true, retryAfterMs: 0 })
+    mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true, retryAfterMs: 0 })
   })
 
   describe('GET /api/agent/catalog', () => {

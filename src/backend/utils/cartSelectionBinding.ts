@@ -13,7 +13,7 @@ export function cartSelectionBinding(input: {
   cartId: string
   items: Array<BindingItem>
 }) {
-  const secret = process.env.OFFER_BINDING_SECRET || process.env.RAZORPAY_KEY_SECRET
+  const secret = process.env.OFFER_BINDING_SECRET
   if (!secret) throw new Error('OFFER_BINDING_SECRET must be configured before checkout offers can be created.')
 
   // The sort must be a TOTAL order, otherwise the canonical string is not

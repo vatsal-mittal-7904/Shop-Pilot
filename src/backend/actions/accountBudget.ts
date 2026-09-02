@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client'
 
 const RESERVED_ORDER_STATUSES = ['PAYMENT_PENDING', 'PAYMENT_AUTHORIZED', 'PAYMENT_CAPTURED', 'PAID'] as const
 
-type BudgetClient = Pick<Prisma.TransactionClient, 'customer' | 'order' | '$executeRaw'>
+type BudgetClient = Pick<Prisma.TransactionClient, 'customer' | 'order' | 'merchantPolicy' | '$executeRaw'>
 
 export function accountBudgetPeriods(now = new Date()) {
   // UTC is deliberately used as the persisted system boundary. It makes the
@@ -25,18 +25,28 @@ export function accountBudgetPeriods(now = new Date()) {
 export async function assertAccountSpendLimit(
   tx: BudgetClient,
   customerId: string,
+  merchantId: string,
   proposedAmount: number,
   now = new Date(),
 ) {
   await tx.$executeRaw`SELECT 1 FROM "Customer" WHERE id = ${customerId} FOR UPDATE`
-  const customer = await tx.customer.findUnique({
-    where: { id: customerId },
-    select: { dailySpendLimit: true, monthlySpendLimit: true },
-  })
+  
+  const [customer, policies] = await Promise.all([
+    tx.customer.findUnique({
+      where: { id: customerId },
+      select: { dailySpendLimit: true, monthlySpendLimit: true },
+    }),
+    tx.merchantPolicy?.findMany({ where: { merchantId } }) ?? Promise.resolve([]),
+  ])
+  
   if (!customer) throw new Error('Customer account not found')
+  
+  const policyMap = Object.fromEntries(policies.map(p => [p.key, p.value])) as Record<string, number>
+  // Protect against Penny Order DDoS: default to 25 transactions per day if policy isn't set.
+  const maxDailyTransactions = policyMap.MAX_DAILY_TRANSACTION_COUNT ?? 25
 
   const { dayStart, monthStart } = accountBudgetPeriods(now)
-  const [daily, monthly] = await Promise.all([
+  const [daily, monthly, merchantDailyCount] = await Promise.all([
     tx.order.aggregate({
       where: { customerId, status: { in: [...RESERVED_ORDER_STATUSES] }, createdAt: { gte: dayStart } },
       _sum: { totalAmount: true },
@@ -45,14 +55,22 @@ export async function assertAccountSpendLimit(
       where: { customerId, status: { in: [...RESERVED_ORDER_STATUSES] }, createdAt: { gte: monthStart } },
       _sum: { totalAmount: true },
     }),
+    tx.order.count({
+      where: { customerId, merchantId, createdAt: { gte: dayStart } }
+    }),
   ])
-  const dailyCommitted = daily._sum.totalAmount ?? 0
-  const monthlyCommitted = monthly._sum.totalAmount ?? 0
+  const dailyCommitted = daily._sum?.totalAmount ?? 0
+  const monthlyCommitted = monthly._sum?.totalAmount ?? 0
+  const dailyOrderCount = merchantDailyCount
+
+  if (dailyOrderCount >= maxDailyTransactions) {
+    throw new Error(`Order exceeds the daily transaction count limit (${maxDailyTransactions}) for this merchant to prevent high processing fees.`)
+  }
   if (dailyCommitted + proposedAmount > customer.dailySpendLimit) {
     throw new Error('Order exceeds the buyer account daily spend limit')
   }
   if (monthlyCommitted + proposedAmount > customer.monthlySpendLimit) {
     throw new Error('Order exceeds the buyer account monthly spend limit')
   }
-  return { dailyCommitted, monthlyCommitted, dailyLimit: customer.dailySpendLimit, monthlyLimit: customer.monthlySpendLimit }
+  return { dailyCommitted, monthlyCommitted, dailyLimit: customer.dailySpendLimit, monthlyLimit: customer.monthlySpendLimit, dailyOrderCount }
 }

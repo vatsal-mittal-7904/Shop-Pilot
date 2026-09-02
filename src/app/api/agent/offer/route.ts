@@ -13,7 +13,9 @@ const schema = z
 
 export async function POST(request: Request) {
   try {
-    const offer = await createOfferFromActiveCart(schema.parse(await request.json()))
+    const { discountPercentage, merchantId, buyerIntentId } = schema.parse(await request.json())
+    if (!merchantId) return Response.json({ error: 'merchantId is strictly required.' }, { status: 400 })
+    const offer = await createOfferFromActiveCart({ discountPercentage, merchantId, buyerIntentId })
     return Response.json({ offer })
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : 'Offer blocked' }, { status: 400 })

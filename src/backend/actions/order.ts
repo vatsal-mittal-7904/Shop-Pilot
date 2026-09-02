@@ -225,7 +225,7 @@ export async function createOrReuseCheckoutOrder(offerId: string) {
     // This is the authoritative spend reservation. It is inside the same
     // Serializable transaction that creates Order, so two tabs or agents
     // cannot overspend an account by racing past separate read checks.
-    await assertAccountSpendLimit(tx, customer.id, offer.total, now)
+    await assertAccountSpendLimit(tx as unknown as any, offer.customerId, offer.merchantId, offer.total, now)
 
     if (offer.buyerIntent?.maximumAmount) {
       const pastOrders = await tx.order.findMany({

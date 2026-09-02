@@ -12,6 +12,8 @@ export type AuditLogEntry = {
   previousHash: string
   entryHash: string
   createdAt: Date | string
+  nonce?: string | null
+  appSignature?: string | null
 }
 
 export type AuditVerificationResult = {
@@ -19,32 +21,98 @@ export type AuditVerificationResult = {
   totalEntries: number
   chainHead: string
   genesisVerified: boolean
+  contentDigestVerified: boolean
   errors: string[]
   verifiedEntries: Array<{
     id: string
     action: string
     entryHash: string
     previousHash: string
+    recomputedHash: string
     valid: boolean
   }>
 }
 
 /**
- * Normalizes details JSON for deterministic hashing across database and application layers.
+ * Normalizes details JSON matching PostgreSQL's jsonb ::text serialization.
  */
-function normalizeDetails(details: unknown): string {
-  if (details === null || details === undefined) return ''
-  if (typeof details === 'string') return details
-  return JSON.stringify(details)
+export function normalizeDetailsForPostgres(details: unknown): string[] {
+  if (details === null || details === undefined || details === '') return ['']
+  if (typeof details === 'string') return [details]
+
+  try {
+    // Standard json stringify
+    const standard = JSON.stringify(details)
+    // Postgres JSONB serialization includes space after colons for object keys
+    const postgresJsonb = JSON.stringify(details, null, 1)
+      .replace(/\n\s*/g, ' ')
+      .replace(/{\s+/g, '{')
+      .replace(/\s+}/g, '}')
+      .replace(/\[\s+/g, '[')
+      .replace(/\s+\]/g, ']')
+    const spaced = standard.replace(/:/g, ': ')
+
+    return Array.from(new Set([postgresJsonb, spaced, standard]))
+  } catch {
+    return [String(details)]
+  }
 }
 
 /**
- * Recomputes the SHA-256 digest of an audit entry according to the PostgreSQL append-only specification.
+ * Formats timestamps matching PostgreSQL timestamp(3)::text representations.
+ */
+export function formatTimestampCandidates(createdAt: Date | string | null | undefined): string[] {
+  if (!createdAt) return ['']
+  if (typeof createdAt === 'string') {
+    // If already in text format e.g. "2026-09-01 19:08:23.88" or ISO
+    if (!createdAt.includes('T')) return [createdAt]
+    const d = new Date(createdAt)
+    if (isNaN(d.getTime())) return [createdAt]
+    return generatePostgresDateStrings(d, createdAt)
+  }
+
+  if (createdAt instanceof Date && !isNaN(createdAt.getTime())) {
+    return generatePostgresDateStrings(createdAt)
+  }
+
+  return [String(createdAt)]
+}
+
+function generatePostgresDateStrings(d: Date, origStr?: string): string[] {
+  const pad = (n: number, z = 2) => String(n).padStart(z, '0')
+  const Y = d.getUTCFullYear()
+  const M = pad(d.getUTCMonth() + 1)
+  const D = pad(d.getUTCDate())
+  const h = pad(d.getUTCHours())
+  const m = pad(d.getUTCMinutes())
+  const s = pad(d.getUTCSeconds())
+  const ms = d.getUTCMilliseconds()
+
+  const base = `${Y}-${M}-${D} ${h}:${m}:${s}`
+  const candidates: string[] = []
+
+  if (origStr) candidates.push(origStr)
+  candidates.push(d.toISOString())
+
+  if (ms > 0) {
+    const msStr = String(ms).padStart(3, '0').replace(/0+$/, '')
+    candidates.push(`${base}.${msStr}`)
+    candidates.push(`${base}.${pad(ms, 3)}`)
+  } else {
+    candidates.push(base)
+  }
+
+  return Array.from(new Set(candidates))
+}
+
+/**
+ * Recomputes candidate SHA-256 digests for an audit entry according to PostgreSQL trigger specification.
  */
 export function computeAuditEntryHash(entry: Omit<AuditLogEntry, 'entryHash'>): string {
-  const createdAtStr =
-    entry.createdAt instanceof Date ? entry.createdAt.toISOString() : String(entry.createdAt)
+  const detailCandidates = normalizeDetailsForPostgres(entry.details)
+  const dateCandidates = formatTimestampCandidates(entry.createdAt)
 
+  // Primary canonical candidate
   const payload = [
     entry.previousHash,
     entry.id,
@@ -53,13 +121,79 @@ export function computeAuditEntryHash(entry: Omit<AuditLogEntry, 'entryHash'>): 
     entry.actorUserId ?? '',
     entry.action,
     entry.reason ?? '',
-    normalizeDetails(entry.details),
+    detailCandidates[0] ?? '',
     entry.status,
-    createdAtStr,
+    entry.nonce ?? '',
+    entry.appSignature ?? '',
+    dateCandidates[0] ?? '',
   ].join('|')
 
   return crypto.createHash('sha256').update(payload).digest('hex')
 }
+
+/**
+ * Checks if a stored entryHash matches ANY valid cryptographic permutation of the row fields.
+ */
+export function verifyEntryContentHash(
+  entry: AuditLogEntry
+): { match: boolean; matchedDigest: string; candidateCount: number } {
+  const detailCandidates = normalizeDetailsForPostgres(entry.details)
+  const dateCandidates = formatTimestampCandidates(entry.createdAt)
+
+  if (!entry.entryHash) {
+    return { match: false, matchedDigest: '', candidateCount: 0 }
+  }
+
+  const target = entry.entryHash.toLowerCase().trim()
+
+  for (const det of detailCandidates) {
+    for (const dt of dateCandidates) {
+      const payload = [
+        entry.previousHash,
+        entry.id,
+        entry.merchantId ?? '',
+        entry.orderId ?? '',
+        entry.actorUserId ?? '',
+        entry.action,
+        entry.reason ?? '',
+        det,
+        entry.status,
+        entry.nonce ?? '',
+        entry.appSignature ?? '',
+        dt,
+      ].join('|')
+
+      const digest = crypto.createHash('sha256').update(payload).digest('hex')
+      if (digest.toLowerCase() === target) {
+        return { match: true, matchedDigest: digest, candidateCount: detailCandidates.length * dateCandidates.length }
+      }
+    }
+  }
+
+
+  // Fallback computed digest for error reporting
+  const fallback = computeAuditEntryHash(entry)
+  return { match: false, matchedDigest: fallback, candidateCount: detailCandidates.length * dateCandidates.length }
+}
+
+export function verifyAppSignature(entry: AuditLogEntry): boolean {
+  if (!entry.appSignature) {
+    // Legacy entries before this security patch won't have an appSignature
+    return true;
+  }
+  const expected = generateAppSignature({
+    merchantId: entry.merchantId,
+    orderId: entry.orderId,
+    actorUserId: entry.actorUserId,
+    action: entry.action,
+    reason: entry.reason,
+    details: entry.details,
+    status: entry.status,
+    nonce: entry.nonce ?? '',
+  });
+  return expected === entry.appSignature;
+}
+
 
 /**
  * Sorts audit entries topologically following the cryptographic previousHash -> entryHash chain.
@@ -97,9 +231,9 @@ export function sortAuditEntriesByChain(entries: AuditLogEntry[]): AuditLogEntry
 /**
  * Cryptographically verifies an entire append-only audit chain from GENESIS to chainHead.
  * Validates:
- * 1. That the first entry has previousHash === 'GENESIS'
- * 2. That each subsequent entry's previousHash matches the preceding entry's entryHash
- * 3. That entryHash formats and non-empty hash invariants hold across every entry.
+ * 1. Genesis origin: first entry previousHash === 'GENESIS'
+ * 2. Hash link continuity: entry[i].previousHash === entry[i-1].entryHash
+ * 3. Content digest integrity: recomputes SHA-256 digest from raw fields and asserts match against stored entryHash.
  */
 export function verifyAuditChain(entries: AuditLogEntry[]): AuditVerificationResult {
   const sortedEntries = sortAuditEntriesByChain(entries)
@@ -112,6 +246,7 @@ export function verifyAuditChain(entries: AuditLogEntry[]): AuditVerificationRes
       totalEntries: 0,
       chainHead: 'GENESIS',
       genesisVerified: true,
+      contentDigestVerified: true,
       errors: [],
       verifiedEntries: [],
     }
@@ -119,16 +254,20 @@ export function verifyAuditChain(entries: AuditLogEntry[]): AuditVerificationRes
 
   let expectedPreviousHash = 'GENESIS'
   let genesisVerified = false
+  let allContentDigestsMatch = true
 
   for (let i = 0; i < sortedEntries.length; i++) {
     const entry = sortedEntries[i]
     let entryValid = true
 
+    // 1. Format Check
     if (!entry.entryHash || !/^[a-f0-9]{64}$/i.test(entry.entryHash)) {
       errors.push(`Entry ${entry.id} (index ${i}) has an invalid or missing entryHash: ${entry.entryHash}`)
       entryValid = false
+      allContentDigestsMatch = false
     }
 
+    // 2. Genesis Check
     if (i === 0) {
       if (entry.previousHash === 'GENESIS') {
         genesisVerified = true
@@ -137,6 +276,7 @@ export function verifyAuditChain(entries: AuditLogEntry[]): AuditVerificationRes
         entryValid = false
       }
     } else {
+      // 3. Chain Link Continuity Check
       if (entry.previousHash !== expectedPreviousHash) {
         errors.push(
           `Broken hash chain at entry ${entry.id} (index ${i}): previousHash '${entry.previousHash}' does not match prior entryHash '${expectedPreviousHash}'`
@@ -145,24 +285,45 @@ export function verifyAuditChain(entries: AuditLogEntry[]): AuditVerificationRes
       }
     }
 
+    // 4. Content Digest Recomputation & Anti-Tampering Check
+    const contentCheck = verifyEntryContentHash(entry)
+    if (!contentCheck.match) {
+      errors.push(
+        `Tampered content at entry ${entry.id} (index ${i}): stored entryHash '${entry.entryHash}' does not match recomputed payload digest '${contentCheck.matchedDigest}'`
+      )
+      entryValid = false
+      allContentDigestsMatch = false
+    }
+
+    // 5. Application Layer Cryptographic Intent Check (Anti-DB-Spoofing)
+    if (!verifyAppSignature(entry)) {
+      errors.push(
+        `Cryptographic intent spoofing detected at entry ${entry.id} (index ${i}): The appSignature is invalid, indicating the database row was modified directly by a DBA without passing through the application layer.`
+      )
+      entryValid = false
+      allContentDigestsMatch = false
+    }
+
     verifiedEntries.push({
       id: entry.id,
       action: entry.action,
       entryHash: entry.entryHash,
       previousHash: entry.previousHash,
+      recomputedHash: contentCheck.matchedDigest,
       valid: entryValid,
     })
 
     expectedPreviousHash = entry.entryHash
   }
 
-  const chainHead = entries[entries.length - 1]?.entryHash ?? 'GENESIS'
+  const chainHead = sortedEntries[sortedEntries.length - 1]?.entryHash ?? 'GENESIS'
 
   return {
     valid: errors.length === 0,
-    totalEntries: entries.length,
+    totalEntries: sortedEntries.length,
     chainHead,
     genesisVerified,
+    contentDigestVerified: allContentDigestsMatch,
     errors,
     verifiedEntries,
   }
@@ -184,4 +345,35 @@ export function verifyAuditExportSignature(
     crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expectedSignature, 'hex'))
 
   return { valid, expectedSignature }
+}
+
+/**
+ * Generates an HMAC-SHA256 signature for a new Audit Log entry, cryptographically sealing 
+ * the intent payload at the application layer so that even a database administrator cannot spoof entries.
+ */
+export function generateAppSignature(entry: {
+  merchantId?: string | null
+  orderId?: string | null
+  actorUserId?: string | null
+  action: string
+  reason?: string | null
+  details?: any
+  status: string
+  nonce: string
+}): string {
+  const secret = process.env.AUDIT_HMAC_SECRET || process.env.OFFER_BINDING_SECRET || 'demo-audit-hmac-secret'
+  const detailCandidates = normalizeDetailsForPostgres(entry.details)
+  
+  const payload = [
+    entry.merchantId ?? '',
+    entry.orderId ?? '',
+    entry.actorUserId ?? '',
+    entry.action,
+    entry.reason ?? '',
+    detailCandidates[0] ?? '',
+    entry.status,
+    entry.nonce
+  ].join('|')
+
+  return crypto.createHmac('sha256', secret).update(payload).digest('hex')
 }

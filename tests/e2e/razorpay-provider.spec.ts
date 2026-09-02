@@ -11,15 +11,17 @@ function signWebhookPayload(rawBody: string, secret: string): string {
 }
 
 /**
- * Validates real provider-contract execution against Razorpay test mode
- * and proves end-to-end signed webhook processing.
+ * Validates a real Razorpay Test Mode order plus this application's local
+ * webhook-signature and duplicate-delivery handling. It deliberately does not
+ * claim that its locally signed payload was delivered by Razorpay; the
+ * `razorpay:proof` verifier is reserved for externally delivered evidence.
  *
  *   RUN_RAZORPAY_LIVE_E2E=1 npm run test:razorpay:proof
  */
-test.describe('Razorpay test-mode provider proof & live webhook signature verification', () => {
+test.describe('Razorpay test-mode order contract and local webhook route handling', () => {
   test.skip(process.env.RUN_RAZORPAY_LIVE_E2E !== '1', 'Set RUN_RAZORPAY_LIVE_E2E=1 to call Razorpay test mode.')
 
-  test('creates, retrieves, and processes live-signed Razorpay test-mode orders and webhooks', async ({ page }, testInfo) => {
+  test('creates and retrieves a real Test Mode order, then exercises the local webhook handler', async ({ page }, testInfo) => {
     // 1. Authenticate as customer
     await page.goto('/')
     await page.getByLabel('Email').fill(CUSTOMER_EMAIL)
@@ -74,7 +76,9 @@ test.describe('Razorpay test-mode provider proof & live webhook signature verifi
     expect(Array.isArray(providerPayments.items)).toBe(true)
     expect(providerPayments.items).toHaveLength(0)
 
-    // 6. Execute live signed-webhook delivery (payment.captured)
+    // 6. Exercise the route's signature and idempotency behavior with a
+    // locally signed fixture. This is a handler contract test, not provider
+    // lifecycle evidence.
     const simulatedPaymentId = `pay_proof_${Date.now()}`
     const eventId = `evt_proof_${Date.now()}`
     const webhookPayload = JSON.stringify({
@@ -155,8 +159,8 @@ test.describe('Razorpay test-mode provider proof & live webhook signature verifi
     expect(await duplicateWebhookResponse.json()).toEqual({ status: 'already_processed' })
 
     testInfo.annotations.push({
-      type: 'razorpay-provider-proof',
-      description: `Verified real test-mode order ${providerOrder.id}; signed webhook ${eventId} with signature ${validSignature.slice(0, 12)}... successfully captured payment ${simulatedPaymentId}.`,
+      type: 'razorpay-order-contract-and-local-webhook-handler',
+      description: `Verified real Test Mode order ${providerOrder.id}; exercised local webhook signature and duplicate-delivery handling with fixture event ${eventId}. This test does not assert provider-originated webhook delivery.`,
     })
   })
 })

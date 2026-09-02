@@ -174,7 +174,7 @@ export async function acceptRecommendation(recommendationId: string, cartId: str
       throw new Error('Offer would violate the minimum merchant margin')
     }
 
-    await assertAccountSpendLimit(tx, customer.id, total)
+    await assertAccountSpendLimit(tx, customer.id, cart.merchantId, total)
 
     // Keep checkout validation aligned with catalog search: a refined intent
     // updates an existing record without changing createdAt.

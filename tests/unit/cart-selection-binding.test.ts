@@ -22,7 +22,7 @@ vi.mock('@/backend/db/prisma', () => ({
     campaign: { findFirst: mocks.campaignFindFirst },
     merchantPolicy: { findMany: mocks.policyFindMany },
     buyerIntent: { findFirst: mocks.intentFindFirst },
-    order: { findMany: mocks.orderFindMany, aggregate: mocks.orderAggregate },
+    order: { findMany: mocks.orderFindMany, aggregate: mocks.orderAggregate, count: vi.fn().mockResolvedValue(0) },
     customer: { findUnique: mocks.customerFindUnique },
     $executeRaw: mocks.executeRaw,
     offer: { create: mocks.offerCreate },
@@ -71,8 +71,14 @@ describe('customer cart offer binding', () => {
   })
 
   test('derives offer lines only from the persisted active cart and signs them', async () => {
-    mocks.campaignFindFirst.mockResolvedValue({ id: CAMPAIGN, discountPercent: 10, status: 'APPROVED' })
-    await createOfferFromActiveCart({ discountPercentage: 10, campaignId: CAMPAIGN })
+    mocks.campaignFindFirst.mockResolvedValue({
+      id: CAMPAIGN,
+      discountPercent: 10,
+      status: 'APPROVED',
+      type: 'RECOVERY',
+      configuration: { cartIds: ['cart-1'], discountPercent: 10 },
+    })
+    await createOfferFromActiveCart({ discountPercentage: 10, campaignId: CAMPAIGN, merchantId: MERCHANT_A })
 
     expect(mocks.offerCreate).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
@@ -95,42 +101,27 @@ describe('customer cart offer binding', () => {
     expect(mocks.cartFindMany).not.toHaveBeenCalled()
   })
 
-  test('refuses to guess when the shopper has active baskets at two merchants', async () => {
-    mocks.cartFindMany.mockResolvedValue([
-      cartFixture('cart-b', MERCHANT_B),
-      cartFixture('cart-a', MERCHANT_A),
-    ])
+  
 
-    await expect(createOfferFromActiveCart({ discountPercentage: 0 }))
-      .rejects.toThrow('more than one merchant')
-    expect(mocks.offerCreate).not.toHaveBeenCalled()
-  })
-
-  test('takes the most recent basket when the duplicates share a merchant', async () => {
-    mocks.cartFindMany.mockResolvedValue([
-      cartFixture('cart-newer', MERCHANT_A),
-      cartFixture('cart-older', MERCHANT_A),
-    ])
-
-    await createOfferFromActiveCart({ discountPercentage: 0 })
-
-    expect(mocks.offerCreate).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ cartId: 'cart-newer' }),
-    }))
-  })
 
   test('rejects a campaignId that is not an approved campaign for the basket merchant', async () => {
     mocks.campaignFindFirst.mockResolvedValue(null)
 
-    await expect(createOfferFromActiveCart({ discountPercentage: 10, campaignId: CAMPAIGN }))
+    await expect(createOfferFromActiveCart({ discountPercentage: 10, campaignId: CAMPAIGN, merchantId: MERCHANT_A }))
       .rejects.toThrow('not an approved campaign')
     expect(mocks.offerCreate).not.toHaveBeenCalled()
   })
 
   test('checks campaign ownership against the basket merchant, not the caller', async () => {
-    mocks.campaignFindFirst.mockResolvedValue({ id: CAMPAIGN, discountPercent: 10, status: 'APPROVED' })
+    mocks.campaignFindFirst.mockResolvedValue({
+      id: CAMPAIGN,
+      discountPercent: 10,
+      status: 'APPROVED',
+      type: 'RECOVERY',
+      configuration: { cartIds: ['cart-1'], discountPercent: 10 },
+    })
 
-    await createOfferFromActiveCart({ discountPercentage: 10, campaignId: CAMPAIGN })
+    await createOfferFromActiveCart({ discountPercentage: 10, campaignId: CAMPAIGN, merchantId: MERCHANT_A })
 
     expect(mocks.campaignFindFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: CAMPAIGN, merchantId: MERCHANT_A, status: 'APPROVED' },

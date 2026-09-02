@@ -24,11 +24,12 @@ const productSchema = z.object({
   upgradeProducts: productRelationshipListSchema.default([]),
 })
 
-import { generateAnalyticalCampaignProposals, Opportunity } from '@/backend/actions/campaignProposalEngine'
+import { Opportunity } from '@/backend/actions/campaignProposalEngine'
+import { generateModelDerivedCampaignProposals } from '@/backend/ai/campaignStrategyAgent'
 import { triggerOpportunisticReconciliation } from '@/backend/actions/opportunisticReconciliation'
 
 async function opportunitiesForMerchant(merchantId: string): Promise<Opportunity[]> {
-  return generateAnalyticalCampaignProposals(merchantId)
+  return generateModelDerivedCampaignProposals(merchantId)
 }
 
 export async function getMerchantDashboardData() {

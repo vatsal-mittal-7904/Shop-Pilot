@@ -200,10 +200,11 @@ describe('Stale Unpaid Order Expiry & Money Safety Invariants', () => {
           aggregate: vi.fn()
             .mockResolvedValueOnce({ _sum: { totalAmount: 20_000 } })
             .mockResolvedValueOnce({ _sum: { totalAmount: 40_000 } }),
+          count: vi.fn().mockResolvedValue(0),
         },
       }
 
-      const result = await assertAccountSpendLimit(tx as never, CUSTOMER_ID, 50_000)
+      const result = await assertAccountSpendLimit(tx as never, CUSTOMER_ID, 'test-merchant', 50_000)
 
       expect(result).toMatchObject({
         dailyCommitted: 20_000,

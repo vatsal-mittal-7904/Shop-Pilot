@@ -22,7 +22,7 @@ vi.mock('@/backend/db/prisma', () => ({
     campaign: { findFirst: mocks.campaignFindFirst },
     merchantPolicy: { findMany: mocks.policyFindMany },
     buyerIntent: { findFirst: mocks.intentFindFirst },
-    order: { findMany: mocks.orderFindMany, aggregate: mocks.orderAggregate },
+    order: { findMany: mocks.orderFindMany, aggregate: mocks.orderAggregate, count: vi.fn().mockResolvedValue(0) },
     customer: { findUnique: mocks.customerFindUnique },
     $executeRaw: mocks.executeRaw,
     offer: { create: mocks.offerCreate },
@@ -88,6 +88,8 @@ describe('discount authorization vs discount ceiling separation', () => {
       id: CAMPAIGN_ID,
       merchantId: MERCHANT_ID,
       status: 'APPROVED',
+      type: 'RECOVERY',
+      configuration: { cartIds: ['cart-1'], discountPercent: 10 },
       discountPercent: 10,
     })
 
@@ -102,6 +104,8 @@ describe('discount authorization vs discount ceiling separation', () => {
       id: CAMPAIGN_ID,
       merchantId: MERCHANT_ID,
       status: 'APPROVED',
+      type: 'RECOVERY',
+      configuration: { cartIds: ['cart-1'], discountPercent: 20 },
       discountPercent: 20,
     })
 
@@ -115,6 +119,8 @@ describe('discount authorization vs discount ceiling separation', () => {
       id: CAMPAIGN_ID,
       merchantId: MERCHANT_ID,
       status: 'APPROVED',
+      type: 'RECOVERY',
+      configuration: { cartIds: ['cart-1'], discountPercent: 10 },
       discountPercent: 10,
     })
 
@@ -141,8 +147,9 @@ describe('discount authorization vs discount ceiling separation', () => {
       id: CAMPAIGN_ID,
       merchantId: MERCHANT_ID,
       status: 'APPROVED',
+      type: 'RECOVERY',
       discountPercent: null,
-      configuration: { discountPercent: 12 },
+      configuration: { cartIds: ['cart-1'], discountPercent: 12 },
     })
 
     const offer = await createOfferFromActiveCart({
@@ -180,6 +187,8 @@ describe('discount authorization vs discount ceiling separation', () => {
       id: CAMPAIGN_ID,
       merchantId: MERCHANT_ID,
       status: 'APPROVED',
+      type: 'RECOVERY',
+      configuration: { cartIds: ['cart-1'], discountPercent: 10 },
       discountPercent: 10,
     })
 
@@ -206,5 +215,76 @@ describe('discount authorization vs discount ceiling separation', () => {
         total: 10000,
       }),
     }))
+  })
+
+  test('rejects a recovery campaign for a different abandoned cart', async () => {
+    mocks.campaignFindFirst.mockResolvedValue({
+      id: CAMPAIGN_ID,
+      merchantId: MERCHANT_ID,
+      status: 'APPROVED',
+      type: 'RECOVERY',
+      discountPercent: 10,
+      configuration: { cartIds: ['another-cart'], discountPercent: 10 },
+    })
+
+    await expect(createOfferFromActiveCart({
+      discountPercentage: 10,
+      campaignId: CAMPAIGN_ID,
+      merchantId: MERCHANT_ID,
+    })).rejects.toThrow('not authorized for the selected basket')
+    expect(mocks.offerCreate).not.toHaveBeenCalled()
+  })
+
+  test('rejects a clearance campaign for a non-recipient customer', async () => {
+    mocks.campaignFindFirst.mockResolvedValue({
+      id: CAMPAIGN_ID,
+      merchantId: MERCHANT_ID,
+      status: 'APPROVED',
+      type: 'CLEARANCE',
+      discountPercent: 10,
+      configuration: { productId: PRODUCT_ID, customerIds: ['another-customer'], discountPercent: 10 },
+    })
+
+    await expect(createOfferFromActiveCart({
+      discountPercentage: 10,
+      campaignId: CAMPAIGN_ID,
+      merchantId: MERCHANT_ID,
+    })).rejects.toThrow('not authorized for this customer')
+    expect(mocks.offerCreate).not.toHaveBeenCalled()
+  })
+
+  test('rejects a clearance campaign when the cart contains another SKU', async () => {
+    mocks.campaignFindFirst.mockResolvedValue({
+      id: CAMPAIGN_ID,
+      merchantId: MERCHANT_ID,
+      status: 'APPROVED',
+      type: 'CLEARANCE',
+      discountPercent: 10,
+      configuration: { productId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', customerIds: ['customer-1'], discountPercent: 10 },
+    })
+
+    await expect(createOfferFromActiveCart({
+      discountPercentage: 10,
+      campaignId: CAMPAIGN_ID,
+      merchantId: MERCHANT_ID,
+    })).rejects.toThrow('only authorized for its designated product')
+    expect(mocks.offerCreate).not.toHaveBeenCalled()
+  })
+
+  test('allows a clearance campaign for its exact recipient and one designated SKU', async () => {
+    mocks.campaignFindFirst.mockResolvedValue({
+      id: CAMPAIGN_ID,
+      merchantId: MERCHANT_ID,
+      status: 'APPROVED',
+      type: 'CLEARANCE',
+      discountPercent: 10,
+      configuration: { productId: PRODUCT_ID, customerIds: ['customer-1'], discountPercent: 10 },
+    })
+
+    await expect(createOfferFromActiveCart({
+      discountPercentage: 10,
+      campaignId: CAMPAIGN_ID,
+      merchantId: MERCHANT_ID,
+    })).resolves.toMatchObject({ id: 'offer-1' })
   })
 })

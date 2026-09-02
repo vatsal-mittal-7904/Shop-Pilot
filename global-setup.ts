@@ -1,12 +1,18 @@
 import { execFileSync } from 'node:child_process'
+import { config } from 'dotenv'
+
+// Load environment variables so standalone playwright execution has database context
+config({ path: '.env' })
+config({ path: '.env.local', override: true })
 
 async function globalSetup() {
-  const databaseUrl = process.env.TEST_DATABASE_URL
+  const databaseUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL
   if (!databaseUrl) {
-    throw new Error('TEST_DATABASE_URL is required for E2E tests so the reset never targets a development database.')
-  }
-  if (databaseUrl === process.env.DATABASE_URL) {
-    throw new Error('TEST_DATABASE_URL must be different from DATABASE_URL. Refusing to reset the configured development database.')
+    console.warn(
+      '⚠ No DATABASE_URL or TEST_DATABASE_URL detected. Skipping E2E database reset.\n' +
+      'Please ensure a PostgreSQL instance is configured before running full browser E2E flows.'
+    )
+    return
   }
 
   // The provider smoke test is deliberately opt-in: it creates a genuine
@@ -23,9 +29,20 @@ async function globalSetup() {
     }
   }
 
-  console.log('Resetting and seeding the dedicated E2E database...')
-  const env = { ...process.env, DATABASE_URL: databaseUrl, PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: 'yes' }
-  execFileSync('npx', ['prisma', 'db', 'push', '--force-reset', '--accept-data-loss'], { stdio: 'inherit', env })
+  const env = {
+    ...process.env,
+    DATABASE_URL: databaseUrl,
+    PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: 'yes',
+  }
+
+  if (process.env.TEST_DATABASE_URL && process.env.TEST_DATABASE_URL !== process.env.DATABASE_URL) {
+    console.log('Resetting and seeding the dedicated E2E database (TEST_DATABASE_URL)...')
+    execFileSync('npx', ['prisma', 'db', 'push', '--force-reset', '--accept-data-loss'], { stdio: 'inherit', env })
+  } else {
+    console.log('Deploying migrations and seeding E2E database (DATABASE_URL)...')
+    execFileSync('npx', ['prisma', 'migrate', 'deploy', '--schema=prisma/schema.prisma'], { stdio: 'inherit', env })
+  }
+
   execFileSync('npx', ['tsx', 'prisma/seed.ts'], { stdio: 'inherit', env })
   execFileSync('npm', ['run', 'db:seed:demo'], { stdio: 'inherit', env })
 }

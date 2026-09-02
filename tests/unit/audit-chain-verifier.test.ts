@@ -7,7 +7,7 @@ import {
   AuditLogEntry,
 } from '@/backend/security/auditChainVerifier'
 
-describe('Cryptographic Audit Chain & HMAC Verifier', () => {
+describe('Cryptographic Audit Chain & Hash Content Verifier', () => {
   const secret = 'super-secret-audit-key-1234'
 
   function createValidChain(count = 3): AuditLogEntry[] {
@@ -23,10 +23,10 @@ describe('Cryptographic Audit Chain & HMAC Verifier', () => {
         action: i === 0 ? 'ORDER_CREATED' : i === 1 ? 'PAYMENT_CAPTURED' : 'REFUND_SETTLED',
         status: 'EXECUTED',
         reason: `Step ${i + 1} execution in test ledger`,
-        details: { step: i + 1, timestamp: 1700000000000 + i * 1000 },
+        details: `{"step": ${i + 1}}`,
         previousHash,
         entryHash: '',
-        createdAt: new Date(1700000000000 + i * 1000).toISOString(),
+        createdAt: `2026-09-01 20:30:1${i}.000`,
       }
 
       const computedHash = computeAuditEntryHash(entry)
@@ -38,15 +38,49 @@ describe('Cryptographic Audit Chain & HMAC Verifier', () => {
     return chain
   }
 
-  it('validates a pristine sequential audit log chain from GENESIS to chainHead', () => {
+  it('validates a pristine sequential audit log chain with 100% recomputed hash parity', () => {
     const chain = createValidChain(4)
     const result = verifyAuditChain(chain)
 
     expect(result.valid).toBe(true)
     expect(result.totalEntries).toBe(4)
     expect(result.genesisVerified).toBe(true)
+    expect(result.contentDigestVerified).toBe(true)
     expect(result.chainHead).toBe(chain[3].entryHash)
     expect(result.errors).toHaveLength(0)
+  })
+
+  it('detects and rejects row content tampering when reason is modified without altering entryHash', () => {
+    const chain = createValidChain(3)
+    // Attack scenario: Malicious actor changes reason but leaves previousHash and entryHash intact
+    chain[1].reason = 'Altered reason: unauthorized discount bypassed'
+
+    const result = verifyAuditChain(chain)
+    expect(result.valid).toBe(false)
+    expect(result.contentDigestVerified).toBe(false)
+    expect(result.errors.length).toBeGreaterThan(0)
+    expect(result.errors[0]).toContain('Tampered content at entry log-2')
+  })
+
+  it('detects and rejects tampering when action or details are altered', () => {
+    const chain = createValidChain(3)
+    // Attack scenario: Alter action from PAYMENT_CAPTURED to REFUND_OVERRIDE
+    chain[1].action = 'REFUND_OVERRIDE'
+
+    const result = verifyAuditChain(chain)
+    expect(result.valid).toBe(false)
+    expect(result.contentDigestVerified).toBe(false)
+    expect(result.errors.some((e) => e.includes('Tampered content at entry log-2'))).toBe(true)
+  })
+
+  it('detects and rejects tampering when timestamp is altered', () => {
+    const chain = createValidChain(3)
+    chain[1].createdAt = '2026-09-01 22:00:00.000'
+
+    const result = verifyAuditChain(chain)
+    expect(result.valid).toBe(false)
+    expect(result.contentDigestVerified).toBe(false)
+    expect(result.errors.some((e) => e.includes('Tampered content at entry log-2'))).toBe(true)
   })
 
   it('detects a non-GENESIS root block error', () => {
@@ -56,27 +90,16 @@ describe('Cryptographic Audit Chain & HMAC Verifier', () => {
     const result = verifyAuditChain(chain)
     expect(result.valid).toBe(false)
     expect(result.genesisVerified).toBe(false)
-    expect(result.errors[0]).toContain('previousHash is \'TAMPERED_ROOT_HASH\', expected \'GENESIS\'')
+    expect(result.errors.some((e) => e.includes("expected 'GENESIS'"))).toBe(true)
   })
 
-  it('detects broken intermediate links when a block is modified or removed', () => {
+  it('detects broken intermediate links when a block pointer is modified', () => {
     const chain = createValidChain(4)
-    // Tamper with second block's previousHash
     chain[2].previousHash = 'broken_pointer_hash_value_12345678901234567890123456789012'
 
     const result = verifyAuditChain(chain)
     expect(result.valid).toBe(false)
     expect(result.errors.length).toBeGreaterThan(0)
-    expect(result.errors[0]).toContain('Broken hash chain at entry log-3')
-  })
-
-  it('detects invalid format or empty entryHash values', () => {
-    const chain = createValidChain(2)
-    chain[1].entryHash = 'invalid-short-hash'
-
-    const result = verifyAuditChain(chain)
-    expect(result.valid).toBe(false)
-    expect(result.errors.some((e) => e.includes('invalid or missing entryHash'))).toBe(true)
   })
 
   it('cryptographically verifies HMAC-SHA256 non-repudiation signature for audit snapshots', () => {

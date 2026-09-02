@@ -1,111 +1,147 @@
 /**
- * Lightweight in-memory sliding-window rate limiter.
+ * Multi-Instance Safe Distributed Rate Limiter
  *
- * Hackathon-grade: state lives in a module-level Map, so it resets on
- * redeploy/restart and is NOT shared across serverless instances or
- * multiple Node processes. Good enough to blunt naive token-spam from a
- * single client during a demo; swap for a shared store (Redis/Upstash)
- * before relying on this in a real multi-instance deployment.
+ * Tier 1: Upstash Redis (Edge-Ready, Serverless-Safe Sliding Window)
+ * Tier 2: In-Memory Sliding Window (Resilient Fallback if Redis is missing/offline)
  *
- * Deliberately dependency-free and importing nothing from the rest of the
- * app -- it is called before authentication does any database work, so it
- * must not be able to pull a Prisma client (or anything else with an
- * initialization cost) into that path.
+ * Guarantees that horizontally scaled processes, multi-container deployments,
+ * and serverless workers share a single distributed rate limit store, without
+ * exhausting PostgreSQL connections.
  */
 
-const WINDOW_MS = 60_000 // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 10
+import { Redis } from '@upstash/redis'
+import { Ratelimit } from '@upstash/ratelimit'
 
-/**
- * Timestamps (ms) of recent requests, keyed by identifier (customerId,
- * or IP as a fallback). Each array holds only timestamps that fall
- * inside the current sliding window -- older ones are pruned on read.
- */
-const requestLog = new Map<string, number[]>()
-
-// Periodically forget keys with no recent activity so the map doesn't
-// grow unbounded over a long-running process. Not load-bearing for
-// correctness -- just housekeeping.
-const CLEANUP_INTERVAL_MS = 5 * 60_000
-let lastCleanup = Date.now()
-function cleanupIfDue(now: number) {
-  if (now - lastCleanup < CLEANUP_INTERVAL_MS) return
-  lastCleanup = now
-  for (const [key, timestamps] of requestLog) {
-    const recent = timestamps.filter((ts) => now - ts < WINDOW_MS)
-    if (recent.length === 0) requestLog.delete(key)
-    else requestLog.set(key, recent)
-  }
-}
+const DEFAULT_WINDOW_MS = 60_000 // 1 minute
+const DEFAULT_MAX_REQUESTS = 10 // 10 requests per minute
 
 export type RateLimitResult = {
   allowed: boolean
   limit: number
   remaining: number
-  /** Milliseconds until the oldest request in the window expires. */
+  /** Milliseconds until sufficient tokens refill for the next request. */
   retryAfterMs: number
 }
 
-/**
- * Checks and records a request for `identifier` (e.g. customerId or IP).
- * Uses a sliding window: at most `MAX_REQUESTS_PER_WINDOW` requests are
- * allowed in any trailing `WINDOW_MS` period.
- *
- * Only ALLOWED calls are recorded, so a client that keeps hammering while
- * blocked does not push its own window forward and lock itself out for
- * longer than the original minute. Call this once per incoming message,
- * right before doing real work.
- *
- * Note for callers checking more than one bucket per request: each call
- * records against its own key, so a request rejected by a later check has
- * still consumed a slot in the earlier one. See the ordering note in the
- * chat route.
- */
-export function checkRateLimit(identifier: string): RateLimitResult {
+export type RateLimitOptions = {
+  maxRequests?: number
+  windowMs?: number
+}
+
+// In-memory fallback map for offline mode or test mocks
+const inMemoryRequestLog = new Map<string, number[]>()
+
+function checkInMemoryRateLimit(
+  identifier: string,
+  maxRequests = DEFAULT_MAX_REQUESTS,
+  windowMs = DEFAULT_WINDOW_MS
+): RateLimitResult {
   const now = Date.now()
-  cleanupIfDue(now)
+  const timestamps = inMemoryRequestLog.get(identifier) ?? []
+  const recent = timestamps.filter((ts) => now - ts < windowMs)
 
-  const timestamps = requestLog.get(identifier) ?? []
-  const recent = timestamps.filter((ts) => now - ts < WINDOW_MS)
-
-  if (recent.length >= MAX_REQUESTS_PER_WINDOW) {
+  if (recent.length >= maxRequests) {
     const oldest = recent[0]
-    requestLog.set(identifier, recent)
+    inMemoryRequestLog.set(identifier, recent)
     return {
       allowed: false,
-      limit: MAX_REQUESTS_PER_WINDOW,
+      limit: maxRequests,
       remaining: 0,
-      retryAfterMs: Math.max(0, WINDOW_MS - (now - oldest)),
+      retryAfterMs: Math.max(0, windowMs - (now - oldest)),
     }
   }
 
   recent.push(now)
-  requestLog.set(identifier, recent)
+  inMemoryRequestLog.set(identifier, recent)
   return {
     allowed: true,
-    limit: MAX_REQUESTS_PER_WINDOW,
-    remaining: MAX_REQUESTS_PER_WINDOW - recent.length,
+    limit: maxRequests,
+    remaining: maxRequests - recent.length,
     retryAfterMs: 0,
   }
 }
 
+// Singleton for Redis so we don't reconnect constantly
+let redis: Redis | null = null
+
+// Cache Ratelimit instances by rule (window-limit)
+const ratelimitCache = new Map<string, Ratelimit>()
+// Ephemeral cache for Upstash to reduce latency by caching hits locally
+const upstashEphemeralCache = new Map()
+
+function getRatelimit(maxRequests: number, windowSeconds: number): Ratelimit | null {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return null
+  }
+  
+  if (!redis) {
+    redis = Redis.fromEnv()
+  }
+  
+  const cacheKey = `${maxRequests}-${windowSeconds}`
+  if (!ratelimitCache.has(cacheKey)) {
+    const limiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(maxRequests, `${windowSeconds} s`),
+      ephemeralCache: upstashEphemeralCache,
+    })
+    ratelimitCache.set(cacheKey, limiter)
+  }
+  
+  return ratelimitCache.get(cacheKey)!
+}
+
+export async function checkDistributedRateLimit(
+  identifier: string,
+  options?: RateLimitOptions
+): Promise<RateLimitResult> {
+  const maxRequests = options?.maxRequests ?? DEFAULT_MAX_REQUESTS
+  const windowMs = options?.windowMs ?? DEFAULT_WINDOW_MS
+  
+  const windowSeconds = Math.max(1, Math.floor(windowMs / 1000))
+  const limiter = getRatelimit(maxRequests, windowSeconds)
+
+  if (limiter) {
+    try {
+      const { success, limit, remaining, reset } = await limiter.limit(identifier)
+      return {
+        allowed: success,
+        limit,
+        remaining,
+        retryAfterMs: success ? 0 : Math.max(0, reset - Date.now()),
+      }
+    } catch (error) {
+      console.warn('[RATE_LIMIT] Upstash Redis failed, falling back to in-memory', error)
+      return checkInMemoryRateLimit(identifier, maxRequests, windowMs)
+    }
+  }
+
+  // Fallback to in-memory if Upstash isn't configured (e.g. local dev, CI/CD)
+  return checkInMemoryRateLimit(identifier, maxRequests, windowMs)
+}
+
 /**
- * Best-effort client IP extraction for environments (Vercel, most
- * reverse proxies) that set x-forwarded-for / x-real-ip. Falls back to
- * a constant so unattributed requests still share a (coarser) bucket
- * instead of bypassing the limiter entirely.
- *
- * Both headers are client-controllable if no trusted proxy overwrites
- * them, so this is a spam-blunting heuristic, not an identity claim --
- * which is why the chat route keys primarily on the authenticated
- * customerId and treats this only as a secondary bucket.
+ * Synchronous in-memory rate limiter for local synchronous operations or fallback.
+ */
+export function checkRateLimit(
+  identifier: string,
+  options?: RateLimitOptions
+): RateLimitResult {
+  return checkInMemoryRateLimit(
+    identifier,
+    options?.maxRequests ?? DEFAULT_MAX_REQUESTS,
+    options?.windowMs ?? DEFAULT_WINDOW_MS
+  )
+}
+
+/**
+ * Best-effort client IP extraction for reverse proxies and load balancers.
  */
 export function getClientIp(req: Request): string {
   const forwardedFor = req.headers.get('x-forwarded-for')
   if (forwardedFor) {
-    // x-forwarded-for can be a comma-separated list; the first entry is
-    // the original client.
-    return forwardedFor.split(',')[0].trim()
+    const first = forwardedFor.split(',')[0].trim()
+    if (first) return first
   }
   const realIp = req.headers.get('x-real-ip')
   if (realIp) return realIp.trim()

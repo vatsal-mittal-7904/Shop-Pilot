@@ -132,25 +132,70 @@ async function processProviderPaymentEvent(payload: unknown) {
         throw new Error(`${eventType} event ${razorpayEventId} is missing payload.payment.entity.id`)
       }
 
-      if (order.status !== 'PAID' && order.status !== 'INVENTORY_FAILED') {
-        let inventoryAvailable = true
+      if (order.status === 'CANCELLED') {
+        // Late payment capture for an order that was cancelled while payment was in-flight.
+        // Money Safety Invariant: Never revive or allocate stock; enqueue full refund immediately.
+        const refund = await tx.refund.create({
+          data: {
+            orderId: order.id,
+            razorpayPaymentId,
+            amount: order.totalAmount,
+            currency: order.currency,
+          },
+        })
+        await tx.auditLog.create({
+          data: {
+            merchantId: order.merchantId,
+            orderId: order.id,
+            action: 'PAYMENT_CAPTURED_ON_CANCELLED_ORDER',
+            status: 'EXECUTED',
+            reason: 'Payment captured on a cancelled order. Enqueued full refund in durable outbox.',
+            details: {
+              razorpayEventId,
+              razorpayPaymentId,
+              razorpayOrderId,
+              eventType,
+              refundId: refund.id,
+              refundAmount: order.totalAmount,
+            } as Prisma.InputJsonValue,
+          },
+        })
+      } else if (order.status !== 'PAID' && order.status !== 'INVENTORY_FAILED') {
+        // Pessimistic Concurrency Invariant:
+        // Acquire row-level locks in deterministic ascending UUID order to prevent deadlocks and race conditions.
+        const productIds = [...new Set(order.items.map((i) => i.productId))].sort()
+        if (productIds.length > 0) {
+          await tx.$executeRaw`
+            SELECT id FROM "Product"
+            WHERE id = ANY(${productIds})
+            ORDER BY id ASC
+            FOR UPDATE
+          `
+        }
+
+        const requiredQuantities = new Map<string, number>()
         for (const item of order.items) {
-          const product = await tx.product.findUnique({ where: { id: item.productId } })
-          if (!product || product.inventory < item.quantity) {
+          requiredQuantities.set(item.productId, (requiredQuantities.get(item.productId) || 0) + item.quantity)
+        }
+
+        let inventoryAvailable = true
+        for (const [productId, requiredQty] of requiredQuantities.entries()) {
+          const product = await tx.product.findUnique({ where: { id: productId } })
+          if (!product || product.inventory < requiredQty) {
             inventoryAvailable = false
             break
           }
         }
 
         if (inventoryAvailable) {
-          for (const item of order.items) {
+          for (const [productId, requiredQty] of requiredQuantities.entries()) {
             const result = await tx.product.updateMany({
-              where: { id: item.productId, inventory: { gte: item.quantity } },
-              data: { inventory: { decrement: item.quantity } },
+              where: { id: productId, inventory: { gte: requiredQty } },
+              data: { inventory: { decrement: requiredQty } },
             })
             if (result.count !== 1) {
               throw new Error(
-                `Inventory became unavailable for product ${item.productId} while processing webhook event ${razorpayEventId}`,
+                `Inventory became unavailable for product ${productId} while processing webhook event ${razorpayEventId}`,
               )
             }
           }
@@ -170,15 +215,15 @@ async function processProviderPaymentEvent(payload: unknown) {
             if (offer?.cartId) {
               const cart = await tx.cart.findUnique({ where: { id: offer.cartId }, include: { items: true } })
               if (cart && cart.status === 'ACTIVE') {
-                for (const orderItem of order.items) {
-                  const cartItem = cart.items.find(ci => ci.productId === orderItem.productId)
+                for (const [productId, requiredQty] of requiredQuantities.entries()) {
+                  const cartItem = cart.items.find(ci => ci.productId === productId)
                   if (cartItem) {
-                    if (cartItem.quantity <= orderItem.quantity) {
+                    if (cartItem.quantity <= requiredQty) {
                       await tx.cartItem.delete({ where: { id: cartItem.id } })
                     } else {
                       await tx.cartItem.update({
                         where: { id: cartItem.id },
-                        data: { quantity: cartItem.quantity - orderItem.quantity }
+                        data: { quantity: cartItem.quantity - requiredQty }
                       })
                     }
                   }

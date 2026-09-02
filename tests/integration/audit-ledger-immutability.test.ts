@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { prisma } from '@/backend/db/prisma'
+import { verifyAuditChain } from '@/backend/security/auditChainVerifier'
 
 afterAll(async () => {
   await prisma.$disconnect()
@@ -132,5 +133,30 @@ describe('Cryptographic Append-Only Audit Ledger Integration Tests', () => {
     await expect(
       prisma.$executeRaw`DELETE FROM "AuditExport" WHERE id = ${exportRecord.id}`
     ).rejects.toThrow(/Audit ledger is append-only: DELETE is not permitted/)
+  })
+
+  test('validates 100% cryptographic recomputed hash parity on real PostgreSQL trigger rows', async () => {
+    const logs = await prisma.auditLog.findMany({
+      where: { merchantId: merchant.id },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    })
+
+    expect(logs.length).toBeGreaterThanOrEqual(2)
+
+    // Verify pristine real PostgreSQL rows
+    const verification = verifyAuditChain(logs)
+    expect(verification.valid).toBe(true)
+    expect(verification.genesisVerified).toBe(true)
+    expect(verification.contentDigestVerified).toBe(true)
+    expect(verification.errors).toHaveLength(0)
+
+    // Attack simulation: alter the reason of one row in the payload
+    const tamperedLogs = logs.map((log, idx) =>
+      idx === 1 ? { ...log, reason: 'Altered reason: unauthorized discount bypassed' } : log
+    )
+    const tamperedVerification = verifyAuditChain(tamperedLogs)
+    expect(tamperedVerification.valid).toBe(false)
+    expect(tamperedVerification.contentDigestVerified).toBe(false)
+    expect(tamperedVerification.errors.some((e) => e.includes('Tampered content'))).toBe(true)
   })
 })

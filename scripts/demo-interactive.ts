@@ -430,7 +430,7 @@ ${c.dim}  Razorpay Agentic Commerce Hackathon — Live Interactive Journey${c.re
   printStep(4, 'Razorpay Test-Mode Checkout Order Creation & Spend Limits')
 
   // Enforce account spend limit
-  await assertAccountSpendLimit(prisma, customer.id, total)
+  await assertAccountSpendLimit(prisma, customer.id, merchant.id, total)
   printSuccess(`Account spend limit validated: ₹${(total / 100).toLocaleString('en-IN')} is within daily/monthly caps.`)
 
   const receipt = `mso_${crypto.randomUUID()}`
