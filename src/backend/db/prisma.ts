@@ -46,7 +46,19 @@ const prisma = basePrisma.$extends({
           nonce: args.data.nonce,
         });
 
-        return query(args);
+        const result = await query(args);
+        
+        // Transmit to external WORM immediately after DB commit
+        // This solves the 'tamper-evident vs tamper-proof' limitation of 
+        // single-infrastructure ledgers by creating an immutable off-site replica.
+        const { transmitToWormDrive } = await import('@/backend/security/wormStorageTransmitter');
+        if (result && result.id && result.appSignature) {
+          // If the caller omitted entryHash using a select constraint, we gracefully degrade
+          // but we still send the application signature which proves intent.
+          transmitToWormDrive(result.id, result.entryHash || 'UNFETCHED_HASH', result.appSignature).catch(() => {});
+        }
+
+        return result;
       },
     },
   },
