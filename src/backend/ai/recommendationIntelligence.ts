@@ -2,7 +2,7 @@ import { prisma } from '@/backend/db/prisma'
 import { Product } from '@prisma/client'
 import { generateObject } from 'ai'
 import { z } from 'zod'
-import { aiModel } from '@/backend/ai/model'
+import { executeWithFallback } from '@/backend/ai/model'
 
 export type CandidateReasoning = {
   categoryMatch: string
@@ -129,12 +129,12 @@ ${candidatePool.map(c => `- ID: ${c.candidate.id} | Name: "${c.candidate.name}" 
 
 Select the candidate that maximizes category synergy, provides a healthy gross margin (price - cost), and is priced appropriately as an add-on (ideally 10-40% of the main item price). Return the selected ID and your reasoning.`
 
-      const { object } = await generateObject({
-        model: aiModel(),
+      const { object } = await executeWithFallback((model) => generateObject({
+        model,
         schema: aiRecommendationSchema,
         prompt,
         temperature: 0.1,
-      })
+      }))
 
       const selected = candidatePool.find(c => c.candidate.id === object.selectedCandidateId)
       if (selected) {
@@ -234,12 +234,12 @@ ${candidatePool.map(c => `- ID: ${c.candidate.id} | Name: "${c.candidate.name}" 
 
 Select the candidate that represents the most logical and compelling premium upgrade step. Consider the price delta (ideally 15-60% more expensive) and gross margin. Return the selected ID and your reasoning.`
 
-      const { object } = await generateObject({
-        model: aiModel(),
+      const { object } = await executeWithFallback((model) => generateObject({
+        model,
         schema: aiRecommendationSchema,
         prompt,
         temperature: 0.1,
-      })
+      }))
 
       const selected = candidatePool.find(c => c.candidate.id === object.selectedCandidateId)
       if (selected) {

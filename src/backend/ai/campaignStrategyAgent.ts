@@ -1,7 +1,7 @@
 import { generateObject } from 'ai'
 import { z } from 'zod'
 import { prisma } from '@/backend/db/prisma'
-import { aiModel } from '@/backend/ai/model'
+import { executeWithFallback } from '@/backend/ai/model'
 import {
   gatherMerchantTelemetry,
   generateAnalyticalCampaignProposals,
@@ -59,12 +59,12 @@ INSTRUCTIONS:
 2. For Slow-Moving Inventory: Formulate a capital velocity clearance campaign targeting qualified repeat buyers. Preserve at least ${minMargin}% post-discount gross margin.
 3. Provide rigorous, quantitative business justifications citing exact numbers.`
 
-        const response = await generateObject({
-          model: aiModel(),
+        const response = await executeWithFallback((model) => generateObject({
+          model,
           schema: strategyProposalSchema,
           prompt,
           temperature: 0.2,
-        })
+        }))
         modelStrategy = response.object
       } catch (llmErr) {
         console.warn('[AI_GROWTH_STRATEGIST:LLM_FALLBACK] LLM call unavailable, using analytical model reasoning:', llmErr)

@@ -66,6 +66,19 @@ async function addOneUnitToCart({
     // below so two adds cannot both read the same pre-increment quantity.
     await tx.$executeRaw`SELECT 1 FROM "Customer" WHERE id = ${customer.id} FOR UPDATE`
 
+    // SEAMLESS MULTI-TENANT COMMERCE:
+    // Automatically abandon any ACTIVE carts the customer has with OTHER merchants.
+    // This allows the shopper to seamlessly transition between stores without
+    // rigid single-tenant blocking and without waiting for the background sweeper.
+    await tx.cart.updateMany({
+      where: {
+        customerId: customer.id,
+        merchantId: { not: merchantId },
+        status: 'ACTIVE',
+      },
+      data: { status: 'ABANDONED' }
+    })
+
     // Re-read inventory inside the lock: the pre-flight check above raced.
     const locked = await tx.product.findUnique({
       where: { id: parsedProductId },

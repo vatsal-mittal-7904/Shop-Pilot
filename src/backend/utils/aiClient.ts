@@ -26,7 +26,7 @@ function fallbackResponse(message: string) {
 export async function safeStreamText(params: Parameters<typeof originalStreamText>[0]) {
   const unavailableMessage = 'Our AI assistant is temporarily unavailable. Please try again in a moment, or continue directly with your cart.'
 
-  if (!process.env.GROQ_API_KEY) {
+  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     console.error('AI_STREAM_ERROR: AI credentials missing')
     return fallbackResponse(unavailableMessage)
   }

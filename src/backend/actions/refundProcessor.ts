@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { RefundStatus } from '@prisma/client'
 import { prisma } from '@/backend/db/prisma'
 import { dispatchOperatorAlert } from '@/backend/notifications/operatorNotifier'
+import { notifyCustomerOfDLQ } from '@/backend/notifications/customerNotifier'
 
 const CLAIM_LEASE_MS = 5 * 60 * 1000
 const MAX_BACKOFF_MS = 6 * 60 * 60 * 1000
@@ -200,6 +201,15 @@ async function processOneRefund(refundId: string, now: Date, staleBefore: Date):
           message: `Refund ${refund.id} for order ${refund.orderId} failed after ${refund.attemptCount} attempts. Last error: ${lastError}`,
         },
       ]).catch(() => {})
+
+      // Keep the customer informed to prevent support tickets and anxiety
+      notifyCustomerOfDLQ({
+        refundId: refund.id,
+        orderId: refund.orderId,
+        reason: lastError,
+      }).catch((err) => {
+        console.error('[CUSTOMER_NOTIFIER] Failed to notify customer:', err)
+      })
     }
   }
   return 'attempted'

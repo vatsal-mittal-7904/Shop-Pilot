@@ -137,13 +137,45 @@ export function checkRateLimit(
 /**
  * Best-effort client IP extraction for reverse proxies and load balancers.
  */
+/**
+ * Determines if an IP address is a private, loopback, or carrier-grade NAT address.
+ */
+function isPrivateIp(ip: string): boolean {
+  if (ip === '::1' || ip === '127.0.0.1') return true
+  // IPv4 Private Ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10)
+  if (/^(10\.|192\.168\.|100\.(6[4-9]|[7-9]\d|1[0-2]\d)\.)/.test(ip)) return true
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)) return true
+  // IPv6 Unique Local Address (fc00::/7) and Link-Local (fe80::/10)
+  if (/^f[cd][0-9a-f]{2}:/i.test(ip) || /^fe8[0-9a-f]:/i.test(ip)) return true
+  return false
+}
+
 export function getClientIp(req: Request): string {
+  // 1. Immutable Edge Proxy Headers (Highest Trust)
+  // Vercel and Cloudflare overwrite these at the edge, preventing client spoofing.
+  const vercelForwarded = req.headers.get('x-vercel-forwarded-for')
+  if (vercelForwarded) return vercelForwarded.trim()
+
+  const cfConnecting = req.headers.get('cf-connecting-ip')
+  if (cfConnecting) return cfConnecting.trim()
+
+  // 2. X-Forwarded-For with Strict Right-To-Left Parsing
+  // Attackers can append spoofed IPs to the left (e.g. "8.8.8.8, 1.2.3.4").
+  // The right-most IPs are appended by our own load balancers/proxies.
   const forwardedFor = req.headers.get('x-forwarded-for')
   if (forwardedFor) {
-    const first = forwardedFor.split(',')[0].trim()
-    if (first) return first
+    const ips = forwardedFor.split(',').map(ip => ip.trim()).filter(Boolean)
+    // Scan right to left. The first IP that is NOT a private internal IP is the true client.
+    for (let i = ips.length - 1; i >= 0; i--) {
+      if (!isPrivateIp(ips[i])) {
+        return ips[i]
+      }
+    }
   }
+
+  // 3. X-Real-IP
   const realIp = req.headers.get('x-real-ip')
-  if (realIp) return realIp.trim()
+  if (realIp && !isPrivateIp(realIp.trim())) return realIp.trim()
+
   return 'unknown'
 }
