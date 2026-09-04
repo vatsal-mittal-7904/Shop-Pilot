@@ -92,6 +92,86 @@ export default async function MerchantAnalyticsPage() {
           aiRevenue={roiData.aiRecoveredRevenue}
           totalRevenue={roiData.totalRevenueGenerated}
         />
+
+        {roiData.upliftExperiment && (
+          <div className="mt-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Empirical A/B Uplift & Counterfactual Analysis</h2>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                    roiData.upliftExperiment.uplift.isStatisticallySignificant
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                  }`}>
+                    {roiData.upliftExperiment.uplift.isStatisticallySignificant
+                      ? '✓ 95% Statistically Significant (p < 0.05)'
+                      : `Evaluating (p = ${roiData.upliftExperiment.uplift.pValue})`}
+                  </span>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Controlled comparison between organic baseline cohorts and AI-assisted shoppers with counterfactual attribution.
+                </p>
+              </div>
+              <div className="text-xs text-slate-400 font-mono">
+                Model: {roiData.upliftExperiment.methodology.attributionModel}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Conversion Uplift</div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    +{roiData.upliftExperiment.uplift.relativeConversionUpliftPercent}%
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    (+{roiData.upliftExperiment.uplift.absoluteConversionRateDiff}% abs)
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  {roiData.upliftExperiment.controlCohort.conversionRatePercent}% baseline vs {roiData.upliftExperiment.treatmentCohort.conversionRatePercent}% treatment
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">AOV Expansion</div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                    {roiData.upliftExperiment.uplift.aovUpliftPercent >= 0 ? '+' : ''}{roiData.upliftExperiment.uplift.aovUpliftPercent}%
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  ₹{(roiData.upliftExperiment.treatmentCohort.averageOrderValuePaise / 100).toLocaleString('en-IN')} vs ₹{(roiData.upliftExperiment.controlCohort.averageOrderValuePaise / 100).toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Net Incremental Revenue</div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-sky-600 dark:text-sky-400">
+                    ₹{(roiData.upliftExperiment.uplift.netIncrementalRevenuePaise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  Gross ₹{(roiData.upliftExperiment.uplift.grossIncrementalRevenuePaise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })} minus ₹{(roiData.upliftExperiment.treatmentCohort.discountCostPaise / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })} discounts
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Z-Score / Confidence</div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-purple-600 dark:text-purple-400">
+                    z = {roiData.upliftExperiment.uplift.zScore}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  {roiData.upliftExperiment.uplift.confidenceLevelPercent}% statistical confidence (N = {roiData.upliftExperiment.controlCohort.sampleSize + roiData.upliftExperiment.treatmentCohort.sampleSize})
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )

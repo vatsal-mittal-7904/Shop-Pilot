@@ -29,8 +29,31 @@ export type RateLimitOptions = {
   windowMs?: number
 }
 
-// In-memory fallback map for offline mode or test mocks
+// In-memory fallback map with bounded capacity and TTL eviction (anti-memory-leak)
 const inMemoryRequestLog = new Map<string, number[]>()
+const MAX_IN_MEMORY_KEYS = 10_000
+
+function pruneInMemoryRequestLog(now: number, windowMs: number) {
+  for (const [key, timestamps] of inMemoryRequestLog.entries()) {
+    const active = timestamps.filter((ts) => now - ts < windowMs)
+    if (active.length === 0) {
+      inMemoryRequestLog.delete(key)
+    } else {
+      inMemoryRequestLog.set(key, active)
+    }
+  }
+
+  // If still at capacity after TTL prune, evict oldest entries (FIFO/LRU)
+  if (inMemoryRequestLog.size >= MAX_IN_MEMORY_KEYS) {
+    const excess = inMemoryRequestLog.size - MAX_IN_MEMORY_KEYS + 100
+    let evicted = 0
+    for (const key of inMemoryRequestLog.keys()) {
+      inMemoryRequestLog.delete(key)
+      evicted++
+      if (evicted >= excess) break
+    }
+  }
+}
 
 function checkInMemoryRateLimit(
   identifier: string,
@@ -38,11 +61,19 @@ function checkInMemoryRateLimit(
   windowMs = DEFAULT_WINDOW_MS
 ): RateLimitResult {
   const now = Date.now()
+
+  // Proactive sweep if map is approaching limit
+  if (inMemoryRequestLog.size >= MAX_IN_MEMORY_KEYS) {
+    pruneInMemoryRequestLog(now, windowMs)
+  }
+
   const timestamps = inMemoryRequestLog.get(identifier) ?? []
   const recent = timestamps.filter((ts) => now - ts < windowMs)
 
   if (recent.length >= maxRequests) {
     const oldest = recent[0]
+    // Re-set to maintain LRU order
+    inMemoryRequestLog.delete(identifier)
     inMemoryRequestLog.set(identifier, recent)
     return {
       allowed: false,
@@ -53,6 +84,8 @@ function checkInMemoryRateLimit(
   }
 
   recent.push(now)
+  // Re-set to maintain LRU order
+  inMemoryRequestLog.delete(identifier)
   inMemoryRequestLog.set(identifier, recent)
   return {
     allowed: true,

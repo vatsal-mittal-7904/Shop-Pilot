@@ -65,5 +65,29 @@ describe('durable buyer account spend policy', () => {
     tx.order.count = vi.fn().mockResolvedValue(25)
     await expect(assertAccountSpendLimit(tx, CUSTOMER, 'test-merchant', 10_000)).rejects.toThrow('daily transaction count limit (25)')
   })
+
+  test('blocks checkout when rolling 15-minute spend velocity ceiling is breached', async () => {
+    const tx = {
+      $executeRaw: vi.fn(),
+      customer: {
+        findUnique: vi.fn().mockResolvedValue({
+          dailySpendLimit: 1_000_000,
+          monthlySpendLimit: 5_000_000,
+          deliveryProfile: { maxVelocitySpendLimit: 50_000 },
+        }),
+      },
+      order: {
+        aggregate: vi.fn()
+          .mockResolvedValueOnce({ _sum: { totalAmount: 30_000 } })
+          .mockResolvedValueOnce({ _sum: { totalAmount: 100_000 } })
+          .mockResolvedValueOnce({ _sum: { totalAmount: 40_000 } }),
+        count: vi.fn().mockResolvedValue(2),
+      },
+    }
+
+    await expect(assertAccountSpendLimit(tx, CUSTOMER, 'test-merchant', 15_000)).rejects.toThrow(
+      '15-minute account spend velocity ceiling'
+    )
+  })
 })
 

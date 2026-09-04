@@ -6,6 +6,7 @@ import { requireCustomer } from '@/backend/auth/session'
 import { createRazorpayOrder } from '@/backend/actions/payment'
 import { bindingsMatch, cartSelectionBinding } from '@/backend/utils/cartSelectionBinding'
 import { assertAccountSpendLimit } from '@/backend/actions/accountBudget'
+import { checkDistributedRateLimit } from '@/backend/utils/rateLimit'
 
 type SelectionLine = { productId: string; quantity: number }
 
@@ -28,6 +29,15 @@ function selectionsMatch(left: SelectionLine[], right: SelectionLine[]) {
  */
 export async function acceptOfferForCheckout(offerId: string) {
   const { user, customer } = await requireCustomer()
+
+  const rateLimit = await checkDistributedRateLimit(`customer:offer-accept:${customer.id}`, {
+    maxRequests: 20,
+    windowMs: 60_000,
+  })
+  if (!rateLimit.allowed) {
+    throw new Error('Rate limit exceeded for offer acceptance. Please wait a moment.')
+  }
+
   const parsedOfferId = z.string().uuid().parse(offerId)
 
   return prisma.$transaction(async (tx) => {
@@ -154,6 +164,15 @@ export async function acceptOfferForCheckout(offerId: string) {
 
 export async function createOrReuseCheckoutOrder(offerId: string) {
   const { user, customer } = await requireCustomer()
+
+  const rateLimit = await checkDistributedRateLimit(`customer:checkout-start:${customer.id}`, {
+    maxRequests: 20,
+    windowMs: 60_000,
+  })
+  if (!rateLimit.allowed) {
+    throw new Error('Rate limit exceeded for starting checkout. Please wait a moment.')
+  }
+
   const parsedOfferId = z.string().uuid().parse(offerId)
 
   // We wrap internal order creation in a transaction

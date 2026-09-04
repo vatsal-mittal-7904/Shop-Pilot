@@ -29,7 +29,12 @@ import { generateModelDerivedCampaignProposals } from '@/backend/ai/campaignStra
 import { triggerOpportunisticReconciliation } from '@/backend/actions/opportunisticReconciliation'
 
 async function opportunitiesForMerchant(merchantId: string): Promise<Opportunity[]> {
-  return generateModelDerivedCampaignProposals(merchantId)
+  try {
+    return await generateModelDerivedCampaignProposals(merchantId)
+  } catch (err) {
+    console.warn('[MERCHANT_DASHBOARD:OPPORTUNITIES_ERROR] Failed to generate campaign proposals, degrading gracefully:', err)
+    return []
+  }
 }
 
 export async function getMerchantDashboardData() {

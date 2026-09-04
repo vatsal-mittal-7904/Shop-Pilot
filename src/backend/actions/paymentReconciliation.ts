@@ -119,7 +119,18 @@ async function processOnePaymentReconciliation(
 
   const reconciliation = await prisma.paymentReconciliation.findUniqueOrThrow({
     where: { id: reconciliationId },
-    include: { order: { select: { id: true, merchantId: true, razorpayOrderId: true } } },
+    include: {
+      order: {
+        select: {
+          id: true,
+          merchantId: true,
+          razorpayOrderId: true,
+          createdAt: true,
+          status: true,
+          totalAmount: true,
+        },
+      },
+    },
   })
   const razorpayOrderId = reconciliation.order.razorpayOrderId
 
@@ -132,7 +143,55 @@ async function processOnePaymentReconciliation(
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Razorpay API connection timed out during reconciliation.')), 10000))
     ])
     const payments = Array.isArray(response.items) ? response.items as ProviderPayment[] : []
-    const payment = payments.map((item) => finalProviderPayment(item, razorpayOrderId)).find(Boolean)
+    
+    // Filter all well-formed final provider payments
+    const validFinalPayments = payments
+      .map((item) => finalProviderPayment(item, razorpayOrderId))
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+
+    // 1. RECOVERY INVARIANT: Prefer ANY captured payment over prior or subsequent failed attempts
+    const capturedPayment = validFinalPayments.find((item) => item.status === 'captured')
+
+    let payment: typeof capturedPayment | null = null
+
+    if (capturedPayment) {
+      payment = capturedPayment
+    } else {
+      // Check if there are active in-flight payments (e.g. authorized or created)
+      const hasInFlightPayments = payments.some(
+        (p) => typeof p.status === 'string' && (p.status === 'authorized' || p.status === 'created')
+      )
+      if (hasInFlightPayments) {
+        throw new Error('Razorpay has not reported a final payment outcome yet')
+      }
+
+      // Check authoritative Razorpay order status if supported
+      if (typeof razorpay.orders?.fetch === 'function') {
+        const providerOrder = await Promise.race([
+          razorpay.orders.fetch(razorpayOrderId),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+        ]).catch(() => null) as { status?: unknown; amount_paid?: unknown } | null
+
+        if (providerOrder?.status === 'paid' || (Number(providerOrder?.amount_paid) || 0) > 0) {
+          throw new Error('Razorpay order is marked paid; awaiting captured payment propagation')
+        }
+      }
+
+      // If all recorded attempts are failed:
+      if (validFinalPayments.length > 0 && validFinalPayments.every((p) => p.status === 'failed')) {
+        const orderCreatedAt = reconciliation.order.createdAt ? new Date(reconciliation.order.createdAt) : null
+        const orderAgeMs = orderCreatedAt ? Date.now() - orderCreatedAt.getTime() : Infinity
+        const isWithinRetryWindow = orderAgeMs < 15 * 60 * 1000 && reconciliation.attemptCount < 3 && reconciliation.order.status === 'PAYMENT_PENDING'
+
+        if (isWithinRetryWindow) {
+          throw new Error('Payment attempt failed, but checkout retry window is active; scheduled retry')
+        }
+
+        // All attempts have failed and checkout retry window has elapsed
+        payment = validFinalPayments[validFinalPayments.length - 1]
+      }
+    }
+
     if (!payment) throw new Error('Razorpay has not reported a final payment outcome yet')
 
     await processTrustedRazorpayReconciliation(payment)

@@ -89,6 +89,28 @@ export async function assertAccountSpendLimit(
     throw new Error(`Order exceeds the customer-configured per-order limit of ₹${(maxOrderSpendLimit / 100).toLocaleString('en-IN')}`)
   }
 
+  // Enforce rolling 15-minute spend velocity limit if configured in merchant policy or customer profile
+  const maxVelocityLimit = typeof deliveryProfile?.maxVelocitySpendLimit === 'number'
+    ? deliveryProfile.maxVelocitySpendLimit
+    : (policyMap.MAX_VELOCITY_SPEND_LIMIT ?? null)
+
+  if (maxVelocityLimit != null) {
+    const velocitySpend = await tx.order.aggregate({
+      where: {
+        customerId,
+        status: { in: [...RESERVED_ORDER_STATUSES] },
+        createdAt: { gte: fifteenMinutesAgo },
+      },
+      _sum: { totalAmount: true },
+    })
+    const velocityCommitted = velocitySpend._sum?.totalAmount ?? 0
+    if (velocityCommitted + proposedAmount > maxVelocityLimit) {
+      throw new Error(
+        `Order exceeds the 15-minute account spend velocity ceiling of ₹${(maxVelocityLimit / 100).toLocaleString('en-IN')}. Please wait a few moments before placing another order.`
+      )
+    }
+  }
+
   if (dailyCommitted + proposedAmount > customer.dailySpendLimit) {
     throw new Error('Order exceeds the buyer account daily spend limit')
   }

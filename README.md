@@ -81,44 +81,57 @@ LLMs are strong at multi-turn conversational reasoning and unpredictable at fina
 - **HMAC Basket Binding**: Active selections are sealed with HMAC SHA-256 ([`cartSelectionBinding.ts`](src/backend/utils/cartSelectionBinding.ts)) to prevent client/parameter tampering between offer creation and checkout.
 - **Explicit Buyer Consent**: Order creation requires an authenticated customer acceptance state transition (`acceptedAt`, `acceptedByUserId`).
 
-### 2. Model-Derived Growth Campaign Strategy & Dynamic Recommendations
-- **AI Growth Strategy Agent ([`campaignStrategyAgent.ts`](src/backend/ai/campaignStrategyAgent.ts))**: Analyzes quantitative merchant telemetry (abandoned basket velocity, capital exposure in dormant stock, repeat customer cohorts) to formulate data-grounded growth campaign proposals.
-- **Dynamic Category Affinity Discovery ([`recommendationIntelligence.ts`](src/backend/ai/recommendationIntelligence.ts))**: Discovers synergistic accessories and premium tier upgrades dynamically across live catalog data, factoring in margin health and stock depth instead of relying on static string arrays.
+### 2. Empirical Uplift & A/B Experimentation Engine ([`upliftExperiment.ts`](src/backend/actions/upliftExperiment.ts))
+- **Counterfactual Baseline Methodology**: Instead of presenting raw synthetic totals as growth, MerchantOS partitions traffic into Control (organic checkout) and Treatment (AI conversational offers & recovery campaigns).
+- **Rigorous Uplift Metrics**:
+  - **Relative & Absolute Conversion Uplift**: Quantifies true conversion rate acceleration over organic baseline.
+  - **AOV Expansion**: Measures basket size growth from dynamic cross-sells and upsells.
+  - **Net Incremental Revenue**: Calculated as `Treatment Revenue - Counterfactual Baseline - Campaign Discounts`.
+  - **Two-Sample Z-Testing**: Calculates z-scores, p-values, and 95% statistical confidence intervals displayed directly in the merchant analytics dashboard.
+
+### 3. Model-Derived Growth Strategy & Sanitized Prompt Boundaries ([`campaignStrategyAgent.ts`](src/backend/ai/campaignStrategyAgent.ts))
+- **Substantive AI Strategy**: Synthesizes price elasticity models, urgency-based time-decay discount ladders, and capital clearance cohorts.
+- **Indirect Prompt Injection Shielding**: All catalog fields interpolated into model prompts are sanitized via [`sanitizeUntrustedToolText`](src/backend/utils/untrustedToolData.ts) and sealed inside `<untrusted_catalog_data>` boundaries to neutralize embedded prompt injection attacks in merchant product names.
 - **Human-in-the-Loop Approval Gate**: The AI proposes; the human merchant approves.
 
-### 3. In-Memory Anti-DDoS Rate Limiting ([`rateLimit.ts`](src/backend/utils/rateLimit.ts))
+### 4. In-Memory Anti-DDoS Rate Limiting ([`rateLimit.ts`](src/backend/utils/rateLimit.ts))
 - Protects conversational endpoints from abuse and DoS using an in-memory token bucket.
 - **Why not PostgreSQL?** A previous design utilized a DB-backed distributed token bucket, but it was found to cause connection pool exhaustion during a high-concurrency DDoS attack.
 
-### 4. Cross-Provider AI Failover Architecture ([`model.ts`](src/backend/ai/model.ts), [`aiClient.ts`](src/backend/utils/aiClient.ts))
+### 5. Cross-Provider AI Failover Architecture ([`model.ts`](src/backend/ai/model.ts), [`aiClient.ts`](src/backend/utils/aiClient.ts))
 - **Live Shopping Chat Streaming Failover (`safeStreamText`)**: The customer shopping chat route ([`src/app/api/chat/route.ts`](src/app/api/chat/route.ts)) streams responses via a resilient multi-provider fallback chain. If Google Gemini (`gemini-2.5-flash` / `gemini-2.5-flash-lite`) encounters rate limits (HTTP 429), timeouts, or service errors, it automatically fails over to Groq's high-speed LLaMA engine (`llama-3.3-70b-versatile`), ensuring uninterrupted buyer shopping sessions.
 - **Background Intelligence Failover (`executeWithFallback`)**: Protects background intelligence agents, recommendation engines, and prompt security classification across Google and Groq.
 
-### 5. Deterministic Budget Authorization & Server-Enforced Ceiling ([`intent.ts`](src/backend/actions/intent.ts), [`accountBudget.ts`](src/backend/actions/accountBudget.ts))
-- **Ceiling Invariant**: Conversational prompts can establish or lower an active budget ceiling, but can **never unilaterally lift or clear it**. If a shopper or prompt injection attempts to increase the budget, the server blocks the increase, keeps the lower active ceiling, and stages a `pendingBudgetIncrease`.
+### 6. Deterministic Budget Authorization & Server-Enforced Ceiling ([`intent.ts`](src/backend/actions/intent.ts), [`accountBudget.ts`](src/backend/actions/accountBudget.ts))
+- **Unconditional Ceiling Invariant**: Conversational prompts can establish or lower an active budget ceiling, but can **never unilaterally lift or clear it across either UPDATE or REPLACE intents**. If a shopper or prompt injection attempts to increase or clear the budget, the server blocks the increase, retains the lower active ceiling, and stages a `pendingBudgetIncrease`.
 - **Authenticated Confirmation**: Increasing a spending ceiling requires an explicit, authenticated customer action via the in-app authorization banner or `/api/agent/budget` endpoint.
 - **Row-Locked Transactional Assertion**: Order checkouts enforce customer spend limits using PostgreSQL row-level locks (`SELECT 1 FROM "Customer" ... FOR UPDATE`).
 
-### 6. Multi-Tier Prompt & Payload Shield ([`promptShield.ts`](src/backend/security/promptShield.ts))
+### 7. Multi-Tier Prompt & Payload Shield ([`promptShield.ts`](src/backend/security/promptShield.ts))
 - **Tier 1 (Deterministic Pre-Filter, <1ms)**: Blocks script injection (XSS), overt jailbreak commands (`ignore previous instructions`), and financial bypass attempts (`set price to 0`) at zero API cost.
 - **Fast-Path Clearance**: Standard e-commerce queries (*"show me keyboards under 5000"*) bypass LLM security evaluation, saving 800ms+ latency.
 - **Tier 2 (Semantic LLM-as-a-Judge)**: Analyzes complex or ambiguous borderline inputs.
 - **Fail-Safe Resilience**: If AI security endpoints time out, benign shopping is never blocked because the backend policy engine and HMAC basket bindings deterministically protect all money operations.
 
-### 7. Database-Enforced Append-Only Audit Ledger & External Sink ([`auditChainVerifier.ts`](src/backend/security/auditChainVerifier.ts), [`wormStorageTransmitter.ts`](src/backend/security/wormStorageTransmitter.ts))
-- **Database Engine Triggers**: PostgreSQL statement-level and row-level triggers strictly prohibit `UPDATE`, `DELETE`, and `TRUNCATE` on `AuditLog` and `AuditExport`.
-- **Advisory Transaction Locks**: Uses `pg_advisory_xact_lock` to serialize SHA-256 chain links sequentially per merchant.
-- **Cryptographic Hash Chaining**: Every log row stores `SHA-256(canonicalContent + previousHash)` and an HMAC-SHA256 `appSignature`.
-- **Pluggable Off-DB Audit Sink with Alarm on Failure**: Simultaneously transmits signed audit events off-database upon commit (`wormStorageTransmitter.ts`). Supports external SIEM/compliance webhooks via `AUDIT_REPLICA_WEBHOOK_URL` with signed HTTP headers (`X-Audit-Signature`, `X-Audit-Hash`). **If external transmission or local mirror writing fails, it immediately dispatches an urgent `AUDIT_REPLICATION_FAILURE` alarm across Slack, Discord, and operator webhooks.**
+### 8. Append-Only Audit Ledger & Off-DB WORM Replication ([`auditChainVerifier.ts`](src/backend/security/auditChainVerifier.ts), [`wormStorageTransmitter.ts`](src/backend/security/wormStorageTransmitter.ts))
+- **Threat Model & Security Boundaries**:
+  - **Application & SQL Layer Defense (In-DB)**: PostgreSQL engine triggers strictly prohibit `UPDATE`, `DELETE`, and `TRUNCATE` on `AuditLog` and `AuditExport`. Advisory transaction locks serialize SHA-256 chain links sequentially per merchant with HMAC-SHA256 signatures, preventing tampering from application exploits or SQL injection.
+  - **Privileged Superuser Defense (Off-DB WORM)**: To protect against a compromised database root credentials or malicious DBA, MerchantOS executes dual-write off-database replication (`wormStorageTransmitter.ts`) to external append-only SIEM endpoints / cloud object storage. **If external replication fails, it immediately fires an urgent `AUDIT_REPLICATION_FAILURE` alarm across Slack, Discord, and operator webhooks.**
 
-### 8. Multi-Channel Alerting & Customer Notifications ([`operatorNotifier.ts`](src/backend/notifications/operatorNotifier.ts), [`customerNotifier.ts`](src/backend/notifications/customerNotifier.ts))
+### 9. Lost-Webhook Recovery & Prioritized Captured Reconciliation ([`paymentReconciliation.ts`](src/backend/actions/paymentReconciliation.ts))
+- **Preferential Capture Selection**: When reconciling orders where multiple payment attempts were made, the worker preferentially selects captured payments over failed attempts, ensuring a lost webhook on a retry attempt never incorrectly marks the order failed.
+- **Authoritative Provider Verification**: Verifies provider order state and active checkout retry windows before finalizing non-payment.
+- **Multi-Tiered Self-Healing**: Includes daemon polling (`scripts/scheduler-daemon.ts`), health diagnostic probe (`scripts/verify-scheduler-health.ts`), and lazy opportunistic reconciliation on authenticated checkout/dashboard visits ([`opportunisticReconciliation.ts`](src/backend/actions/opportunisticReconciliation.ts)).
+
+### 10. High-Concurrency Flash-Sale & Inventory Safety ([`flash-sale-contention.test.ts`](tests/unit/flash-sale-contention.test.ts))
+- **Atomic Stock Reservation**: Ascending-UUID sorted row locks (`SELECT ... FOR UPDATE`) in serializable transactions guarantee zero overselling under heavy parallel contention.
+- **Durable Stockout Refunds**: Any payment captured post-stockout is marked `INVENTORY_FAILED` and automatically queued to the durable refund outbox rather than reviving or stranding stock.
+
+### 11. Multi-Channel Alerting & Customer Notifications ([`operatorNotifier.ts`](src/backend/notifications/operatorNotifier.ts), [`customerNotifier.ts`](src/backend/notifications/customerNotifier.ts))
 - **Operator Channels**: Dispatches queue age alerts, critical backlogs, and audit replication alarms to Slack (Block Kit), Discord (rich embeds), and generic HMAC-signed webhooks.
-- **Customer DLQ Delivery**: Multi-channel delivery when background operations enter DLQ:
-  - Native Resend API transactional email when `RESEND_API_KEY` is present.
-  - Signed webhook notification when `CUSTOMER_NOTIFICATION_WEBHOOK_URL` is configured.
-  - Immutable in-app system `ConversationMessage` in PostgreSQL ensuring customers always see updates in their shopping session.
+- **Customer DLQ Delivery**: Multi-channel delivery when background operations enter DLQ (Resend email, signed webhooks, in-app system messages).
 
-### 9. Razorpay Route Marketplace Architecture ([`payment.ts`](src/backend/actions/payment.ts))
+### 12. Razorpay Route Marketplace Architecture ([`payment.ts`](src/backend/actions/payment.ts))
 - Supports multi-merchant commerce via Razorpay Route. When a merchant configures a linked `razorpayAccountId`, the order creation payload attaches Route transfer directives to deterministically route settlement funds to the merchant's subaccount.
 
 ---

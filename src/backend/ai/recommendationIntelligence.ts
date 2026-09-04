@@ -91,7 +91,54 @@ export async function findIntelligentCrossSellCandidate(
     }
   }
 
-  // 2. Dynamic candidates
+  // 1.5 Empirical Co-Purchase Candidates: Products previously purchased in PAID orders alongside current cart items
+  try {
+    const historicalOrders = await prisma.order.findMany({
+      where: {
+        merchantId,
+        status: 'PAID',
+        items: { some: { productId: { in: Array.from(cartProductIds) } } },
+      },
+      select: {
+        items: {
+          select: { productId: true },
+        },
+      },
+      take: 50,
+    })
+
+    const coPurchaseFrequency = new Map<string, number>()
+    for (const order of historicalOrders) {
+      for (const orderItem of order.items) {
+        if (!cartProductIds.has(orderItem.productId) && !excludedProductIds.has(orderItem.productId)) {
+          coPurchaseFrequency.set(
+            orderItem.productId,
+            (coPurchaseFrequency.get(orderItem.productId) || 0) + 1
+          )
+        }
+      }
+    }
+
+    const topCoPurchaseIds = Array.from(coPurchaseFrequency.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id)
+      .slice(0, 5)
+
+    if (topCoPurchaseIds.length > 0) {
+      const coPurchaseProducts = await prisma.product.findMany({
+        where: { id: { in: topCoPurchaseIds }, merchantId, inventory: { gt: 0 } },
+      })
+      for (const prod of coPurchaseProducts) {
+        if (!candidatePool.some((c) => c.candidate.id === prod.id)) {
+          candidatePool.push({ candidate: prod, sourceProduct: cartItems[0].product, isStatic: true })
+        }
+      }
+    }
+  } catch (coPurchaseErr) {
+    console.warn('[AI_MERCHANDISER:CO_PURCHASE_FALLBACK] Failed to mine co-purchase history:', coPurchaseErr)
+  }
+
+  // 2. Dynamic category affinity candidates (for cold-start or low co-purchase depth)
   for (const item of cartItems) {
     const sourceCat = item.product.category.toLowerCase().trim()
     const targetCats = COMPLEMENTARY_CATEGORY_MAP[sourceCat] || ['accessories']

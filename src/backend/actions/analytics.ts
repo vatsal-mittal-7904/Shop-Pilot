@@ -1,6 +1,7 @@
 import { prisma } from '@/backend/db/prisma'
 import { z } from 'zod'
 import { getRecoveryAttribution } from '@/backend/actions/recoveryAttribution'
+import { calculateMerchantUplift, type UpliftExperimentMetrics } from '@/backend/actions/upliftExperiment'
 
 export type MerchantROIMetrics = {
   totalRevenueGenerated: number;
@@ -8,14 +9,24 @@ export type MerchantROIMetrics = {
   crossSellPaidRate: number;
   crossSellTotal: number;
   crossSellAccepted: number;
+  crossSellPaid: number;
   crossSellIncrementalRevenue: number;
   upsellPaidRate: number;
   upsellTotal: number;
   upsellAccepted: number;
+  upsellPaid: number;
   upsellIncrementalRevenue: number;
+  totalAiAttributedRevenue: number;
   blockedDiscountPolicyRequests: number;
   aiRecoveredRevenue: number;
+  attributionMethodology: {
+    model: string;
+    disclaimer: string;
+  };
+  upliftExperiment?: UpliftExperimentMetrics;
 }
+
+export { calculateMerchantUplift, type UpliftExperimentMetrics }
 
 /**
  * Calculates ROI and conversion rates for AI-driven offers.
@@ -30,7 +41,8 @@ export async function getMerchantROI(merchantId: string): Promise<MerchantROIMet
     upsellTotal,
     upsellAccepted,
     blockedActions,
-    recoveryAttribution
+    recoveryAttribution,
+    upliftExperiment,
   ] = await Promise.all([
     prisma.order.findMany({
       where: { merchantId: parsedMerchantId, status: 'PAID' },
@@ -52,7 +64,8 @@ export async function getMerchantROI(merchantId: string): Promise<MerchantROIMet
       where: { merchantId: parsedMerchantId, status: 'BLOCKED' },
       select: { policyResult: true },
     }),
-    getRecoveryAttribution(parsedMerchantId)
+    getRecoveryAttribution(parsedMerchantId),
+    calculateMerchantUplift(parsedMerchantId).catch(() => undefined),
   ])
 
   // Get paid recommendations for incremental revenue
@@ -103,18 +116,28 @@ export async function getMerchantROI(merchantId: string): Promise<MerchantROIMet
     return policy.passed === false && Array.isArray(policy.checked) && policy.checked.includes('MAX_DISCOUNT_PERCENTAGE')
   }).length
 
+  const totalAiAttributedRevenue = aiRecoveredRevenue + crossSellIncrementalRevenue + upsellIncrementalRevenue
+
   return {
     totalRevenueGenerated,
     abandonedCartsRecovered,
     crossSellPaidRate,
     crossSellTotal,
     crossSellAccepted,
+    crossSellPaid,
     crossSellIncrementalRevenue,
     upsellPaidRate,
     upsellTotal,
     upsellAccepted,
+    upsellPaid,
     upsellIncrementalRevenue,
+    totalAiAttributedRevenue,
     blockedDiscountPolicyRequests,
     aiRecoveredRevenue,
+    attributionMethodology: {
+      model: 'OBSERVATIONAL_DIRECT_ATTRIBUTION',
+      disclaimer: 'This calculation reflects observational direct attribution and is not a randomized controlled experiment. Results may include selection bias.',
+    },
+    upliftExperiment,
   }
 }

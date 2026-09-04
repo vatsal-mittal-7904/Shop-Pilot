@@ -6,6 +6,7 @@ import { prisma } from '@/backend/db/prisma'
 import { requireCustomer } from '@/backend/auth/session'
 import { cartSelectionBinding } from '@/backend/utils/cartSelectionBinding'
 import { assertAccountSpendLimit } from '@/backend/actions/accountBudget'
+import { checkDistributedRateLimit } from '@/backend/utils/rateLimit'
 
 const acceptRecommendationSchema = z.object({
   recommendationId: z.string().uuid(),
@@ -14,6 +15,15 @@ const acceptRecommendationSchema = z.object({
 
 export async function acceptRecommendation(recommendationId: string, cartId: string) {
   const { user, customer } = await requireCustomer()
+
+  const rateLimit = await checkDistributedRateLimit(`customer:recommendation-accept:${customer.id}`, {
+    maxRequests: 20,
+    windowMs: 60_000,
+  })
+  if (!rateLimit.allowed) {
+    throw new Error('Rate limit exceeded for recommendation acceptance. Please wait a moment.')
+  }
+
   const data = acceptRecommendationSchema.parse({ recommendationId, cartId })
 
   return prisma.$transaction(async (tx) => {
@@ -249,6 +259,15 @@ export async function acceptRecommendation(recommendationId: string, cartId: str
 
 export async function declineRecommendation(recommendationId: string) {
   const { customer } = await requireCustomer()
+
+  const rateLimit = await checkDistributedRateLimit(`customer:recommendation-decline:${customer.id}`, {
+    maxRequests: 20,
+    windowMs: 60_000,
+  })
+  if (!rateLimit.allowed) {
+    throw new Error('Rate limit exceeded. Please wait a moment.')
+  }
+
   const recommendation = await prisma.recommendation.findUnique({ where: { id: recommendationId } })
   if (!recommendation || recommendation.customerId !== customer.id) {
     throw new Error('Recommendation not found.')

@@ -339,5 +339,123 @@ describe('Deterministic First-Class Budget Authorization & Safety', () => {
         }),
       }))
     })
+
+    it('retains active budget ceiling when intentAction is REPLACE with higher budget', async () => {
+      // Customer has active budget ceiling of ₹5,000
+      prismaMock.buyerIntent.findFirst.mockResolvedValue({
+        id: 'intent_123',
+        category: ['keyboard'],
+        maximumAmount: 500000,
+        requirements: {},
+        updatedAt: new Date(),
+      })
+      prismaMock.buyerIntent.update.mockResolvedValue({
+        id: 'intent_123',
+        maximumAmount: 500000,
+      })
+
+      // Model extracted intentAction: 'REPLACE' with an elevated budget of ₹25,000
+      mocks.generateObjectMock.mockResolvedValue({
+        object: {
+          isActionable: true,
+          category: ['mouse'],
+          requirements: [{ key: 'sensor', value: 'optical' }],
+          maximumAmount: 25000, // ₹25,000
+          clearBudget: false,
+          intentAction: 'REPLACE',
+        },
+      })
+
+      await parseBuyerIntent(CUSTOMER_ID, 'actually forget keyboards, show me mice for 25000')
+
+      // Verifies that REPLACE cannot lift the ceiling: ₹5,000 ceiling is preserved, and increase is staged
+      expect(prismaMock.buyerIntent.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: 'intent_123' },
+        data: expect.objectContaining({
+          maximumAmount: 500000,
+          requirements: expect.objectContaining({
+            sensor: 'optical',
+            pendingBudgetIncrease: '2500000',
+            budgetIncreaseRequiresAuthorization: 'true',
+          }),
+        }),
+      }))
+    })
+
+    it('retains active budget ceiling when intentAction is REPLACE with clearBudget: true', async () => {
+      prismaMock.buyerIntent.findFirst.mockResolvedValue({
+        id: 'intent_123',
+        category: ['keyboard'],
+        maximumAmount: 500000,
+        requirements: {},
+        updatedAt: new Date(),
+      })
+      prismaMock.buyerIntent.update.mockResolvedValue({
+        id: 'intent_123',
+        maximumAmount: 500000,
+      })
+
+      // Model extracted intentAction: 'REPLACE' with clearBudget: true
+      mocks.generateObjectMock.mockResolvedValue({
+        object: {
+          isActionable: true,
+          category: ['monitor'],
+          requirements: [],
+          maximumAmount: null,
+          clearBudget: true,
+          intentAction: 'REPLACE',
+        },
+      })
+
+      await parseBuyerIntent(CUSTOMER_ID, 'start over, show me monitors with no budget')
+
+      // Verifies that REPLACE cannot clear the ceiling: ₹5,000 ceiling is preserved, and increase is staged
+      expect(prismaMock.buyerIntent.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: 'intent_123' },
+        data: expect.objectContaining({
+          maximumAmount: 500000,
+          requirements: expect.objectContaining({
+            pendingBudgetIncrease: 'UNLIMITED',
+            budgetIncreaseRequiresAuthorization: 'true',
+          }),
+        }),
+      }))
+    })
+
+    it('retains active budget ceiling when intentAction is REPLACE with no budget mentioned', async () => {
+      prismaMock.buyerIntent.findFirst.mockResolvedValue({
+        id: 'intent_123',
+        category: ['keyboard'],
+        maximumAmount: 500000,
+        requirements: {},
+        updatedAt: new Date(),
+      })
+      prismaMock.buyerIntent.update.mockResolvedValue({
+        id: 'intent_123',
+        maximumAmount: 500000,
+      })
+
+      // Model extracted intentAction: 'REPLACE' with no budget
+      mocks.generateObjectMock.mockResolvedValue({
+        object: {
+          isActionable: true,
+          category: ['headphones'],
+          requirements: [],
+          maximumAmount: null,
+          clearBudget: false,
+          intentAction: 'REPLACE',
+        },
+      })
+
+      await parseBuyerIntent(CUSTOMER_ID, 'actually show me headphones instead')
+
+      // Verifies that REPLACE retains the active ceiling if no new budget is mentioned
+      expect(prismaMock.buyerIntent.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: 'intent_123' },
+        data: expect.objectContaining({
+          maximumAmount: 500000,
+        }),
+      }))
+    })
   })
 })

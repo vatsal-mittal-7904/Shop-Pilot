@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { prisma } from '@/backend/db/prisma'
 import { requireCustomer } from '@/backend/auth/session'
+import { checkDistributedRateLimit } from '@/backend/utils/rateLimit'
 
 const productIdSchema = z.string().uuid()
 
@@ -35,6 +36,15 @@ async function addOneUnitToCart({
   expectedMerchantId?: string
 }) {
   const { customer } = await requireCustomer()
+
+  const rateLimit = await checkDistributedRateLimit(`customer:cart:${customer.id}`, {
+    maxRequests: 30,
+    windowMs: 60_000,
+  })
+  if (!rateLimit.allowed) {
+    throw new Error('Rate limit exceeded for basket updates. Please wait a moment.')
+  }
+
   const parsedProductId = productIdSchema.parse(productId)
 
   // `expectedCustomerId` exists because one caller is a client component that

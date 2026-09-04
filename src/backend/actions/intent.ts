@@ -111,6 +111,7 @@ export async function parseBuyerIntent(customerId: string, rawMessage: string) {
     // Conversational model extraction is allowed to establish an initial budget or narrow/lower an existing budget.
     // However, an LLM extraction can NEVER unilaterally lift or clear an active budget limit without explicit customer authorization.
     // If an existing budget exists, attempts to clear it or raise it above the existing ceiling fail-closed and retain the active ceiling.
+    // This invariant strictly applies to BOTH incremental updates AND intent replacements (REPLACE).
     let resolvedMaximumAmount: number | null = null
 
     if (recent?.maximumAmount != null) {
@@ -128,7 +129,7 @@ export async function parseBuyerIntent(customerId: string, rawMessage: string) {
         // Narrowed or maintained budget is safe
         resolvedMaximumAmount = maximumAmount
       } else {
-        // No new monetary value mentioned
+        // No new monetary value mentioned - retain active ceiling unconditionally
         resolvedMaximumAmount = recent.maximumAmount
       }
     } else {
