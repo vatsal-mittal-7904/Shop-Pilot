@@ -36,17 +36,19 @@ cd merchantos
 npm install
 npx prisma migrate deploy
 npx prisma db seed
-npm run db:seed:demo
+# Run the autonomous machine-to-machine buyer agent demo:
+npm run demo:buyer
 
 # Run the complete end-to-end interactive CLI journey:
 npm run demo:interactive
 ```
 
-To run the Next.js web application:
+To run the Next.js web application and Model Context Protocol (MCP) server:
 ```bash
 npm run dev
 ```
 
+*Note: Access the MCP JSON-RPC 2.0 endpoint at `http://localhost:3000/api/mcp`.*
 *Note: Configure `.env` and `.env.local` first. See [Local Setup](#-local-setup) below for details.*
 
 ---
@@ -94,16 +96,18 @@ LLMs are strong at multi-turn conversational reasoning and unpredictable at fina
 - **Indirect Prompt Injection Shielding**: All catalog fields interpolated into model prompts are sanitized via [`sanitizeUntrustedToolText`](src/backend/utils/untrustedToolData.ts) and sealed inside `<untrusted_catalog_data>` boundaries to neutralize embedded prompt injection attacks in merchant product names.
 - **Human-in-the-Loop Approval Gate**: The AI proposes; the human merchant approves.
 
-### 4. In-Memory Anti-DDoS Rate Limiting ([`rateLimit.ts`](src/backend/utils/rateLimit.ts))
-- Protects conversational endpoints from abuse and DoS using an in-memory token bucket.
-- **Why not PostgreSQL?** A previous design utilized a DB-backed distributed token bucket, but it was found to cause connection pool exhaustion during a high-concurrency DDoS attack.
+### 4. Bounded LRU Anti-DDoS Rate Limiting & Server Action Defense ([`rateLimit.ts`](src/backend/utils/rateLimit.ts))
+- Protects conversational endpoints and high-impact Server Actions (`addToCart`, `acceptOfferForCheckout`, `createOrReuseCheckoutOrder`, `acceptRecommendation`) using an in-memory token bucket.
+- **Bounded Memory Profile**: Enforces a strict `MAX_IN_MEMORY_KEYS = 10,000` limit with active timestamp cleanup and LRU eviction, eliminating Node.js memory leaks under heavy bot cart spam.
+- **Fail-Safe Fallback**: If database-backed rate-limiting fails or runs into connection exhaustion, automatically degrades gracefully to bounded in-memory rate limiting.
 
 ### 5. Cross-Provider AI Failover Architecture ([`model.ts`](src/backend/ai/model.ts), [`aiClient.ts`](src/backend/utils/aiClient.ts))
 - **Live Shopping Chat Streaming Failover (`safeStreamText`)**: The customer shopping chat route ([`src/app/api/chat/route.ts`](src/app/api/chat/route.ts)) streams responses via a resilient multi-provider fallback chain. If Google Gemini (`gemini-2.5-flash` / `gemini-2.5-flash-lite`) encounters rate limits (HTTP 429), timeouts, or service errors, it automatically fails over to Groq's high-speed LLaMA engine (`llama-3.3-70b-versatile`), ensuring uninterrupted buyer shopping sessions.
 - **Background Intelligence Failover (`executeWithFallback`)**: Protects background intelligence agents, recommendation engines, and prompt security classification across Google and Groq.
 
-### 6. Deterministic Budget Authorization & Server-Enforced Ceiling ([`intent.ts`](src/backend/actions/intent.ts), [`accountBudget.ts`](src/backend/actions/accountBudget.ts))
+### 6. Deterministic Budget Authorization & 15-Minute Spend Velocity ([`intent.ts`](src/backend/actions/intent.ts), [`accountBudget.ts`](src/backend/actions/accountBudget.ts))
 - **Unconditional Ceiling Invariant**: Conversational prompts can establish or lower an active budget ceiling, but can **never unilaterally lift or clear it across either UPDATE or REPLACE intents**. If a shopper or prompt injection attempts to increase or clear the budget, the server blocks the increase, retains the lower active ceiling, and stages a `pendingBudgetIncrease`.
+- **15-Minute Spend Velocity Throttling**: In addition to per-order caps and daily ceilings, enforces a rolling 15-minute sliding spend window (`assertAccountSpendLimit`) to prevent rapid automated loop drains from compromised or malfunctioning buyer agents.
 - **Authenticated Confirmation**: Increasing a spending ceiling requires an explicit, authenticated customer action via the in-app authorization banner or `/api/agent/budget` endpoint.
 - **Row-Locked Transactional Assertion**: Order checkouts enforce customer spend limits using PostgreSQL row-level locks (`SELECT 1 FROM "Customer" ... FOR UPDATE`).
 
@@ -133,6 +137,15 @@ LLMs are strong at multi-turn conversational reasoning and unpredictable at fina
 
 ### 12. Razorpay Route Marketplace Architecture ([`payment.ts`](src/backend/actions/payment.ts))
 - Supports multi-merchant commerce via Razorpay Route. When a merchant configures a linked `razorpayAccountId`, the order creation payload attaches Route transfer directives to deterministically route settlement funds to the merchant's subaccount.
+
+### 13. Model Context Protocol (MCP) Server Endpoint ([`route.ts`](src/app/api/mcp/route.ts))
+- Standardized **JSON-RPC 2.0 MCP interface** exposing 5 production-grade merchant tools:
+  1. `merchantos_catalog_search`: Semantic and keyword product lookup.
+  2. `merchantos_create_basket`: Initializes an isolated customer cart session.
+  3. `merchantos_add_item`: Adds product units into the cart with inventory verification.
+  4. `merchantos_request_signed_offer`: Generates HMAC-SHA256 sealed price-guaranteed offer.
+  5. `merchantos_checkout_order`: Transitions offer to acceptance and creates Razorpay provider order.
+- Enables external autonomous buyer agents (Claude Desktop, Cursor, enterprise procurement agents) to transact over standardized machine-to-machine protocols with strict financial guardrails.
 
 ---
 
@@ -210,6 +223,12 @@ npm run audit:verify
 
 # 5. Playwright Live Razorpay Order Contract & Webhook Route Test:
 npm run test:razorpay:proof
+
+# 6. Autonomous Machine Buyer Agent Demo (7-step A2A commerce lifecycle):
+npm run demo:buyer
+
+# 7. Background Scheduler & Recovery Daemon Health Probe:
+tsx --env-file=.env.local --env-file=.env scripts/verify-scheduler-health.ts
 ```
 
 ---
@@ -219,7 +238,7 @@ npm run test:razorpay:proof
 MerchantOS features a multi-tiered test matrix covering 100% of financial, authorization, and lifecycle invariants:
 
 1. **Hermetic Unit Test Suite (`npm run test:unit`)**:
-   - **198 unit tests** across **45 test files** covering deterministic discount authorization, HMAC basket binding, distributed token bucket rate limiting, money-safety matrices, cross-provider streaming AI failover (Gemini $\to$ Groq), multi-tier prompt shield, recommendation intelligence, external WORM sink alarming, pluggable customer DLQ email delivery, and conversation sliding windows. Executes hermetically with 100% pass rate in ~3.6s.
+   - **226 unit tests** across **50 test files** covering Model Context Protocol (MCP) tool execution, rolling 15-minute spend velocity throttling, empirical A/B testing uplift significance, deterministic discount authorization, HMAC basket binding, bounded LRU rate limiting, money-safety matrices, cross-provider streaming AI failover (Gemini $\to$ Groq), multi-tier prompt shield, recommendation intelligence, external WORM sink alarming, pluggable customer DLQ email delivery, and conversation sliding windows. Executes hermetically with 100% pass rate in < 8s.
 
 2. **Database Integration & State Transitions (`npm run test:integration` / `npm run test:state-transitions`)**:
    - **21 integration tests** across **7 test files** executing against PostgreSQL with pre-flight connection validation, migration synchronization, statement-level `TRUNCATE` rejection testing, and multi-instance concurrency testing.
@@ -228,8 +247,11 @@ MerchantOS features a multi-tiered test matrix covering 100% of financial, autho
    - Real test-mode checkout creation, webhook HMAC-SHA256 signature verification, tamper rejection, duplicate replay defense, and live captured payment settlement verification (`pay_TW18gkYUhOpBw1`).
 
 ```bash
-# Run unit tests (198 tests, 45 files)
+# Run unit tests (226 tests, 50 files)
 npm run test:unit
+
+# Run autonomous buyer agent demo
+npm run demo:buyer
 
 # Run integration tests (21 tests, 7 files against PostgreSQL)
 npm run test:integration
@@ -253,8 +275,9 @@ src/
 ├── app/
 │   ├── page.tsx                           # Role-aware authentication gateway
 │   ├── agent/                             # Conversational buyer shopping UI
-│   ├── merchant/                          # Growth queue, product catalog, analytics
+│   ├── merchant/                          # Growth queue, product catalog, analytics, audits
 │   └── api/
+│       ├── mcp/route.ts                   # Model Context Protocol (JSON-RPC 2.0) server
 │       ├── chat/route.ts                  # AI SDK streaming & dynamic recommendation tools
 │       ├── agent/                         # REST API for autonomous shopping agents
 │       ├── cron/sweep-carts/route.ts      # Scheduled cart abandonment sweep
@@ -262,6 +285,8 @@ src/
 ├── backend/
 │   ├── actions/
 │   │   ├── policyEngine.ts                # Deterministic discount & margin enforcement
+│   │   ├── upliftExperiment.ts            # A/B uplift & statistical significance engine
+│   │   ├── accountBudget.ts               # Multi-window spend velocity & ceilings
 │   │   ├── paymentReconciliation.ts       # Durable queue for Razorpay payment verification
 │   │   ├── refundProcessor.ts             # Durable outbox for provider refunds
 │   │   ├── orderExpiry.ts                 # Fail-safe stale unpaid order expiry
@@ -269,13 +294,13 @@ src/
 │   │   └── queueMonitor.ts                # Queue backlog & health monitoring
 │   ├── ai/
 │   │   ├── campaignStrategyAgent.ts       # Model-derived growth campaign generator
-│   │   ├── recommendationIntelligence.ts  # Dynamic category synergy & upgrade discovery
+│   │   ├── recommendationIntelligence.ts  # Empirical co-purchase mining & category synergy
 │   │   └── conversationStorage.ts         # Normalized message storage & sliding window
 │   ├── security/
 │   │   ├── auditChainVerifier.ts          # Cryptographic SHA-256 audit chain verification
 │   │   └── demoSafety.ts                  # Production safety checks
 │   ├── utils/
-│   │   ├── rateLimit.ts                   # Distributed atomic token bucket limiter
+│   │   ├── rateLimit.ts                   # Bounded LRU distributed token bucket limiter
 │   │   ├── cartSelectionBinding.ts        # HMAC basket anti-tampering
 │   │   └── untrustedToolData.ts           # DTO sanitization for untrusted catalog data
 │   └── db/prisma.ts                       # Prisma client with PostgreSQL adapter
@@ -283,6 +308,8 @@ prisma/
 ├── schema.prisma                          # 21 Prisma models (policies, audit logs, queues)
 └── migrations/                            # 15 chronological PostgreSQL migrations
 scripts/
+├── demo-autonomous-buyer.ts               # Autonomous buyer agent CLI runner (dual-mode)
+├── verify-scheduler-health.ts             # Background recovery & scheduler health probe
 ├── scheduler-daemon.ts                    # Production background maintenance daemon
 ├── prove-razorpay-lifecycle.ts            # Verifies real Test Mode payment + webhook evidence
 ├── audit-export.ts                        # Cryptographic audit export & verification CLI
@@ -299,4 +326,4 @@ scripts/
 4. **Append-Only Cryptographic Audit**: Every mutation is chained via SHA-256 content hashes to `GENESIS`.
 5. **Durable Refund Outbox**: Stockout cancellations write a durable pending refund row; retries use deterministic idempotency keys.
 6. **Reconciliation Independence**: Orders verify payment status asynchronously via server-to-server Razorpay API queries regardless of webhook receipt.
-7. **Durable Customer Spend Limits**: Enforces daily and monthly caps across all merchants before reserving intent budgets.
+7. **Multi-Window Spend Velocity & Ceilings**: Enforces per-order caps, rolling 15-minute spend velocity limits, and daily caps across merchants before reserving or charging funds.
