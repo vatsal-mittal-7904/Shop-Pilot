@@ -10,7 +10,7 @@ describe('AI Multi-Model Fallback', () => {
 
   it('succeeds with the primary model when no errors occur', async () => {
     let callCount = 0
-    const mockAction = vi.fn().mockImplementation(async (model) => {
+    const mockAction = vi.fn().mockImplementation(async () => {
       callCount++
       return { success: true, call: callCount }
     })
@@ -23,7 +23,7 @@ describe('AI Multi-Model Fallback', () => {
 
   it('fails over to the secondary model when the primary model throws an error', async () => {
     let callCount = 0
-    const mockAction = vi.fn().mockImplementation(async (model) => {
+    const mockAction = vi.fn().mockImplementation(async () => {
       callCount++
       if (callCount === 1) {
         throw new Error('Primary model rate limited or disconnected')
@@ -49,6 +49,7 @@ describe('AI Multi-Model Fallback', () => {
   it('throws an error if no API keys are configured', async () => {
     vi.stubEnv('GROQ_API_KEY', '')
     vi.stubEnv('GEMINI_API_KEY', '')
+    vi.stubEnv('GEMINI_API_KEY_FALLBACK', '')
     vi.stubEnv('GOOGLE_GENERATIVE_AI_API_KEY', '')
 
     const mockAction = vi.fn()

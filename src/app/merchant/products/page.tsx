@@ -1,4 +1,6 @@
+
 'use client'
+import Image from 'next/image';
 
 import { useEffect, useState } from 'react'
 import { getMerchantDashboardData, addProduct, updateProduct, deleteProduct } from '@/backend/actions/merchant'
@@ -197,7 +199,7 @@ export default function ProductAdder() {
                     <tr key={p.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 dark:text-white flex items-center gap-3">
                         {p.imageUrl ? (
-                          <img src={p.imageUrl} alt="" className="w-10 h-10 rounded-md object-cover border border-slate-200" />
+                          <Image src={p.imageUrl} alt="" width={40} height={40} unoptimized className="w-10 h-10 rounded-md object-cover border border-slate-200" />
                         ) : (
                           <div className="w-10 h-10 rounded-md bg-slate-100 flex items-center justify-center text-slate-300">
                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>

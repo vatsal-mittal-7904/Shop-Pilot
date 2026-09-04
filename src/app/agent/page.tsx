@@ -1,4 +1,6 @@
+
 'use client'
+import Image from 'next/image';
 
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
@@ -21,16 +23,16 @@ import type { AgentActionSummary } from '@/backend/actions/explainability'
 // letting search_catalog results feed ProductCards without a second cast. Both
 // tools that return products (search_catalog, propose_products) now include them.
 type ProductCard = { id: string; name: string; category: string; price: number; inventory: number; imageUrl?: string | null; warrantyYears: number; deliveryDays: number; tags?: string[]; attributes: Record<string, unknown> }
-type CheckoutOffer = { items: Array<{ id: string; unitPrice: number; product: ProductCard }>; subtotal: number; discount: number; total: number }
+type CheckoutOffer = { items: Array<{ id: string; unitPrice: number; product: ProductCard }>; subtotal: number; discount: number; total: number; expiresAt?: string | Date }
 type CartItem = { id: string; quantity: number; product: ProductCard }
-type BuyerIntentUsed = { category: string[]; maximumAmount: number | null }
+type BuyerIntentUsed = { category: string[]; maximumAmount: number | null; pendingBudgetIncrease?: string | null }
 type BundleAddon = { id: string; name: string; price: number; imageUrl?: string | null; category?: string }
 type UpsellUpgrade = { id: string; name: string; price: number; imageUrl?: string | null; category?: string }
 // What evaluateDiscount() (policyEngine.ts) returns, and what the chat route hands
 // back on every policy-gated path -- refused (route.ts:316, :366) and approved
 // (route.ts:334, :371) alike. PolicyBadge re-parses it with zod at the boundary
 // rather than trusting this declaration.
-type PolicyResult = { checked: string[]; passed: boolean; limit: number; requested: number; reason: string }
+type PolicyResult = { checked: string[]; passed: boolean; limit: number; requested: number; reason: string; allowed?: number }
 // One flat optional-field bag covering every tool's result shape; `skipped`
 // through `bundleTotal` are the propose_bundle_addon fields, and `orderId`
 // through `currency` are generate_checkout_link's.
@@ -318,7 +320,31 @@ export default function AgentSimulation() {
                   ? 'bg-indigo-600 dark:bg-blue-600 text-white rounded-br-none'
                   : 'bg-white dark:bg-[#1E2B4D]/95 dark:backdrop-blur-md border border-slate-200 dark:border-[#3B4D78]/80 text-slate-800 dark:text-slate-100 rounded-bl-none shadow-md dark:shadow-blue-900/10'
               }`}>
-                {text && <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{renderInlineBold(text)}</p>}
+                {text && (
+                  <>
+                    <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{renderInlineBold(text.replace('__BASKET_ACTIONS__', ''))}</p>
+                    {text.includes('__BASKET_ACTIONS__') && (
+                      <div className="mt-4 flex flex-col gap-2 w-full md:w-3/4">
+                        <button onClick={() => sendMessage({ text: 'What discounts are available?' })} className="text-left px-4 py-2 text-sm bg-white dark:bg-[#151f38] border border-slate-200 dark:border-[#2b3a5e] hover:bg-slate-50 dark:hover:bg-[#1a2644] rounded-lg transition-colors text-slate-700 dark:text-blue-100 shadow-sm flex items-center justify-between group">
+                          <span>💰 View discounts</span>
+                          <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                        </button>
+                        <button onClick={() => sendMessage({ text: 'Can you compare options?' })} className="text-left px-4 py-2 text-sm bg-white dark:bg-[#151f38] border border-slate-200 dark:border-[#2b3a5e] hover:bg-slate-50 dark:hover:bg-[#1a2644] rounded-lg transition-colors text-slate-700 dark:text-blue-100 shadow-sm flex items-center justify-between group">
+                          <span>⚖️ Compare options</span>
+                          <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                        </button>
+                        <button onClick={() => sendMessage({ text: 'What are the bundle options?' })} className="text-left px-4 py-2 text-sm bg-white dark:bg-[#151f38] border border-slate-200 dark:border-[#2b3a5e] hover:bg-slate-50 dark:hover:bg-[#1a2644] rounded-lg transition-colors text-slate-700 dark:text-blue-100 shadow-sm flex items-center justify-between group">
+                          <span>🎁 See bundle options</span>
+                          <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                        </button>
+                        <button onClick={() => sendMessage({ text: 'Proceed to checkout' })} className="text-left px-4 py-2 text-sm bg-indigo-600 dark:bg-blue-600 text-white hover:bg-indigo-700 dark:hover:bg-blue-700 border border-indigo-700 dark:border-blue-700 rounded-lg transition-colors shadow-sm font-medium flex items-center justify-between group">
+                          <span>💳 Proceed to checkout</span>
+                          <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
 
                 {/* Render Tool Invocations inside the Chat! */}
                 {toolParts.map((toolInvocation) => {
@@ -364,7 +390,7 @@ export default function AgentSimulation() {
                           {result.items.map((item) => (
                             <div key={item.id} className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
                               {item.product.imageUrl ? (
-                                <img src={item.product.imageUrl} alt={item.product.name} className="w-16 h-16 rounded-lg object-cover border border-slate-100 shadow-sm" />
+                                <Image src={item.product.imageUrl} alt={item.product.name} width={64} height={64} unoptimized className="w-16 h-16 rounded-lg object-cover border border-slate-100 shadow-sm" />
                               ) : (
                                 <div className="w-16 h-16 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 border border-slate-200">
                                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -409,6 +435,34 @@ export default function AgentSimulation() {
                             )}
                           </span>
                         </div>
+                        {result?.intentUsed?.pendingBudgetIncrease && (() => {
+                          const pendingIncrease = result.intentUsed.pendingBudgetIncrease
+                          return (
+                            <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-amber-800">Budget Ceiling Locked:</span>
+                                <span>
+                                  Request to change budget to {pendingIncrease === 'UNLIMITED' ? 'no limit' : `₹${(Number(pendingIncrease) / 100).toLocaleString('en-IN')}`} requires customer authorization.
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const targetAmount = pendingIncrease === 'UNLIMITED' ? null : Number(pendingIncrease)
+                                  await fetch('/api/agent/budget', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ budgetAmount: targetAmount }),
+                                  })
+                                  sendMessage({ text: 'I have confirmed and authorized the budget update. Please show available products.' })
+                                }}
+                                className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded font-medium text-xs transition-colors cursor-pointer"
+                              >
+                                Authorize Budget Update
+                              </button>
+                            </div>
+                          )
+                        })()}
                         {products.length > 0 && (
                           <div className="mt-3">
                             <ProductCards
@@ -427,7 +481,7 @@ export default function AgentSimulation() {
                                     role: 'assistant',
                                     parts: [{
                                       type: 'text',
-                                      text: `${product.name} has been added to your basket. You can keep shopping, ask for an upgrade, or ask me to prepare checkout.`,
+                                      text: `${product.name} has been added to your basket. __BASKET_ACTIONS__`,
                                     }],
                                   },
                                 ])
@@ -448,7 +502,7 @@ export default function AgentSimulation() {
                           {result.products.map((p) => (
                             <div key={p.id} className="shrink-0 w-64 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden snap-start hover:border-indigo-300 transition-colors">
                               {p.imageUrl ? (
-                                <img src={p.imageUrl} alt={p.name} className="w-full h-32 object-cover" />
+                                <Image src={p.imageUrl} alt={p.name} width={400} height={128} unoptimized className="w-full h-32 object-cover" />
                               ) : (
                                 <div className="w-full h-32 bg-slate-200 flex items-center justify-center text-slate-400">
                                   <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -466,7 +520,7 @@ export default function AgentSimulation() {
                                     {p.inventory > 0 ? 'In Stock' : 'Out of Stock'}
                                   </span>
                                 </div>
-                                <button type="button" onClick={async () => { let text = `${p.name} has been added to your basket. Ask me to compare options, negotiate, or create your final offer.`; try { await addProductToCart(p.id) } catch (error) { text = error instanceof Error ? error.message : `${p.name} could not be added to your basket.` } setMessages(prev => [...prev, { id: `${Date.now()}-basket`, role: 'assistant', parts: [{ type: 'text', text }] }]) }} className="mt-3 w-full rounded-lg border border-indigo-200 bg-white py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">Add to basket</button>
+                                <button type="button" onClick={async () => { let text = `${p.name} has been added to your basket. __BASKET_ACTIONS__`; try { await addProductToCart(p.id) } catch (error) { text = error instanceof Error ? error.message : `${p.name} could not be added to your basket.` } setMessages(prev => [...prev, { id: `${Date.now()}-basket`, role: 'assistant', parts: [{ type: 'text', text }] }]) }} className="mt-3 w-full rounded-lg border border-indigo-200 bg-white py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">Add to basket</button>
                               </div>
                             </div>
                           ))}
@@ -609,6 +663,23 @@ export default function AgentSimulation() {
                               <span>Total</span>
                               <span>{(offer.total / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
                             </div>
+
+                            <details className="mt-4 pt-2 border-t border-emerald-200 text-xs text-emerald-800">
+                              <summary className="cursor-pointer font-semibold hover:text-emerald-900 transition-colors">
+                                Why this price?
+                              </summary>
+                              <div className="mt-2 space-y-1 bg-emerald-100/50 p-2 rounded">
+                                <p><strong>Cart verified:</strong> {offer.items.length} item(s) locked</p>
+                                {result?.policyResult && (
+                                  <>
+                                    <p><strong>Discount policy:</strong> {result.policyResult.reason}</p>
+                                    <p><strong>Limit applied:</strong> {result.policyResult.requested}% (Max: {result.policyResult.allowed}%)</p>
+                                  </>
+                                )}
+                                <p><strong>Expires:</strong> {new Date(offer.expiresAt || Date.now() + 15 * 60000).toLocaleTimeString()}</p>
+                                <p><strong>Requirement:</strong> Requires explicit customer acceptance signature</p>
+                              </div>
+                            </details>
                           </div>
                           <OfferCheckoutControl
                             offerId={offerId}

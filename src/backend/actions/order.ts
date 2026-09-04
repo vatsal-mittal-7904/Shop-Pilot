@@ -225,6 +225,7 @@ export async function createOrReuseCheckoutOrder(offerId: string) {
     // This is the authoritative spend reservation. It is inside the same
     // Serializable transaction that creates Order, so two tabs or agents
     // cannot overspend an account by racing past separate read checks.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await assertAccountSpendLimit(tx as unknown as any, offer.customerId, offer.merchantId, offer.total, now)
 
     if (offer.buyerIntent?.maximumAmount) {

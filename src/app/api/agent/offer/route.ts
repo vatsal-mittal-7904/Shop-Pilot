@@ -11,11 +11,26 @@ const schema = z
   })
   .strict()
 
+import { prisma } from '@/backend/db/prisma'
+import { requireCustomer } from '@/backend/auth/session'
+
 export async function POST(request: Request) {
   try {
     const { discountPercentage, merchantId, buyerIntentId } = schema.parse(await request.json())
-    if (!merchantId) return Response.json({ error: 'merchantId is strictly required.' }, { status: 400 })
-    const offer = await createOfferFromActiveCart({ discountPercentage, merchantId, buyerIntentId })
+    let resolvedMerchantId = merchantId
+    if (!resolvedMerchantId) {
+      const { customer } = await requireCustomer()
+      const activeCart = await prisma.cart.findFirst({
+        where: { customerId: customer.id, status: 'ACTIVE' },
+        orderBy: { updatedAt: 'desc' },
+        select: { merchantId: true },
+      })
+      if (activeCart) {
+        resolvedMerchantId = activeCart.merchantId
+      }
+    }
+    if (!resolvedMerchantId) return Response.json({ error: 'merchantId is strictly required.' }, { status: 400 })
+    const offer = await createOfferFromActiveCart({ discountPercentage, merchantId: resolvedMerchantId, buyerIntentId })
     return Response.json({ offer })
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : 'Offer blocked' }, { status: 400 })

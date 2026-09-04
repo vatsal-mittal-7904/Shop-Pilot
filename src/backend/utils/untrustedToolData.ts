@@ -52,20 +52,37 @@ export function sanitizeToolMessagesForModel<T>(messages: T[]): T[] {
   return messages.map((message) => {
     if (!message || typeof message !== 'object') return message
     const record = message as Record<string, unknown>
+    
+    // Sanitize tool result messages
     if (record.role === 'tool') {
-      return { ...record, content: sanitizeToolPayload(record.content) } as T
+      if (Array.isArray(record.content)) {
+        const sanitizedContent = record.content.map((p: unknown) => {
+          if (!p || typeof p !== 'object') return p;
+          const part = p as Record<string, unknown>;
+          if (part.type === 'tool-result' && part.result !== undefined) {
+            return { ...part, result: sanitizeToolPayload(part.result) };
+          }
+          return p;
+        });
+        return { ...record, content: sanitizedContent } as T;
+      }
+      return message;
     }
-    if (Array.isArray(record.content)) {
-      return {
-        ...record,
-        content: record.content.map((part) => {
-          if (!part || typeof part !== 'object' || (part as { type?: string }).type !== 'tool-result') return part
-          return sanitizeToolPayload(part)
-        }),
-      } as T
+    
+    // For assistant messages, strip out toolCalls and keep only the text content
+    if (record.role === 'assistant') {
+      if (Array.isArray(record.content)) {
+        const textParts = record.content.filter((p: unknown) => p && typeof p === 'object' && (p as Record<string, unknown>).type === 'text');
+        if (textParts.length === 0) return null;
+        return { ...record, content: textParts, toolCalls: undefined } as T;
+      }
+      if (typeof record.content === 'string') {
+        return { ...record, toolCalls: undefined } as T;
+      }
     }
+    
     return message
-  })
+  }).filter(Boolean) as T[]
 }
 
 function sanitizeToolPayload(value: unknown): unknown {

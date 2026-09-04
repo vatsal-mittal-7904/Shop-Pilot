@@ -70,9 +70,9 @@ describe('Cryptographic Audit Ledger Chain & Tamper Prevention Logic', () => {
     expect(entry2Hash).not.toEqual(entry1Hash)
   })
 
-  test('rejection trigger raises exception on any UPDATE or DELETE mutation attempt', () => {
-    function enforceAppendOnly(operation: 'INSERT' | 'UPDATE' | 'DELETE') {
-      if (operation === 'UPDATE' || operation === 'DELETE') {
+  test('rejection trigger raises exception on any UPDATE, DELETE, or TRUNCATE mutation attempt', () => {
+    function enforceAppendOnly(operation: 'INSERT' | 'UPDATE' | 'DELETE' | 'TRUNCATE') {
+      if (operation === 'UPDATE' || operation === 'DELETE' || operation === 'TRUNCATE') {
         throw new Error(`Audit ledger is append-only: ${operation} is not permitted`)
       }
     }
@@ -80,5 +80,6 @@ describe('Cryptographic Audit Ledger Chain & Tamper Prevention Logic', () => {
     expect(() => enforceAppendOnly('INSERT')).not.toThrow()
     expect(() => enforceAppendOnly('UPDATE')).toThrow('Audit ledger is append-only: UPDATE is not permitted')
     expect(() => enforceAppendOnly('DELETE')).toThrow('Audit ledger is append-only: DELETE is not permitted')
+    expect(() => enforceAppendOnly('TRUNCATE')).toThrow('Audit ledger is append-only: TRUNCATE is not permitted')
   })
 })

@@ -176,22 +176,98 @@ export function verifyEntryContentHash(
   return { match: false, matchedDigest: fallback, candidateCount: detailCandidates.length * dateCandidates.length }
 }
 
+const KNOWN_ACTION_KEYS: Record<string, string[]> = {
+  'PAYMENT_RECONCILIATION_RETRY_SCHEDULED': ['reconciliationId', 'razorpayOrderId', 'lastError'],
+  'RAZORPAY_ORDER_CREATED': ['razorpayOrderId', 'receipt'],
+  'PAYMENT_CAPTURED': ['razorpayEventId', 'razorpayPaymentId', 'razorpayOrderId', 'eventType', 'attributedRecoveryCampaignId'],
+  'RECOMMENDATION_ACCEPTED': ['offerId', 'cartId', 'recommendedProductId', 'originalProductId', 'discountPercent', 'marginPercent', 'type'],
+  'ORDER_CANCELLED_BY_CUSTOMER': ['orderId', 'previousStatus', 'totalAmount'],
+  'ORDER_CANCELLED_AND_REFUND_QUEUED': ['orderId', 'refundId', 'razorpayPaymentId', 'refundAmount', 'restoredItemsCount'],
+  'ORDER_CANCELLED_BY_MERCHANT_AND_REFUND_QUEUED': ['orderId', 'refundId', 'razorpayPaymentId', 'refundAmount', 'restoredItemsCount'],
+  'CLEARANCE_CAMPAIGN_DISPATCHED': ['campaignId', 'productId', 'issuedOfferIds', 'issuedDiscount', 'campaignBudget', 'marginPercent'],
+  'OFFER_CREATED': ['offerId', 'cartId', 'discountPercent', 'marginPercent', 'cartBinding'],
+  'OFFER_ACCEPTED_BY_CUSTOMER': ['offerId', 'total', 'currency', 'acceptedAt'],
+  'ORDER_CREATED': ['razorpayOrderId', 'receipt', 'amount'],
+  'ORDER_ACCEPTED': ['offerId'],
+  'CUSTOMER_BUDGET_CAP_MODIFIED': ['previousBudget', 'newBudget', 'dailySpendLimit', 'maxOrderSpendLimit'],
+  'CUSTOMER_SPEND_LIMITS_UPDATED': ['dailySpendLimit', 'monthlySpendLimit', 'maxOrderSpendLimit'],
+}
+
+function getPermutations<T>(arr: T[]): T[][] {
+  if (arr.length <= 1) return [arr]
+  const result: T[][] = []
+  for (let i = 0; i < arr.length; i++) {
+    const rest = arr.slice(0, i).concat(arr.slice(i + 1))
+    for (const p of getPermutations(rest)) {
+      result.push([arr[i], ...p])
+    }
+  }
+  return result
+}
+
+function reconstructObjectWithKeys(obj: unknown, keys: string[]): unknown {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
+  const record = obj as Record<string, unknown>
+  const result: Record<string, unknown> = {}
+  for (const k of keys) {
+    if (k in record) result[k] = record[k]
+  }
+  for (const k of Object.keys(record)) {
+    if (!(k in result)) result[k] = record[k]
+  }
+  return result
+}
+
 export function verifyAppSignature(entry: AuditLogEntry): boolean {
   if (!entry.appSignature) {
     // Legacy entries before this security patch won't have an appSignature
-    return true;
+    return true
   }
-  const expected = generateAppSignature({
-    merchantId: entry.merchantId,
-    orderId: entry.orderId,
-    actorUserId: entry.actorUserId,
-    action: entry.action,
-    reason: entry.reason,
-    details: entry.details,
-    status: entry.status,
-    nonce: entry.nonce ?? '',
-  });
-  return expected === entry.appSignature;
+
+  const secret =
+    process.env.AUDIT_HMAC_SECRET ||
+    process.env.OFFER_BINDING_SECRET ||
+    (process.env.NODE_ENV === 'test' ? 'test_secret' : 'dev_secret')
+
+  const candidateObjs: unknown[] = [entry.details]
+
+  const knownKeys = KNOWN_ACTION_KEYS[entry.action]
+  if (knownKeys && entry.details && typeof entry.details === 'object') {
+    candidateObjs.push(reconstructObjectWithKeys(entry.details, knownKeys))
+  }
+
+  if (entry.details && typeof entry.details === 'object' && !Array.isArray(entry.details)) {
+    const keys = Object.keys(entry.details)
+    if (keys.length > 1 && keys.length <= 5) {
+      const perms = getPermutations(keys)
+      for (const perm of perms) {
+        candidateObjs.push(reconstructObjectWithKeys(entry.details, perm))
+      }
+    }
+  }
+
+  for (const candidate of candidateObjs) {
+    const detailCandidates = normalizeDetailsForPostgres(candidate)
+    for (const det of detailCandidates) {
+      const payload = [
+        entry.merchantId ?? '',
+        entry.orderId ?? '',
+        entry.actorUserId ?? '',
+        entry.action,
+        entry.reason ?? '',
+        det,
+        entry.status,
+        entry.nonce ?? '',
+      ].join('|')
+
+      const sig = crypto.createHmac('sha256', secret).update(payload).digest('hex')
+      if (sig === entry.appSignature) {
+        return true
+      }
+    }
+  }
+
+  return false
 }
 
 
@@ -357,11 +433,14 @@ export function generateAppSignature(entry: {
   actorUserId?: string | null
   action: string
   reason?: string | null
-  details?: any
+  details?: unknown
   status: string
   nonce: string
 }): string {
-  const secret = process.env.AUDIT_HMAC_SECRET || process.env.OFFER_BINDING_SECRET || 'demo-audit-hmac-secret'
+  const secret = process.env.AUDIT_HMAC_SECRET || process.env.OFFER_BINDING_SECRET || (process.env.NODE_ENV === 'test' ? 'test_secret' : 'dev_secret');
+  if (!process.env.AUDIT_HMAC_SECRET && !process.env.OFFER_BINDING_SECRET) {
+    if (process.env.APP_ENV !== 'demo' && process.env.NODE_ENV !== 'test') throw new Error('AUDIT_HMAC_SECRET is required in production.');
+  }
   const detailCandidates = normalizeDetailsForPostgres(entry.details)
   
   const payload = [

@@ -9,7 +9,7 @@ afterAll(async () => {
 describe('Cryptographic Append-Only Audit Ledger Integration Tests', () => {
   let merchant: { id: string }
   let user: { id: string }
-
+ 
   beforeAll(async () => {
     user = await prisma.user.create({
       data: {
@@ -133,6 +133,18 @@ describe('Cryptographic Append-Only Audit Ledger Integration Tests', () => {
     await expect(
       prisma.$executeRaw`DELETE FROM "AuditExport" WHERE id = ${exportRecord.id}`
     ).rejects.toThrow(/Audit ledger is append-only: DELETE is not permitted/)
+  })
+
+  test('strictly halts TRUNCATE attempts via statement-level PostgreSQL tamper-proofing trigger', async () => {
+    // Attempt TRUNCATE on AuditLog
+    await expect(
+      prisma.$executeRaw`TRUNCATE TABLE "AuditLog"`
+    ).rejects.toThrow(/Audit ledger is append-only: TRUNCATE is not permitted/)
+
+    // Attempt TRUNCATE on AuditExport
+    await expect(
+      prisma.$executeRaw`TRUNCATE TABLE "AuditExport"`
+    ).rejects.toThrow(/Audit ledger is append-only: TRUNCATE is not permitted/)
   })
 
   test('validates 100% cryptographic recomputed hash parity on real PostgreSQL trigger rows', async () => {

@@ -34,7 +34,7 @@ import { createOfferFromActiveCart } from '@/backend/actions/commerce'
 import { bindingsMatch, cartSelectionBinding } from '@/backend/utils/cartSelectionBinding'
 
 const MERCHANT_A = '11111111-1111-4111-8111-111111111111'
-const MERCHANT_B = '22222222-2222-4222-8222-222222222222'
+// const MERCHANT_B 
 const CAMPAIGN = '33333333-3333-4333-8333-333333333333'
 const PRODUCT = 'd560ebdc-263c-4edb-82f7-f46b12ba5b65'
 

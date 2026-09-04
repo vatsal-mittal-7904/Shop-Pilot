@@ -65,3 +65,4 @@ next-env.d.ts
 /blob-report/
 merchantos-audit-export-*.json
 *.log
+.pgdata/

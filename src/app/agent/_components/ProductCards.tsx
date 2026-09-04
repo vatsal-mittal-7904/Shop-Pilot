@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image';
 
 import { useEffect, useRef, useState } from 'react'
 import { addToCart } from '@/backend/actions/cart'
@@ -123,10 +124,10 @@ export function ProductCards({ products, customerId, merchantId, onSelect }: Pro
                   key={product.id}
                   className="flex w-64 flex-shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
                 >
-                  <div className="h-40 w-full bg-gray-100">
+                  <div className="relative h-40 w-full bg-gray-100">
                     {product.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                       
+                      <Image src={product.imageUrl} alt={product.name} fill unoptimized className="object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-sm text-gray-400">
                         No image

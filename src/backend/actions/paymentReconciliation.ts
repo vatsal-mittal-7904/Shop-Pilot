@@ -21,8 +21,28 @@ function nextRetry(attemptCount: number) {
   return new Date(Date.now() + delay)
 }
 
-function safeError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error)
+function safeError(error: unknown): string {
+  let message: string
+  if (error instanceof Error) {
+    message = error.message
+  } else if (typeof error === 'object' && error !== null) {
+    const errObj = error as Record<string, unknown>
+    if (errObj.error && typeof errObj.error === 'object' && (errObj.error as Record<string, unknown>).description) {
+      message = String((errObj.error as Record<string, unknown>).description)
+    } else if (typeof errObj.message === 'string') {
+      message = errObj.message
+    } else if (typeof errObj.description === 'string') {
+      message = errObj.description
+    } else {
+      try {
+        message = JSON.stringify(error)
+      } catch {
+        message = String(error)
+      }
+    }
+  } else {
+    message = String(error)
+  }
   return message.replace(/(rzp_[A-Za-z0-9_-]+|gsk_[A-Za-z0-9_-]+)/g, '[REDACTED]').slice(0, 500)
 }
 

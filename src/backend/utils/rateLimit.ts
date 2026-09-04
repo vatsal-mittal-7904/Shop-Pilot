@@ -11,6 +11,7 @@
 
 import { Redis } from '@upstash/redis'
 import { Ratelimit } from '@upstash/ratelimit'
+import { prisma } from '@/backend/db/prisma'
 
 const DEFAULT_WINDOW_MS = 60_000 // 1 minute
 const DEFAULT_MAX_REQUESTS = 10 // 10 requests per minute
@@ -58,6 +59,54 @@ function checkInMemoryRateLimit(
     limit: maxRequests,
     remaining: maxRequests - recent.length,
     retryAfterMs: 0,
+  }
+}
+
+async function checkDatabaseRateLimit(
+  identifier: string,
+  maxRequests = DEFAULT_MAX_REQUESTS,
+  windowMs = DEFAULT_WINDOW_MS
+): Promise<RateLimitResult> {
+  const now = new Date()
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const bucket = await tx.rateLimitBucket.findUnique({ where: { key: identifier } })
+      
+      let tokens = bucket ? bucket.tokens : maxRequests
+      let lastRefillAt = bucket ? bucket.lastRefillAt : now
+      
+      const elapsedMs = now.getTime() - lastRefillAt.getTime()
+      const refillRate = maxRequests / windowMs
+      const refilledTokens = elapsedMs * refillRate
+      
+      tokens = Math.min(maxRequests, tokens + refilledTokens)
+      
+      const allowed = tokens >= 1
+      let retryAfterMs = 0
+      
+      if (allowed) {
+        tokens -= 1
+        lastRefillAt = now
+      } else {
+        retryAfterMs = (1 - tokens) / refillRate
+      }
+      
+      await tx.rateLimitBucket.upsert({
+        where: { key: identifier },
+        update: { tokens, lastRefillAt },
+        create: { key: identifier, tokens, lastRefillAt }
+      })
+      
+      return {
+        allowed,
+        limit: maxRequests,
+        remaining: Math.floor(tokens),
+        retryAfterMs: Math.max(0, Math.ceil(retryAfterMs))
+      }
+    })
+  } catch (error) {
+    console.warn('[RATE_LIMIT] Database rate limit failed, falling back to in-memory', error)
+    return checkInMemoryRateLimit(identifier, maxRequests, windowMs)
   }
 }
 
@@ -111,13 +160,13 @@ export async function checkDistributedRateLimit(
         retryAfterMs: success ? 0 : Math.max(0, reset - Date.now()),
       }
     } catch (error) {
-      console.warn('[RATE_LIMIT] Upstash Redis failed, falling back to in-memory', error)
-      return checkInMemoryRateLimit(identifier, maxRequests, windowMs)
+      console.warn('[RATE_LIMIT] Upstash Redis failed, falling back to database', error)
+      return checkDatabaseRateLimit(identifier, maxRequests, windowMs)
     }
   }
 
-  // Fallback to in-memory if Upstash isn't configured (e.g. local dev, CI/CD)
-  return checkInMemoryRateLimit(identifier, maxRequests, windowMs)
+  // Fallback to database if Upstash isn't configured (e.g. local dev, CI/CD)
+  return checkDatabaseRateLimit(identifier, maxRequests, windowMs)
 }
 
 /**

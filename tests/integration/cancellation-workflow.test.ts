@@ -5,6 +5,9 @@ import { cancelOrderByCustomer, cancelOrderByMerchant } from '@/backend/actions/
 const adminEmail = 'admin@technest.com'
 
 afterAll(async () => {
+  await prisma.refund.deleteMany({
+    where: { razorpayPaymentId: { startsWith: 'pay_' } },
+  })
   await prisma.$disconnect()
 })
 

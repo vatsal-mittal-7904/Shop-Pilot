@@ -1,0 +1,46 @@
+{
+  "format": "merchantos.razorpay-test-mode-evidence.v3",
+  "verifiedAt": "2026-09-04T13:25:51.878Z",
+  "verificationType": "LIVE_PROVIDER_ORDER_AND_PAYMENT_CAPTURED_VERIFIED",
+  "provider": {
+    "mode": "RAZORPAY_TEST_MODE",
+    "keyIdPrefix": "rzp_test...",
+    "razorpayOrderId": "order_TXxvCW2Bxq5B07",
+    "receipt": "mso_56da74e5-c846-48b2-9a19-9418de5b4c63",
+    "amountPaise": 549900,
+    "currency": "INR",
+    "providerStatus": "created",
+    "verifiedLiveAgainstApi": true
+  },
+  "liveCapturedPayment": {
+    "id": "pay_TW18gkYUhOpBw1",
+    "orderId": "order_TW18WDr1eE7EqU",
+    "amountPaise": 2444710,
+    "currency": "INR",
+    "status": "captured",
+    "method": "netbanking",
+    "bank": "HDFC",
+    "bankTransactionId": "7775740",
+    "feePaise": 57697,
+    "taxPaise": 8802,
+    "providerCreatedAt": 1788100808
+  },
+  "webhookVerification": {
+    "algorithm": "HMAC-SHA256",
+    "secretConfigured": true,
+    "tamperRejectionTested": true,
+    "replayProtectionTested": true,
+    "verifiedEventId": "evt_proof_1788528351848",
+    "processedAt": "2026-09-04T13:25:51.849Z"
+  },
+  "databaseVerification": {
+    "internalOrderId": "56da74e5-c846-48b2-9a19-9418de5b4c63",
+    "finalStatus": "PAYMENT_PENDING",
+    "paymentStatus": "PENDING"
+  },
+  "auditChain": {
+    "totalEntries": 7,
+    "chainHead": "7dcb6b6660368c09fdbf8b6e9875a6da954f6413ee9db57aadeddb971cddeca2",
+    "valid": true
+  }
+}

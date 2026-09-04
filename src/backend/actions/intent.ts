@@ -106,15 +106,40 @@ export async function parseBuyerIntent(customerId: string, rawMessage: string) {
 
     let mergedCategory = extracted.category
     let mergedRequirements = extracted.requirements.reduce((acc, req) => { acc[req.key] = req.value; return acc; }, {} as Record<string, string>)
-    let resolvedMaximumAmount = extracted.clearBudget ? null : maximumAmount
+    
+    // MONEY-SAFETY INVARIANT:
+    // Conversational model extraction is allowed to establish an initial budget or narrow/lower an existing budget.
+    // However, an LLM extraction can NEVER unilaterally lift or clear an active budget limit without explicit customer authorization.
+    // If an existing budget exists, attempts to clear it or raise it above the existing ceiling fail-closed and retain the active ceiling.
+    let resolvedMaximumAmount: number | null = null
+
+    if (recent?.maximumAmount != null) {
+      if (extracted.clearBudget) {
+        console.warn(`[BUDGET_POLICY] Ignored conversational attempt to clear active budget ceiling of ₹${recent.maximumAmount / 100} for customer ${customerId}. Retaining active budget.`)
+        resolvedMaximumAmount = recent.maximumAmount
+        mergedRequirements.pendingBudgetIncrease = 'UNLIMITED'
+        mergedRequirements.budgetIncreaseRequiresAuthorization = 'true'
+      } else if (maximumAmount != null && maximumAmount > recent.maximumAmount) {
+        console.warn(`[BUDGET_POLICY] Blocked conversational attempt to increase budget ceiling from ₹${recent.maximumAmount / 100} to ₹${maximumAmount / 100} for customer ${customerId}. Retaining active ceiling.`)
+        resolvedMaximumAmount = recent.maximumAmount
+        mergedRequirements.pendingBudgetIncrease = String(maximumAmount)
+        mergedRequirements.budgetIncreaseRequiresAuthorization = 'true'
+      } else if (maximumAmount != null) {
+        // Narrowed or maintained budget is safe
+        resolvedMaximumAmount = maximumAmount
+      } else {
+        // No new monetary value mentioned
+        resolvedMaximumAmount = recent.maximumAmount
+      }
+    } else {
+      // No active budget ceiling set yet: accept initial intent extraction
+      resolvedMaximumAmount = extracted.clearBudget ? null : maximumAmount
+    }
 
     if (recent && extracted.intentAction === 'UPDATE') {
       const previousRequirements = (recent?.requirements as Record<string, string> | null) ?? {}
       mergedCategory = Array.from(new Set([...recent.category, ...extracted.category]))
       mergedRequirements = { ...previousRequirements, ...mergedRequirements }
-      if (!extracted.clearBudget) {
-        resolvedMaximumAmount = maximumAmount ?? recent.maximumAmount ?? null
-      }
     }
 
     if (recent) {
@@ -150,4 +175,86 @@ export async function parseBuyerIntent(customerId: string, rawMessage: string) {
     // step above: never let intent capture crash the chat request.
     return null
   }
+}
+
+/**
+ * Authoritatively updates or clears a customer's active budget limit.
+ * Must be invoked by an authenticated customer action, never by prompt extraction.
+ */
+export async function authorizeCustomerBudgetUpdate({
+  customerId,
+  actorUserId,
+  budgetAmount,
+}: {
+  customerId: string
+  actorUserId: string
+  budgetAmount: number | null
+}) {
+  return prisma.$transaction(async (tx) => {
+    const customer = await tx.customer.findUnique({
+      where: { id: customerId },
+      select: { dailySpendLimit: true },
+    })
+    if (!customer) throw new Error('Customer account not found')
+
+    if (budgetAmount != null) {
+      if (budgetAmount <= 0 || !Number.isInteger(budgetAmount)) {
+        throw new Error('Authorized budget must be a positive integer in paise.')
+      }
+      if (budgetAmount > customer.dailySpendLimit) {
+        throw new Error(`Authorized budget cannot exceed the account daily spend limit of ₹${(customer.dailySpendLimit / 100).toLocaleString('en-IN')}.`)
+      }
+    }
+
+    const recent = await tx.buyerIntent.findFirst({
+      where: { customerId },
+      orderBy: { updatedAt: 'desc' },
+    })
+
+    let updatedIntent
+    if (recent) {
+      const requirements = (recent.requirements as Record<string, string> | null) ?? {}
+      delete requirements.pendingBudgetIncrease
+      delete requirements.budgetIncreaseRequiresAuthorization
+
+      updatedIntent = await tx.buyerIntent.update({
+        where: { id: recent.id },
+        data: {
+          maximumAmount: budgetAmount,
+          requirements: requirements as Prisma.InputJsonValue,
+        },
+      })
+    } else {
+      updatedIntent = await tx.buyerIntent.create({
+        data: {
+          customerId,
+          category: [],
+          requirements: {},
+          maximumAmount: budgetAmount,
+          currency: 'INR',
+          rawRequest: 'Explicit customer budget authorization',
+          autonomousPurchase: false,
+          requiresConfirmation: true,
+        },
+      })
+    }
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId,
+        action: 'CUSTOMER_BUDGET_CAP_MODIFIED',
+        status: 'APPROVED',
+        reason: budgetAmount != null
+          ? `Customer explicitly authorized budget cap of ₹${(budgetAmount / 100).toLocaleString('en-IN')}`
+          : 'Customer explicitly cleared conversational budget ceiling',
+        details: {
+          previousMaximumAmount: recent?.maximumAmount ?? null,
+          newMaximumAmount: budgetAmount,
+          customerId,
+        } as Prisma.InputJsonValue,
+      },
+    })
+
+    return { success: true, maximumAmount: updatedIntent.maximumAmount }
+  })
 }

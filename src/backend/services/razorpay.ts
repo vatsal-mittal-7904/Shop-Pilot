@@ -2,5 +2,5 @@ import Razorpay from 'razorpay'
 
 export const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret'
+  key_secret: process.env.RAZORPAY_KEY_SECRET || (process.env.APP_ENV === 'demo' ? 'dummy_secret' : (() => { throw new Error('RAZORPAY_KEY_SECRET is required') })())
 })

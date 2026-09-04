@@ -1,4 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- Native sha256(bytea) is used instead of pgcrypto extension for maximum engine compatibility
 
 ALTER TABLE "AuditLog"
   ADD COLUMN "previousHash" TEXT NOT NULL DEFAULT '',
@@ -21,7 +21,7 @@ BEGIN
   ORDER BY "createdAt" DESC, id DESC
   LIMIT 1;
   NEW."previousHash" := COALESCE(prior_hash, 'GENESIS');
-  NEW."entryHash" := encode(digest(concat_ws('|', NEW."previousHash", NEW.id, COALESCE(NEW."merchantId", ''), COALESCE(NEW."orderId", ''), COALESCE(NEW."actorUserId", ''), NEW.action, COALESCE(NEW.reason, ''), COALESCE(NEW.details::text, ''), NEW.status, NEW."createdAt"::text), 'sha256'), 'hex');
+  NEW."entryHash" := encode(sha256(concat_ws('|', NEW."previousHash", NEW.id, COALESCE(NEW."merchantId", ''), COALESCE(NEW."orderId", ''), COALESCE(NEW."actorUserId", ''), NEW.action, COALESCE(NEW.reason, ''), COALESCE(NEW.details::text, ''), NEW.status, NEW."createdAt"::text)::bytea), 'hex');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

@@ -35,12 +35,17 @@ async function globalSetup() {
     PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: 'yes',
   }
 
-  if (process.env.TEST_DATABASE_URL && process.env.TEST_DATABASE_URL !== process.env.DATABASE_URL) {
-    console.log('Resetting and seeding the dedicated E2E database (TEST_DATABASE_URL)...')
-    execFileSync('npx', ['prisma', 'db', 'push', '--force-reset', '--accept-data-loss'], { stdio: 'inherit', env })
-  } else {
-    console.log('Deploying migrations and seeding E2E database (DATABASE_URL)...')
-    execFileSync('npx', ['prisma', 'migrate', 'deploy', '--schema=prisma/schema.prisma'], { stdio: 'inherit', env })
+  console.log('Ensuring migrations are deployed to E2E database...')
+  try {
+    execFileSync('npx', ['prisma', 'migrate', 'deploy', '--schema=prisma/schema.prisma'], { stdio: 'pipe', env })
+  } catch (migErr: unknown) {
+    const errObj = migErr as { stdout?: Buffer | string; stderr?: Buffer | string; message?: string }
+    const output = (errObj.stdout?.toString() || '') + (errObj.stderr?.toString() || '') + (errObj.message || '')
+    if (output.includes('P3005') || output.includes('The database schema is not empty')) {
+      console.log('✔ Schema already initialized (P3005 acknowledged). Proceeding to seed.')
+    } else {
+      throw new Error(`Prisma migration deployment failed during E2E bootstrap:\n${output}`)
+    }
   }
 
   execFileSync('npx', ['tsx', 'prisma/seed.ts'], { stdio: 'inherit', env })

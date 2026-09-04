@@ -16,7 +16,7 @@ BEGIN
   ORDER BY "createdAt" DESC, id DESC
   LIMIT 1;
   NEW."previousHash" := COALESCE(prior_hash, 'GENESIS');
-  NEW."entryHash" := encode(digest(concat_ws('|', 
+  NEW."entryHash" := encode(sha256(concat_ws('|', 
     NEW."previousHash", 
     NEW.id, 
     COALESCE(NEW."merchantId", ''), 
@@ -29,7 +29,7 @@ BEGIN
     COALESCE(NEW.nonce, ''),
     COALESCE(NEW."appSignature", ''),
     NEW."createdAt"::text
-  ), 'sha256'), 'hex');
+  )::bytea), 'hex');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

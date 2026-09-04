@@ -4,6 +4,9 @@ import { prisma } from '@/backend/db/prisma'
 const adminEmail = 'admin@technest.com'
 
 afterAll(async () => {
+  await prisma.paymentReconciliation.deleteMany({
+    where: { order: { razorpayOrderId: { startsWith: 'order_fake_' } } },
+  })
   await prisma.$disconnect()
 })
 
@@ -29,6 +32,8 @@ vi.mock('@/backend/services/razorpay', () => {
     razorpay: {
       orders: {
         all: vi.fn().mockResolvedValue({ items: [] }),
+        fetchPayments: vi.fn().mockResolvedValue({ items: [] }),
+        fetch: vi.fn().mockResolvedValue({ status: 'created' }),
         create: vi.fn().mockImplementation(async (args) => {
           return { id: `order_fake_${counter++}`, amount: args.amount, currency: args.currency }
         })

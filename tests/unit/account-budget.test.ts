@@ -49,5 +49,21 @@ describe('durable buyer account spend policy', () => {
       dailyLimit: 100_000,
       monthlyLimit: 500_000,
     })
+    expect(tx.order.count).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        customerId: CUSTOMER,
+        merchantId: 'test-merchant',
+        OR: expect.arrayContaining([
+          expect.objectContaining({ status: { in: ['PAID', 'PAYMENT_AUTHORIZED', 'PAYMENT_CAPTURED'] } }),
+        ]),
+      }),
+    }))
+  })
+
+  test('blocks checkout when daily transaction count limit is exceeded', async () => {
+    const tx = budgetTx()
+    tx.order.count = vi.fn().mockResolvedValue(25)
+    await expect(assertAccountSpendLimit(tx, CUSTOMER, 'test-merchant', 10_000)).rejects.toThrow('daily transaction count limit (25)')
   })
 })
+

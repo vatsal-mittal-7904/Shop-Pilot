@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image';
 
 import { useState } from 'react'
 // acceptRecommendation lives in offer.ts alongside the other offer-creation actions.
@@ -93,10 +94,10 @@ export function BundleOfferCard({
   return (
     <div className="w-full max-w-sm rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
       <div className="flex gap-3 p-3">
-        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-100">
+        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-100">
           {addon.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={addon.imageUrl} alt={addon.name} className="h-full w-full object-cover" />
+             
+            <Image src={addon.imageUrl} alt={addon.name} fill unoptimized className="object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center text-[10px] text-neutral-400">No image</div>
           )}

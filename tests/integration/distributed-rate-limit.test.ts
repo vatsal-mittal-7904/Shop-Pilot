@@ -1,8 +1,20 @@
-import { afterAll, describe, expect, test } from 'vitest'
+import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { prisma } from '@/backend/db/prisma'
 import { checkDistributedRateLimit } from '@/backend/utils/rateLimit'
 
+let savedUpstashUrl: string | undefined
+let savedUpstashToken: string | undefined
+
+beforeAll(() => {
+  savedUpstashUrl = process.env.UPSTASH_REDIS_REST_URL
+  savedUpstashToken = process.env.UPSTASH_REDIS_REST_TOKEN
+  delete process.env.UPSTASH_REDIS_REST_URL
+  delete process.env.UPSTASH_REDIS_REST_TOKEN
+})
+
 afterAll(async () => {
+  if (savedUpstashUrl) process.env.UPSTASH_REDIS_REST_URL = savedUpstashUrl
+  if (savedUpstashToken) process.env.UPSTASH_REDIS_REST_TOKEN = savedUpstashToken
   await prisma.$disconnect()
 })
 

@@ -12,9 +12,14 @@ function signWebhookPayload(rawBody: string, secret: string): string {
 
 /**
  * Validates a real Razorpay Test Mode order plus this application's local
- * webhook-signature and duplicate-delivery handling. It deliberately does not
- * claim that its locally signed payload was delivered by Razorpay; the
- * `razorpay:proof` verifier is reserved for externally delivered evidence.
+ * Validates a real Razorpay Test Mode order plus this application's local
+ * webhook-signature and duplicate-delivery handling. 
+ *
+ * CRITICAL CLARIFICATION:
+ * This is a CONTRACT TEST. It uses a locally signed payload to verify the 
+ * handler logic. It does NOT assert that Razorpay successfully delivered a 
+ * live webhook over the internet to this application, which requires an 
+ * active tunnel (like ngrok) and is out of scope for CI runners.
  *
  *   RUN_RAZORPAY_LIVE_E2E=1 npm run test:razorpay:proof
  */
@@ -24,22 +29,32 @@ test.describe('Razorpay test-mode order contract and local webhook route handlin
   test('creates and retrieves a real Test Mode order, then exercises the local webhook handler', async ({ page }, testInfo) => {
     // 1. Authenticate as customer
     await page.goto('/')
-    await page.getByLabel('Email').fill(CUSTOMER_EMAIL)
-    await page.getByLabel('Password').fill(CUSTOMER_PASSWORD)
+    const emailInput = page.getByLabel('Email')
+    await emailInput.waitFor({ state: 'visible' })
+    await emailInput.fill(CUSTOMER_EMAIL)
+    const passwordInput = page.getByLabel('Password')
+    await passwordInput.fill(CUSTOMER_PASSWORD)
+    await expect(emailInput).toHaveValue(CUSTOMER_EMAIL)
+    await expect(passwordInput).toHaveValue(CUSTOMER_PASSWORD)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
-    await expect(page).toHaveURL(/\/agent$/)
+    await expect(page).toHaveURL(/\/agent$/, { timeout: 15_000 })
 
     // 2. Fetch catalog and populate basket
     const catalog = await page.request.get('/api/agent/catalog')
     expect(catalog.ok()).toBeTruthy()
-    const catalogData = (await catalog.json()) as { products: Array<{ id: string }> }
+    const catalogData = (await catalog.json()) as {
+      merchant?: { id: string }
+      products: Array<{ id: string }>
+    }
     expect(catalogData.products.length).toBeGreaterThan(0)
 
     const cart = await page.request.post('/api/agent/cart', { data: { productId: catalogData.products[0].id } })
     expect(cart.ok()).toBeTruthy()
 
     // 3. Create and accept offer
-    const offerResponse = await page.request.post('/api/agent/offer', { data: { discountPercentage: 0 } })
+    const offerResponse = await page.request.post('/api/agent/offer', {
+      data: { discountPercentage: 0, merchantId: catalogData.merchant?.id },
+    })
     expect(offerResponse.ok()).toBeTruthy()
     const { offer } = (await offerResponse.json()) as { offer: { id: string; total: number } }
 

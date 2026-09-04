@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { prisma } from '@/backend/db/prisma'
 
 const CUSTOMER_EMAIL = process.env.DEMO_CUSTOMER_EMAIL || 'demo.customer@technest.com'
 const CUSTOMER_PASSWORD = process.env.DEMO_CUSTOMER_PASSWORD || 'technest-customer-demo'
@@ -10,8 +11,11 @@ test.describe('Buyer checkout consent', () => {
     await page.getByLabel('Password').fill(CUSTOMER_PASSWORD)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await expect(page).toHaveURL(/\/agent$/)
+    
+    const merchant = await prisma.merchant.findFirst();
+    expect(merchant).not.toBeNull();
 
-    const catalog = await page.request.get('/api/agent/catalog')
+    const catalog = await page.request.get(`/api/agent/catalog?merchantId=${merchant?.id}`)
     expect(catalog.ok()).toBeTruthy()
     const catalogData = await catalog.json() as { products: Array<{ id: string }> }
     expect(catalogData.products.length).toBeGreaterThan(0)

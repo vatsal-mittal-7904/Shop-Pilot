@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image';
 
 import { useState } from 'react'
 import { acceptRecommendation, declineRecommendation } from '@/backend/actions/offer'
@@ -89,10 +90,10 @@ export function UpsellOfferCard({
   return (
     <div className="w-full max-w-sm rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
       <div className="flex gap-3 p-3">
-        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-100">
+        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-100">
           {upgrade.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={upgrade.imageUrl} alt={upgrade.name} className="h-full w-full object-cover" />
+             
+            <Image src={upgrade.imageUrl} alt={upgrade.name} fill unoptimized className="object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center text-[10px] text-neutral-400">No image</div>
           )}

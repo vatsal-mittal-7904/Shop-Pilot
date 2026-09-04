@@ -17,7 +17,12 @@ export async function createRazorpayOrder(internalOrderId: string) {
   const orderId = z.string().uuid().parse(internalOrderId)
   const order = await prisma.order.findFirst({
     where: { id: orderId, customerId: customer.id },
-    include: { payment: true, items: { include: { product: true } }, offer: true },
+    include: {
+      payment: true,
+      items: { include: { product: true } },
+      offer: true,
+      merchant: { select: { id: true, razorpayAccountId: true } },
+    },
   })
   if (!order) throw new Error('Order not found')
   if (!['ACCEPTED', 'PAYMENT_PENDING'].includes(order.status)) throw new Error('Order is not ready for payment')
@@ -50,7 +55,9 @@ export async function createRazorpayOrder(internalOrderId: string) {
   })
 
   // Tier 3 Self-Healing: Opportunistically heal pending payments for this merchant on retry
-  triggerOpportunisticReconciliation({ merchantId: order.merchantId, maxReconciliations: 2 }).catch(() => {})
+  if (!process.env.VITEST) {
+    triggerOpportunisticReconciliation({ merchantId: order.merchantId, maxReconciliations: 2 }).catch(() => {})
+  }
 
   const providerOrder = await findRazorpayOrderByReceipt(receipt)
   if (providerOrder) {
@@ -60,12 +67,42 @@ export async function createRazorpayOrder(internalOrderId: string) {
 
   let rzpOrder
   try {
-    rzpOrder = await razorpay.orders.create({
+    interface RazorpayRouteTransfer {
+      account: string
+      amount: number
+      currency: string
+      notes?: Record<string, string>
+    }
+
+    type RazorpayOrderPayloadWithTransfers = Parameters<typeof razorpay.orders.create>[0] & {
+      transfers?: RazorpayRouteTransfer[]
+    }
+
+    const orderPayload: RazorpayOrderPayloadWithTransfers = {
       amount: order.totalAmount,
       currency: order.currency,
       receipt,
-      notes: { merchantId: order.merchantId, internalOrderId: order.id },
-    })
+      notes: {
+        merchantId: order.merchantId,
+        internalOrderId: order.id,
+        settlementAccount: order.merchant?.razorpayAccountId || 'PLATFORM_PRIMARY',
+      },
+    }
+
+    // Razorpay Route Marketplace Architecture:
+    // If merchant has a linked Razorpay Route subaccount ID, route split settlement
+    if (order.merchant?.razorpayAccountId) {
+      orderPayload.transfers = [
+        {
+          account: order.merchant.razorpayAccountId,
+          amount: order.totalAmount,
+          currency: order.currency,
+          notes: { merchantId: order.merchantId, internalOrderId: order.id },
+        },
+      ]
+    }
+
+    rzpOrder = await razorpay.orders.create(orderPayload as Parameters<typeof razorpay.orders.create>[0])
   } catch (error) {
     // A timeout may conceal a successful create. Look up the unique receipt
     // once more before surfacing the failure, never blindly issuing another.

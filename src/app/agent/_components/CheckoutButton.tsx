@@ -95,7 +95,7 @@ export function CheckoutButton({ orderId, razorpayOrderId, amount, currency = 'I
         const order = await getCustomerOrderStatus(orderId)
         if (order.status === 'PAID') {
           setState('paid')
-          setVerificationMessage(`Verified payment${order.razorpayPaymentId ? ` (${order.razorpayPaymentId})` : ''}. Your order is confirmed.`)
+          setVerificationMessage(`Verified payment${order.razorpayPaymentId ? ` (${order.razorpayPaymentId})` : ''}. We will send the delivery details to your registered email address once the merchant has accepted and processed your order.`)
           return
         }
         if (order.status === 'PAYMENT_FAILED' || order.status === 'INVENTORY_FAILED') {

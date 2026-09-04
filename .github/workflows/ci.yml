@@ -1,37 +1,14 @@
-name: CI
+name: MerchantOS CI Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
-  test:
-    name: Build & Test
+  build_and_test:
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgrespassword
-          POSTGRES_DB: razorpay_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      DATABASE_URL: "postgresql://postgres:postgrespassword@localhost:5432/razorpay_test"
-      TEST_DATABASE_URL: "postgresql://postgres:postgrespassword@localhost:5432/razorpay_test"
-      CRON_SECRET: ci-test-cron-secret
-      OFFER_BINDING_SECRET: ci-test-binding-secret
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,20 +22,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate Prisma schema
-        run: npx prisma validate
+      - name: Lint Codebase
+        run: npm run lint
 
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Apply database migrations
-        run: npx prisma migrate deploy
-
-      - name: Type check
+      - name: Typecheck
         run: npx tsc --noEmit
 
-      - name: Run unit tests (including cron & recovery workers)
+      - name: Validate Prisma Schema
+        run: npx prisma validate
+
+      - name: Run Unit Tests
         run: npm run test:unit
 
-      - name: Run integration tests (live PostgreSQL)
-        run: npm run test:integration
+      - name: Run Integration Tests
+        run: |
+          docker compose -f docker-compose.test.yml up -d
+          sleep 5
+          DATABASE_URL=postgresql://root:rootpassword@localhost:51215/razorpay_integration_test npx prisma migrate deploy
+          DATABASE_URL=postgresql://root:rootpassword@localhost:51215/razorpay_integration_test npm run test:integration
+          docker compose -f docker-compose.test.yml down
+
+      - name: Production Build
+        run: npm run build

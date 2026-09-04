@@ -34,7 +34,7 @@ export async function assertAccountSpendLimit(
   const [customer, policies] = await Promise.all([
     tx.customer.findUnique({
       where: { id: customerId },
-      select: { dailySpendLimit: true, monthlySpendLimit: true },
+      select: { dailySpendLimit: true, monthlySpendLimit: true, deliveryProfile: true },
     }),
     tx.merchantPolicy?.findMany({ where: { merchantId } }) ?? Promise.resolve([]),
   ])
@@ -46,6 +46,8 @@ export async function assertAccountSpendLimit(
   const maxDailyTransactions = policyMap.MAX_DAILY_TRANSACTION_COUNT ?? 25
 
   const { dayStart, monthStart } = accountBudgetPeriods(now)
+  const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000)
+
   const [daily, monthly, merchantDailyCount] = await Promise.all([
     tx.order.aggregate({
       where: { customerId, status: { in: [...RESERVED_ORDER_STATUSES] }, createdAt: { gte: dayStart } },
@@ -55,8 +57,18 @@ export async function assertAccountSpendLimit(
       where: { customerId, status: { in: [...RESERVED_ORDER_STATUSES] }, createdAt: { gte: monthStart } },
       _sum: { totalAmount: true },
     }),
+    // Protect against Penny-Order DDoS: count settled orders today plus active in-flight checkouts from the last 15m.
+    // Stale abandoned checkouts, cancelled orders, and failed orders do not lock out the user.
     tx.order.count({
-      where: { customerId, merchantId, createdAt: { gte: dayStart } }
+      where: {
+        customerId,
+        merchantId,
+        createdAt: { gte: dayStart },
+        OR: [
+          { status: { in: ['PAID', 'PAYMENT_AUTHORIZED', 'PAYMENT_CAPTURED'] } },
+          { status: 'PAYMENT_PENDING', createdAt: { gte: fifteenMinutesAgo } },
+        ],
+      },
     }),
   ])
   const dailyCommitted = daily._sum?.totalAmount ?? 0
@@ -66,6 +78,17 @@ export async function assertAccountSpendLimit(
   if (dailyOrderCount >= maxDailyTransactions) {
     throw new Error(`Order exceeds the daily transaction count limit (${maxDailyTransactions}) for this merchant to prevent high processing fees.`)
   }
+
+  // Enforce customer-configured per-order cap if present
+  const deliveryProfile = (customer as { deliveryProfile?: unknown }).deliveryProfile as Record<string, unknown> | null
+  const maxOrderSpendLimit = typeof deliveryProfile?.maxOrderSpendLimit === 'number'
+    ? deliveryProfile.maxOrderSpendLimit
+    : null
+
+  if (maxOrderSpendLimit != null && proposedAmount > maxOrderSpendLimit) {
+    throw new Error(`Order exceeds the customer-configured per-order limit of ₹${(maxOrderSpendLimit / 100).toLocaleString('en-IN')}`)
+  }
+
   if (dailyCommitted + proposedAmount > customer.dailySpendLimit) {
     throw new Error('Order exceeds the buyer account daily spend limit')
   }
@@ -73,4 +96,54 @@ export async function assertAccountSpendLimit(
     throw new Error('Order exceeds the buyer account monthly spend limit')
   }
   return { dailyCommitted, monthlyCommitted, dailyLimit: customer.dailySpendLimit, monthlyLimit: customer.monthlySpendLimit, dailyOrderCount }
+}
+
+/**
+ * Authoritatively updates a customer's durable account spend limits and per-order limit.
+ */
+export async function updateCustomerSpendLimits({
+  tx,
+  customerId,
+  dailySpendLimit,
+  monthlySpendLimit,
+  maxOrderSpendLimit,
+}: {
+  tx: Pick<Prisma.TransactionClient, 'customer' | '$executeRaw'>
+  customerId: string
+  dailySpendLimit?: number
+  monthlySpendLimit?: number
+  maxOrderSpendLimit?: number | null
+}) {
+  await tx.$executeRaw`SELECT 1 FROM "Customer" WHERE id = ${customerId} FOR UPDATE`
+
+  if (dailySpendLimit !== undefined && (dailySpendLimit <= 0 || !Number.isInteger(dailySpendLimit))) {
+    throw new Error('Daily spend limit must be a positive integer in paise.')
+  }
+  if (monthlySpendLimit !== undefined && (monthlySpendLimit <= 0 || !Number.isInteger(monthlySpendLimit))) {
+    throw new Error('Monthly spend limit must be a positive integer in paise.')
+  }
+  if (maxOrderSpendLimit !== undefined && maxOrderSpendLimit !== null && (maxOrderSpendLimit <= 0 || !Number.isInteger(maxOrderSpendLimit))) {
+    throw new Error('Per-order spend limit must be a positive integer in paise.')
+  }
+
+  const customer = await tx.customer.findUnique({
+    where: { id: customerId },
+    select: { dailySpendLimit: true, monthlySpendLimit: true, deliveryProfile: true },
+  })
+  if (!customer) throw new Error('Customer account not found')
+
+  const currentProfile = (customer.deliveryProfile as Record<string, unknown> | null) ?? {}
+  const newProfile = {
+    ...currentProfile,
+    ...(maxOrderSpendLimit !== undefined ? { maxOrderSpendLimit } : {}),
+  }
+
+  return tx.customer.update({
+    where: { id: customerId },
+    data: {
+      ...(dailySpendLimit !== undefined ? { dailySpendLimit } : {}),
+      ...(monthlySpendLimit !== undefined ? { monthlySpendLimit } : {}),
+      deliveryProfile: newProfile as Prisma.InputJsonValue,
+    },
+  })
 }

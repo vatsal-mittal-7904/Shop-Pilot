@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { calculateCrossSellPricing } from '@/backend/utils/recommendationPricing'
 import { bindingsMatch, cartSelectionBinding } from '@/backend/utils/cartSelectionBinding'
+import { assertAccountSpendLimit } from '@/backend/actions/accountBudget'
 
 describe('Money Safety & Financial Invariants Matrix', () => {
   const PROD_1 = '11111111-1111-4111-8111-111111111111'
@@ -8,12 +9,15 @@ describe('Money Safety & Financial Invariants Matrix', () => {
 
   describe('Invariant 1: Deterministic Discount Authorization & Margin Floor', () => {
     it('guarantees discounts cannot exceed authorized merchant policies', async () => {
-      // Direct testing of policy evaluation
-      const policyLimit = 15
-      const requested = 25
-
-      const isAllowed = requested <= policyLimit
-      expect(isAllowed).toBe(false)
+      const addonProduct = { id: PROD_2, price: 100000, cost: 50000 }
+      const policyLimit = 15 // 15% max
+      const pricing = calculateCrossSellPricing({
+        cartItems: [{ productId: PROD_1, quantity: 1, product: { id: PROD_1, price: 500000, cost: 300000 } }],
+        addonProduct,
+        discountPercent: 10,
+      })
+      // Assert pricing logic respects bounded limit
+      expect(pricing.discountAmount).toBeLessThanOrEqual(addonProduct.price * (policyLimit / 100))
     })
 
     it('enforces that bundle cross-sell discounts apply strictly to ONE unit of the add-on', () => {
@@ -94,22 +98,40 @@ describe('Money Safety & Financial Invariants Matrix', () => {
   })
 
   describe('Invariant 4: Account Spend Caps (Daily & Monthly)', () => {
-    it('blocks checkout when accumulated daily spend exceeds customer spend limit', () => {
-      const dailySpendLimit = 5000000 // ₹50,000
-      const existingDailySpend = 4500000 // ₹45,000
-      const incomingOrderAmount = 1000000 // ₹10,000
+    it('blocks checkout when accumulated daily spend exceeds customer spend limit', async () => {
+      const mockTx = {
+        $executeRaw: vi.fn(),
+        customer: { findUnique: vi.fn().mockResolvedValue({ dailySpendLimit: 5000000, monthlySpendLimit: 20000000 }) },
+        merchantPolicy: { findMany: vi.fn().mockResolvedValue([]) },
+        order: {
+          aggregate: vi.fn()
+            .mockResolvedValueOnce({ _sum: { totalAmount: 4500000 } })
+            .mockResolvedValueOnce({ _sum: { totalAmount: 4500000 } }),
+          count: vi.fn().mockResolvedValue(1),
+        },
+      }
 
-      const exceedsDaily = existingDailySpend + incomingOrderAmount > dailySpendLimit
-      expect(exceedsDaily).toBe(true)
+      await expect(
+        assertAccountSpendLimit(mockTx as unknown as Parameters<typeof assertAccountSpendLimit>[0], 'cust-1', 'merch-1', 1000000)
+      ).rejects.toThrow('Order exceeds the buyer account daily spend limit')
     })
 
-    it('blocks checkout when accumulated monthly spend exceeds monthly limit', () => {
-      const monthlySpendLimit = 20000000 // ₹200,000
-      const existingMonthlySpend = 19500000 // ₹195,000
-      const incomingOrderAmount = 800000 // ₹8,000
+    it('blocks checkout when accumulated monthly spend exceeds monthly limit', async () => {
+      const mockTx = {
+        $executeRaw: vi.fn(),
+        customer: { findUnique: vi.fn().mockResolvedValue({ dailySpendLimit: 50000000, monthlySpendLimit: 20000000 }) },
+        merchantPolicy: { findMany: vi.fn().mockResolvedValue([]) },
+        order: {
+          aggregate: vi.fn()
+            .mockResolvedValueOnce({ _sum: { totalAmount: 500000 } })
+            .mockResolvedValueOnce({ _sum: { totalAmount: 19500000 } }),
+          count: vi.fn().mockResolvedValue(1),
+        },
+      }
 
-      const exceedsMonthly = existingMonthlySpend + incomingOrderAmount > monthlySpendLimit
-      expect(exceedsMonthly).toBe(true)
+      await expect(
+        assertAccountSpendLimit(mockTx as unknown as Parameters<typeof assertAccountSpendLimit>[0], 'cust-1', 'merch-1', 800000)
+      ).rejects.toThrow('Order exceeds the buyer account monthly spend limit')
     })
   })
 })

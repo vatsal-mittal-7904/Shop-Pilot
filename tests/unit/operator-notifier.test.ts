@@ -113,4 +113,80 @@ describe('Operator Notifier & Alerting Channels', () => {
     expect(result.dispatched).toBe(0)
     expect(result.failed).toBe(1)
   })
+
+  it('formats Slack Block Kit payload specifically for AUDIT_REPLICATION_FAILURE', () => {
+    const auditPayload: OperatorAlertPayload = {
+      event: 'AUDIT_REPLICATION_FAILURE',
+      severity: 'CRITICAL',
+      timestamp: '2026-09-04T12:00:00.000Z',
+      environment: 'production',
+      alertCount: 1,
+      auditFailure: {
+        entryId: 'entry-999',
+        hash: 'hash-abc-999',
+        reason: 'S3 Object Lock Bucket unreachable',
+        sinkUrl: 'https://s3.amazonaws.com/compliance-bucket',
+      },
+    }
+
+    const slackJson = formatSlackPayload(auditPayload)
+    expect(slackJson.attachments[0].color).toBe('#E53E3E')
+    const header = slackJson.attachments[0].blocks[0]
+    expect(header.text.text).toContain('Audit Ledger Replication Failure')
+  })
+
+  it('formats Discord embed payload specifically for AUDIT_REPLICATION_FAILURE', () => {
+    const auditPayload: OperatorAlertPayload = {
+      event: 'AUDIT_REPLICATION_FAILURE',
+      severity: 'CRITICAL',
+      timestamp: '2026-09-04T12:00:00.000Z',
+      environment: 'production',
+      alertCount: 1,
+      auditFailure: {
+        entryId: 'entry-999',
+        hash: 'hash-abc-999',
+        reason: 'Network socket closed',
+        sinkUrl: 'https://siem.internal/audit',
+      },
+    }
+
+    const discordJson = formatDiscordPayload(auditPayload)
+    expect(discordJson.embeds[0].color).toBe(0xff0000)
+    expect(discordJson.embeds[0].title).toContain('Audit Ledger Replication Failure')
+    expect(discordJson.embeds[0].fields.some((f) => f.name === 'Entry ID')).toBe(true)
+  })
+
+  it('dispatches audit replication alert across all configured channels with HMAC signature', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200 } as unknown as Response)
+    const webhookUrl = 'https://operator.example.com/alerts'
+    const slackWebhookUrl = 'https://hooks.slack.com/services/T00/B00/X00'
+    const secret = 'test-secret'
+
+    const { dispatchAuditReplicationAlert } = await import('@/backend/notifications/operatorNotifier')
+
+    const result = await dispatchAuditReplicationAlert(
+      {
+        entryId: 'entry-critical-1',
+        hash: 'hash-critical-1',
+        reason: 'Remote compliance sink rejected signature',
+        sinkUrl: 'https://compliance.example.com',
+      },
+      {
+        webhookUrl,
+        slackWebhookUrl,
+        alertSecret: secret,
+        fetchImpl: mockFetch as unknown as typeof fetch,
+      }
+    )
+
+    expect(result.dispatched).toBe(2)
+    expect(result.failed).toBe(0)
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+
+    // Verify HMAC signature on the webhook call
+    const webhookCall = mockFetch.mock.calls.find(([url]) => url === webhookUrl)
+    expect(webhookCall).toBeDefined()
+    expect(webhookCall![1].headers['x-operator-alert-signature']).toBeDefined()
+  })
 })
+
