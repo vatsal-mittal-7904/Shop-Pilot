@@ -54,6 +54,11 @@ export function BundleOfferCard({
   const [finalTotal, setFinalTotal] = useState<number | null>(null)
   const [finalDiscount, setFinalDiscount] = useState<number | null>(null)
 
+  const priorCartSubtotal = Math.max(0, bundleSubtotal - addon.price)
+  const currentDiscount = finalDiscount ?? bundleDiscount
+  const discountedAddonPrice = Math.max(0, addon.price - currentDiscount)
+  const displayTotal = finalTotal ?? bundleTotal
+
   async function handleAccept() {
     setState('loading')
     setErrorMessage(null)
@@ -105,22 +110,32 @@ export function BundleOfferCard({
         <div className="min-w-0 flex-1">
           <p className="text-[11px] uppercase tracking-wide text-neutral-400 dark:text-slate-400">Bundle with your {pairedWith}</p>
           <h3 className="truncate text-sm font-medium text-neutral-900 dark:text-white">{addon.name}</h3>
-          <p className="mt-0.5 text-xs text-neutral-500 dark:text-slate-300">{formatInr(addon.price)} add-on &middot; {discountPercent}% bundle discount</p>
+          <p className="mt-0.5 text-xs text-neutral-500 dark:text-slate-300">
+            <span className="line-through text-neutral-400 mr-1">{formatInr(addon.price)}</span>
+            <span className="font-semibold text-green-600 dark:text-emerald-400">{formatInr(discountedAddonPrice)}</span>
+            <span className="ml-1 text-[11px] text-neutral-400 dark:text-slate-400">({discountPercent}% bundle discount)</span>
+          </p>
         </div>
       </div>
 
-      <div className="border-t border-neutral-100 dark:border-[#2b3a5e] px-3 py-2">
+      <div className="border-t border-neutral-100 dark:border-[#2b3a5e] px-3 py-2 space-y-1">
+        {priorCartSubtotal > 0 && (
+          <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-slate-400">
+            <span>Current basket subtotal</span>
+            <span>{formatInr(priorCartSubtotal)}</span>
+          </div>
+        )}
         <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-slate-400">
-          <span>Bundle subtotal</span>
-          <span>{formatInr(bundleSubtotal)}</span>
+          <span>Add-on ({addon.name})</span>
+          <span>+{formatInr(addon.price)}</span>
         </div>
         <div className="flex items-center justify-between text-xs text-green-600 dark:text-emerald-400">
           <span>Bundle discount ({discountPercent}%)</span>
-          <span>-{formatInr(finalDiscount ?? bundleDiscount)}</span>
+          <span>-{formatInr(currentDiscount)}</span>
         </div>
-        <div className="mt-1 flex items-center justify-between text-sm font-semibold text-neutral-900 dark:text-white">
-          <span>New total</span>
-          <span>{formatInr(finalTotal ?? bundleTotal)}</span>
+        <div className="pt-1.5 border-t border-neutral-100 dark:border-[#2b3a5e] flex items-center justify-between text-sm font-semibold text-neutral-900 dark:text-white">
+          <span>New basket total</span>
+          <span>{formatInr(displayTotal)}</span>
         </div>
       </div>
 
@@ -128,7 +143,7 @@ export function BundleOfferCard({
         {state === 'success' && checkoutData ? (
           <div className="space-y-3">
             <p className="rounded-lg bg-green-50 dark:bg-emerald-950/40 border border-emerald-500/20 px-3 py-2 text-center text-sm font-medium text-green-700 dark:text-emerald-300">
-              Bundle added -- new total {formatInr(finalTotal ?? bundleTotal)}
+              Bundle added -- new total {formatInr(displayTotal)}
             </p>
             <CheckoutButton
               orderId={checkoutData.internalOrderId}

@@ -161,3 +161,22 @@ export async function addToCart(customerId: string, merchantId: string, productI
   if (!item) throw new Error('The basket could not be updated. Please try again.')
   return { cartId: cart.id, productId: item.productId, quantity: item.quantity }
 }
+
+/**
+ * Empties all items from the customer's active basket.
+ */
+export async function clearCart() {
+  const { customer } = await requireCustomer()
+  return prisma.$transaction(async (tx) => {
+    const cart = await tx.cart.findFirst({
+      where: { customerId: customer.id, status: 'ACTIVE' },
+      orderBy: { updatedAt: 'desc' },
+    })
+    if (!cart) return { success: true, count: 0 }
+    const result = await tx.cartItem.deleteMany({
+      where: { cartId: cart.id },
+    })
+    return { success: true, count: result.count }
+  })
+}
+

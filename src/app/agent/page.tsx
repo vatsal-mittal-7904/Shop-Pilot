@@ -7,7 +7,7 @@ import { DefaultChatTransport } from 'ai'
 import { useRef, useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { ThemeToggle } from '@/frontend/components/ThemeToggle'
-import { addProductToCart } from '@/backend/actions/cart'
+import { addProductToCart, clearCart } from '@/backend/actions/cart'
 import { ProductCards } from './_components/ProductCards'
 import { BundleOfferCard } from './_components/BundleOfferCard'
 import { UpsellOfferCard } from './_components/UpsellOfferCard'
@@ -426,9 +426,25 @@ export default function AgentSimulation() {
                             </svg>
                             Your Basket
                           </span>
-                          <span className="text-xs font-bold bg-white px-2 py-1 rounded-full text-indigo-700 border border-indigo-200">
-                            {result.items.reduce((sum, item) => sum + item.quantity, 0)} items
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await clearCart()
+                                  setMessages(prev => [...prev, { id: `${Date.now()}-cart-cleared`, role: 'assistant', parts: [{ type: 'text', text: 'I have cleared your shopping basket. How can I assist you next?' }] }])
+                                } catch (e) {
+                                  console.error('Failed to clear cart:', e)
+                                }
+                              }}
+                              className="text-[11px] font-medium text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors underline underline-offset-2 mr-1"
+                            >
+                              Clear
+                            </button>
+                            <span className="text-xs font-bold bg-white px-2 py-1 rounded-full text-indigo-700 border border-indigo-200">
+                              {result.items.reduce((sum, item) => sum + item.quantity, 0)} items
+                            </span>
+                          </div>
                         </div>
                         <div className="divide-y divide-slate-100">
                           {result.items.map((item, itemIdx) => (
@@ -454,6 +470,15 @@ export default function AgentSimulation() {
                           <span className="text-sm font-medium text-slate-600">Subtotal</span>
                           <span className="font-bold text-slate-900 text-base">{(cartTotal / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
                         </div>
+                      </div>
+                    )
+                  }
+
+                  if (toolName === 'clear_basket') {
+                    return (
+                      <div key={toolKey} className="mt-4 p-3 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 rounded-xl text-xs font-medium border border-emerald-200 dark:border-emerald-800/30 flex items-center gap-2">
+                        <span className="text-base">🗑️</span>
+                        <span>{result?.message || 'Your shopping basket has been cleared.'}</span>
                       </div>
                     )
                   }

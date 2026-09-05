@@ -86,8 +86,12 @@ export async function findIntelligentCrossSellCandidate(
   for (const item of cartItems) {
     const staticIds = item.product.complementaryProducts?.filter(id => !cartProductIds.has(id) && !excludedProductIds.has(id)) ?? []
     for (const sid of staticIds) {
+      if (item.product.upgradeProducts?.includes(sid)) continue
       const candidate = await prisma.product.findUnique({ where: { id: sid, merchantId } })
-      if (candidate && candidate.inventory > 0) candidatePool.push({ candidate, sourceProduct: item.product, isStatic: true })
+      if (candidate && candidate.inventory > 0) {
+        if (candidate.category.toLowerCase().trim() === item.product.category.toLowerCase().trim() && candidate.price >= item.product.price) continue
+        candidatePool.push({ candidate, sourceProduct: item.product, isStatic: true })
+      }
     }
   }
 
@@ -129,6 +133,8 @@ export async function findIntelligentCrossSellCandidate(
         where: { id: { in: topCoPurchaseIds }, merchantId, inventory: { gt: 0 } },
       })
       for (const prod of coPurchaseProducts) {
+        if (cartItems.some(item => item.product.upgradeProducts?.includes(prod.id))) continue
+        if (cartItems.some(item => item.product.category.toLowerCase().trim() === prod.category.toLowerCase().trim() && prod.price >= item.product.price)) continue
         if (!candidatePool.some((c) => c.candidate.id === prod.id)) {
           candidatePool.push({ candidate: prod, sourceProduct: cartItems[0].product, isStatic: true })
         }
@@ -146,7 +152,7 @@ export async function findIntelligentCrossSellCandidate(
 
     const orConditions: Prisma.ProductWhereInput[] = [
       { category: { in: targetCats, mode: 'insensitive' } },
-      { tags: { hasSome: [sourceCat, 'accessory', 'bundle', 'addon', 'add-on', ...(item.product.tags ?? [])] } },
+      { tags: { hasSome: [sourceCat, 'accessory', 'bundle', 'addon', 'add-on'] } },
     ]
 
     if (item.product.price > 0) {
@@ -170,6 +176,9 @@ export async function findIntelligentCrossSellCandidate(
     })) || []
     
     for (const dynCandidate of dyn) {
+      if (item.product.upgradeProducts?.includes(dynCandidate.id)) continue
+      if (dynCandidate.category.toLowerCase().trim() === sourceCat && dynCandidate.price >= item.product.price) continue
+      if (item.product.price > 0 && dynCandidate.price > item.product.price) continue
       if (!candidatePool.some(c => c.candidate.id === dynCandidate.id)) {
         candidatePool.push({ candidate: dynCandidate, sourceProduct: item.product, isStatic: false })
       }

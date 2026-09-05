@@ -88,9 +88,9 @@ export function UpsellOfferCard({
   if (state === 'dismissed') return null
 
   return (
-    <div className="w-full max-w-sm rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
+    <div className="w-full max-w-sm rounded-xl border border-neutral-200 dark:border-[#2b3a5e] bg-white dark:bg-[#151f38] shadow-sm overflow-hidden">
       <div className="flex gap-3 p-3">
-        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-100">
+        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-100 dark:bg-slate-800">
           {upgrade.imageUrl ? (
              
             <Image src={upgrade.imageUrl} alt={upgrade.name} fill unoptimized className="object-cover" />
@@ -99,31 +99,35 @@ export function UpsellOfferCard({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] uppercase tracking-wide text-indigo-500 font-bold">Upgrade your {replaces}</p>
-          <h3 className="truncate text-sm font-medium text-neutral-900">{upgrade.name}</h3>
-          <p className="mt-0.5 text-xs text-neutral-500">{formatInr(upgrade.price)} &middot; {discountPercent}% discount</p>
+          <p className="text-[11px] uppercase tracking-wide text-indigo-500 dark:text-indigo-400 font-bold">Upgrade your {replaces}</p>
+          <h3 className="truncate text-sm font-medium text-neutral-900 dark:text-white">{upgrade.name}</h3>
+          <p className="mt-0.5 text-xs text-neutral-500 dark:text-slate-300">
+            <span className="line-through text-neutral-400 mr-1">{formatInr(upgrade.price)}</span>
+            <span className="font-semibold text-green-600 dark:text-emerald-400">{formatInr(upgrade.price - (finalDiscount ?? upsellDiscount))}</span>
+            <span className="ml-1 text-[11px] text-neutral-400 dark:text-slate-400">({discountPercent}% discount)</span>
+          </p>
         </div>
       </div>
 
-      <div className="border-t border-neutral-100 px-3 py-2">
-        <div className="flex items-center justify-between text-xs text-neutral-500">
+      <div className="border-t border-neutral-100 dark:border-[#2b3a5e] px-3 py-2 space-y-1">
+        <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-slate-400">
           <span>Order subtotal after replacement</span>
           <span>{formatInr(upsellSubtotal)}</span>
         </div>
-        <div className="flex items-center justify-between text-xs text-green-600">
+        <div className="flex items-center justify-between text-xs text-green-600 dark:text-emerald-400">
           <span>Upgrade discount ({discountPercent}%)</span>
           <span>-{formatInr(finalDiscount ?? upsellDiscount)}</span>
         </div>
-        <div className="mt-1 flex items-center justify-between text-sm font-semibold text-neutral-900">
+        <div className="pt-1.5 border-t border-neutral-100 dark:border-[#2b3a5e] flex items-center justify-between text-sm font-semibold text-neutral-900 dark:text-white">
           <span>Order total after upgrade</span>
           <span>{formatInr(finalTotal ?? upsellTotal)}</span>
         </div>
       </div>
 
-      <div className="border-t border-neutral-100 p-3">
+      <div className="border-t border-neutral-100 dark:border-[#2b3a5e] p-3">
         {state === 'success' && checkoutData ? (
           <div className="space-y-3">
-            <p className="rounded-lg bg-green-50 px-3 py-2 text-center text-sm font-medium text-green-700">
+            <p className="rounded-lg bg-green-50 dark:bg-emerald-950/40 border border-emerald-500/20 px-3 py-2 text-center text-sm font-medium text-green-700 dark:text-emerald-300">
               Upgrade accepted -- new total {formatInr(finalTotal ?? upsellTotal)}
             </p>
             <CheckoutButton
@@ -139,7 +143,7 @@ export function UpsellOfferCard({
               type="button"
               onClick={handleReject}
               disabled={state === 'loading'}
-              className="flex-1 rounded-lg border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50 disabled:opacity-50"
+              className="flex-1 rounded-lg border border-neutral-200 dark:border-[#2b3a5e] px-3 py-2 text-sm font-medium text-neutral-600 dark:text-slate-300 hover:bg-neutral-50 dark:hover:bg-[#1a2644] disabled:opacity-50 transition-colors"
             >
               No thanks
             </button>
@@ -147,14 +151,14 @@ export function UpsellOfferCard({
               type="button"
               onClick={handleAccept}
               disabled={state === 'loading'}
-              className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60 shadow-sm"
+              className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60 transition-colors"
             >
               {state === 'loading' ? 'Upgrading…' : state === 'error' ? 'Try again' : 'Upgrade item'}
             </button>
           </div>
         )}
         {state === 'error' && errorMessage && (
-          <p className="mt-2 text-center text-xs text-red-600">{errorMessage}</p>
+          <p className="mt-2 text-center text-xs text-red-600 dark:text-red-400">{errorMessage}</p>
         )}
       </div>
     </div>

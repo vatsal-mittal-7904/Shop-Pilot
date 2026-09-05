@@ -100,7 +100,16 @@ export async function acceptRecommendation(recommendationId: string, cartId: str
     let cost = 0
 
     if (recommendation.type === 'CROSS_SELL') {
-      if (!originalProductItem.product.complementaryProducts.includes(recommendedProduct.id) && !originalProductItem.product.relatedProducts.includes(recommendedProduct.id)) {
+      if (originalProductItem.product.upgradeProducts?.includes(recommendedProduct.id)) {
+        throw new Error('Upgrade products cannot be bundled as cross-sell add-ons')
+      }
+
+      const isStaticMatch =
+        originalProductItem.product.complementaryProducts?.includes(recommendedProduct.id) ||
+        originalProductItem.product.relatedProducts?.includes(recommendedProduct.id)
+      const isApprovedAction = authorizedAction && authorizedAction.status === 'APPROVED'
+
+      if (!isStaticMatch && !isApprovedAction) {
         throw new Error('These products are no longer complementary')
       }
 

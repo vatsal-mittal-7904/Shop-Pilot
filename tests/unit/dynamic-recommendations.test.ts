@@ -141,4 +141,23 @@ describe('Dynamic Category-Agnostic Recommendation Intelligence', () => {
 
     expect(candidate).toBeNull()
   })
+
+  it('strictly excludes upgrade products and same-category more expensive items from cross-sell candidates', async () => {
+    const coffeeWithUpgrade = {
+      ...coffeeBeans,
+      upgradeProducts: [premiumCoffee.id],
+    }
+
+    // Only premium coffee (same category, higher price, and listed in upgradeProducts) returned
+    mocks.productFindMany.mockResolvedValue([premiumCoffee])
+
+    const candidate = await findIntelligentCrossSellCandidate(
+      merchantId,
+      [{ productId: coffeeWithUpgrade.id, product: coffeeWithUpgrade }],
+      new Set<string>()
+    )
+
+    // Should reject premiumCoffee as a cross-sell candidate
+    expect(candidate).toBeNull()
+  })
 })
