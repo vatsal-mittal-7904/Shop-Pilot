@@ -9,6 +9,14 @@ on:
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
+    env:
+      APP_ENV: demo
+      DATABASE_URL: postgresql://postgres:postgres@localhost:51214/razorpay_integration_test
+      OFFER_BINDING_SECRET: ci_test_offer_binding_secret_12345
+      AUDIT_HMAC_SECRET: ci_test_audit_hmac_secret_123456789
+      RAZORPAY_KEY_ID: rzp_test_mockkey123456789
+      RAZORPAY_KEY_SECRET: mocksecret123456789
+      RAZORPAY_WEBHOOK_SECRET: mockwebhooksecret123456789
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,10 +45,14 @@ jobs:
       - name: Run Integration Tests
         run: |
           docker compose -f docker-compose.test.yml up -d
-          sleep 5
-          DATABASE_URL=postgresql://root:rootpassword@localhost:51215/razorpay_integration_test npx prisma migrate deploy
-          DATABASE_URL=postgresql://root:rootpassword@localhost:51215/razorpay_integration_test npm run test:integration
+          until docker compose -f docker-compose.test.yml exec -T db-test pg_isready -U postgres -d razorpay_integration_test; do
+            echo "Waiting for postgres to be ready..."
+            sleep 1
+          done
+          DATABASE_URL=postgresql://postgres:postgres@localhost:51214/razorpay_integration_test npx prisma migrate deploy
+          DATABASE_URL=postgresql://postgres:postgres@localhost:51214/razorpay_integration_test npm run test:integration
           docker compose -f docker-compose.test.yml down
 
       - name: Production Build
         run: npm run build
+
