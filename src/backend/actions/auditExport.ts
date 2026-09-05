@@ -153,7 +153,7 @@ export async function createAuditExport(customMerchantId?: string) {
   const verification = verifyAuditChain(logs)
 
   const payload = {
-    format: 'merchantos.audit-export.v2',
+    format: 'shop-pilot.audit-export.v2',
     merchantId,
     exportedAt: new Date().toISOString(),
     totalEntries: logs.length,

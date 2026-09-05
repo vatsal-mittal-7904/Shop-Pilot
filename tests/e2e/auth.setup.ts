@@ -4,7 +4,7 @@ import { test as setup, expect } from '@playwright/test'
  * Produces the merchant storageState that merchant.spec.ts runs against.
  *
  * This signs in through the real form on '/' -- which calls the `authenticate`
- * server action and lets it set the merchantos_session cookie -- rather than
+ * server action and lets it set the shoppilot_session cookie -- rather than
  * forging a cookie by hand. That keeps the fixture honest: if the login flow or
  * the session shape changes, this fails loudly here instead of producing a
  * cookie the app quietly rejects further downstream.
@@ -53,7 +53,7 @@ setup('authenticate as merchant', async ({ page }) => {
 
   // The portal is a client component; waiting for its heading means the session
   // survived the navigation rather than just the redirect having been issued.
-  await expect(page.getByRole('heading', { name: /merchantos hub/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /shop-pilot hub/i })).toBeVisible()
 
   await page.context().storageState({ path: MERCHANT_STORAGE_STATE })
 })

@@ -77,7 +77,7 @@ describe('Model Context Protocol (MCP) Agent-to-Agent Commerce Endpoint', () => 
     const res = await GET()
     const data = await res.json()
 
-    expect(data.name).toContain('MerchantOS')
+    expect(data.name).toContain('Shop-Pilot')
     expect(data.protocol).toBe('MCP JSON-RPC 2.0')
     expect(data.capabilities.tools).toBe(true)
     expect(data.tools).toHaveLength(5)

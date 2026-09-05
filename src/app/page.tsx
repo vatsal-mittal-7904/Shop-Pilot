@@ -59,7 +59,7 @@ export default function Home() {
         {/* Hero Text at Bottom Left matching the screenshot's vibe */}
         <div className="absolute bottom-16 left-12 right-12 z-10 text-white">
           <h2 className="text-4xl font-semibold leading-tight mb-6 max-w-2xl drop-shadow-sm">
-            Join the future of agentic commerce with Razorpay MerchantOS.
+            Join the future of agentic commerce with Razorpay Shop-Pilot.
           </h2>
           <div className="flex gap-6 text-sm font-medium text-gray-200">
             <span className="flex items-center gap-2">
@@ -107,7 +107,7 @@ export default function Home() {
           </div>
 
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 tracking-wide">
-            Welcome to <span className="text-slate-900 dark:text-white font-bold">Razorpay MerchantOS</span>
+            Welcome to <span className="text-slate-900 dark:text-white font-bold">Razorpay Shop-Pilot</span>
           </p>
           
           <h1 className="text-3xl font-semibold text-[#0B1221] dark:text-white mb-8 leading-[1.2] tracking-tight">

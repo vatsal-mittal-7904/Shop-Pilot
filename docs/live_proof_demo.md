@@ -3,8 +3,8 @@
 This guide explains how to demonstrate **Phase 3: One Meaningful Failure** to the judges. It proves that the system gracefully handles Razorpay webhook failures (dropped or delayed network packets) without leaving the customer in limbo or falsely confirming an unpaid order.
 
 ## The Setup (The Failure)
-1. **Disable Webhooks**: Temporarily change your Razorpay webhook URL to a broken endpoint in the Razorpay Dashboard (e.g., `https://merchantos-demo.com/api/webhooks/broken`).
-2. **Checkout**: Go through the MerchantOS conversational AI to generate an offer and click checkout.
+1. **Disable Webhooks**: Temporarily change your Razorpay webhook URL to a broken endpoint in the Razorpay Dashboard (e.g., `https://shoppilot-demo.com/api/webhooks/broken`).
+2. **Checkout**: Go through the Shop-Pilot conversational AI to generate an offer and click checkout.
 3. **Pay**: Complete the test payment in the Razorpay UI.
 4. **Observe the Pending State**: Show the judges that the UI still says "Pending/Processing". 
    - *Narration:* "The payment succeeded on Razorpay's end, but the webhook dropped. Notice how our system refuses to blindly trust the client browser and falsely mark this order as paid. It remains pending."

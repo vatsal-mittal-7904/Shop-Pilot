@@ -4,7 +4,7 @@
 
 ### 0:00–0:40 | State the merchant problem and one measurable target
 - **Action:** Open the dashboard.
-- **Narration:** "Merchants lose sales to indecision. MerchantOS converts conversational product discovery into a safe Razorpay checkout, where AI can recommend but cannot move money."
+- **Narration:** "Merchants lose sales to indecision. Shop-Pilot converts conversational product discovery into a safe Razorpay checkout, where AI can recommend but cannot move money."
 - **Proof:** Show the deterministic boundary rule in the system prompt on screen for 5 seconds.
 
 ### 0:40–1:40 | Customer asks a nuanced shopping question

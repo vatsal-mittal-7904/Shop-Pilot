@@ -1,6 +1,6 @@
-# 🚀 Vercel Deployment Guide for MerchantOS
+# 🚀 Vercel Deployment Guide for Shop-Pilot
 
-This guide walk you through deploying **MerchantOS** to **Vercel** with a managed PostgreSQL database (e.g. Neon, Supabase, or Railway Postgres).
+This guide walk you through deploying **Shop-Pilot** to **Vercel** with a managed PostgreSQL database (e.g. Neon, Supabase, or Railway Postgres).
 
 ---
 
@@ -45,7 +45,7 @@ This guide walk you through deploying **MerchantOS** to **Vercel** with a manage
 ## 🛠️ Step 1: Provision a Cloud PostgreSQL Database
 
 ### Using Neon (Recommended):
-1. Sign up at [neon.tech](https://neon.tech) and create a new project (e.g., `merchantos-prod`).
+1. Sign up at [neon.tech](https://neon.tech) and create a new project (e.g., `shoppilot-prod`).
 2. Copy the connection string provided in your Neon dashboard:
    ```text
    postgresql://user:password@ep-cool-cloud.us-east-2.aws.neon.tech/neondb?sslmode=require
@@ -141,7 +141,7 @@ To ensure live payment captures and stockout refunds reconcile in real time:
 
 ## ⏰ Step 6: Vercel Cron Schedule Verification
 
-MerchantOS includes `vercel.json` preconfigured for scheduled maintenance:
+Shop-Pilot includes `vercel.json` preconfigured for scheduled maintenance:
 ```json
 {
   "crons": [
@@ -155,7 +155,7 @@ MerchantOS includes `vercel.json` preconfigured for scheduled maintenance:
 
 - **On Vercel Pro**: Runs every 5 minutes automatically with `Authorization: Bearer <CRON_SECRET>`.
 - **On Vercel Hobby (Free)**: Hobby plans support daily cron jobs. If you are deploying on a Free Hobby plan, change the schedule in `vercel.json` to `"0 0 * * *"` (once daily).
-- **Self-Healing Fallback**: Even without crons, MerchantOS executes opportunistic reconciliation whenever customers checkout or merchants load `/merchant/portal`.
+- **Self-Healing Fallback**: Even without crons, Shop-Pilot executes opportunistic reconciliation whenever customers checkout or merchants load `/merchant/portal`.
 
 ---
 
@@ -185,7 +185,7 @@ curl -X POST https://<your-project>.vercel.app/api/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 ```
-Expected output: Returns JSON-RPC 2.0 list of tools (`merchantos_catalog_search`, `merchantos_create_basket`, etc.).
+Expected output: Returns JSON-RPC 2.0 list of tools (`shoppilot_catalog_search`, `shoppilot_create_basket`, etc.).
 
 ### 3. Verify Frontend & Interactive Workflows
 - Open `https://<your-project>.vercel.app`:

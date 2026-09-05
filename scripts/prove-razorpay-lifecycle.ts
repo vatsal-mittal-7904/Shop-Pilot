@@ -324,7 +324,7 @@ async function runRazorpayProof() {
   fs.mkdirSync(proofDir, { recursive: true })
   const proofArtifactPath = path.join(proofDir, 'razorpay-provider-proof.json')
   const proofData = {
-    format: 'merchantos.razorpay-test-mode-evidence.v3',
+    format: 'shop-pilot.razorpay-test-mode-evidence.v3',
     verifiedAt: new Date().toISOString(),
     verificationType: isDirectOrderPayment
       ? 'LIVE_PROVIDER_ORDER_AND_PAYMENT_CAPTURED_VERIFIED'

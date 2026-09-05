@@ -13,6 +13,10 @@ const MUTATING_TOOLS = new Set([
   'merchantos_add_item',
   'merchantos_request_signed_offer',
   'merchantos_checkout_order',
+  'shoppilot_create_basket',
+  'shoppilot_add_item',
+  'shoppilot_request_signed_offer',
+  'shoppilot_checkout_order',
 ])
 
 function isAuthorizedMcpRequest(req: NextRequest): boolean {
@@ -114,7 +118,7 @@ const TOOLS_MANIFEST = [
 
 export async function GET() {
   return NextResponse.json({
-    name: 'MerchantOS Model Context Protocol (MCP) Server',
+    name: 'Shop-Pilot Model Context Protocol (MCP) Server',
     version: '1.0.0',
     protocol: 'MCP JSON-RPC 2.0',
     description: 'Standardized Agent-to-Agent (A2A) commerce endpoint powering autonomous procurement and policy-guarded Razorpay checkouts.',
@@ -165,7 +169,7 @@ export async function POST(req: NextRequest) {
       result: {
         protocolVersion: '2024-11-05',
         serverInfo: {
-          name: 'MerchantOS Agent Commerce MCP Server',
+          name: 'Shop-Pilot Agent Commerce MCP Server',
           version: '1.0.0',
         },
         capabilities: {

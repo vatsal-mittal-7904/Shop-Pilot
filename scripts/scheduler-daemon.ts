@@ -126,7 +126,7 @@ async function main() {
     : parseInt(process.env.DAEMON_INTERVAL_MS || String(DEFAULT_INTERVAL_MS), 10)
 
   console.log('================================================================================')
-  console.log(' ⚙️  MerchantOS Background Scheduler Daemon')
+  console.log(' ⚙️  Shop-Pilot Background Scheduler Daemon')
   console.log('================================================================================')
   console.log(` Mode: ${isOnce ? 'Single-Pass Run (--once)' : `Continuous Daemon (Interval: ${intervalMs}ms)`}`)
   console.log(` Process PID: ${process.pid}\n`)

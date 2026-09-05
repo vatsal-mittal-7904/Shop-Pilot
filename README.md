@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>🛍️ MerchantOS</h1>
+  <h1>🛍️ Shop-Pilot</h1>
   <p><b>An AI-native commerce platform with deterministic financial guardrails.</b></p>
   
   [![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -11,7 +11,7 @@
 
 <br/>
 
-> 🎯 **Core Concept**: MerchantOS converts conversational product discovery into a safe Razorpay checkout, where AI can recommend but cannot move money.
+> 🎯 **Core Concept**: Shop-Pilot converts conversational product discovery into a safe Razorpay checkout, where AI can recommend but cannot move money.
 
 > 🏆 Built for the **Razorpay Agentic Commerce Hackathon**.
 
@@ -31,8 +31,8 @@
 To clone, set up, and execute the interactive end-to-end commerce lifecycle:
 
 ```bash
-git clone https://github.com/vatsal-mittal-7904/razorPay_Project.git merchantos
-cd merchantos
+git clone https://github.com/vatsal-mittal-7904/razorPay_Project.git shop-pilot
+cd shop-pilot
 npm install
 npx prisma migrate deploy
 npx prisma db seed
@@ -119,7 +119,7 @@ LLMs are strong at multi-turn conversational reasoning and unpredictable at fina
 ### 8. Append-Only Audit Ledger & Off-DB WORM Replication ([`auditChainVerifier.ts`](src/backend/security/auditChainVerifier.ts), [`wormStorageTransmitter.ts`](src/backend/security/wormStorageTransmitter.ts))
 - **Threat Model & Security Boundaries**:
   - **Application & SQL Layer Defense (In-DB)**: PostgreSQL engine triggers strictly prohibit `UPDATE`, `DELETE`, and `TRUNCATE` on `AuditLog` and `AuditExport`. Advisory transaction locks serialize SHA-256 chain links sequentially per merchant with HMAC-SHA256 signatures, preventing tampering from application exploits or SQL injection.
-  - **Privileged Superuser Defense (Off-DB WORM)**: To protect against a compromised database root credentials or malicious DBA, MerchantOS executes dual-write off-database replication (`wormStorageTransmitter.ts`) to external append-only SIEM endpoints / cloud object storage. **If external replication fails, it immediately fires an urgent `AUDIT_REPLICATION_FAILURE` alarm across Slack, Discord, and operator webhooks.**
+  - **Privileged Superuser Defense (Off-DB WORM)**: To protect against a compromised database root credentials or malicious DBA, Shop-Pilot executes dual-write off-database replication (`wormStorageTransmitter.ts`) to external append-only SIEM endpoints / cloud object storage. **If external replication fails, it immediately fires an urgent `AUDIT_REPLICATION_FAILURE` alarm across Slack, Discord, and operator webhooks.**
 
 ### 9. Lost-Webhook Recovery & Prioritized Captured Reconciliation ([`paymentReconciliation.ts`](src/backend/actions/paymentReconciliation.ts))
 - **Preferential Capture Selection**: When reconciling orders where multiple payment attempts were made, the worker preferentially selects captured payments over failed attempts, ensuring a lost webhook on a retry attempt never incorrectly marks the order failed.
@@ -148,12 +148,12 @@ LLMs are strong at multi-turn conversational reasoning and unpredictable at fina
 - **Universal Cross-Sell & Upsell Discovery**: Identifies complementary add-ons and tier upgrades across all product categories using margin health, inventory depth, and optimal price ratios (10%–40% for cross-sells, 1.1x–2.2x for upsells) with fallback to natural price-bracket discovery.
 
 ### 15. Model Context Protocol (MCP) Server Endpoint ([`route.ts`](src/app/api/mcp/route.ts))
-- Standardized **JSON-RPC 2.0 MCP interface** exposing 5 production-grade merchant tools:
-  1. `merchantos_catalog_search`: Semantic and keyword product lookup with inventory and pricing.
-  2. `merchantos_create_basket`: Initializes an isolated customer cart session (guarded by M2M API key authorization).
-  3. `merchantos_add_item`: Adds product units into the cart with inventory verification.
-  4. `merchantos_request_signed_offer`: Generates HMAC-SHA256 sealed price-guaranteed offer and persists cryptographic hash snapshot.
-  5. `merchantos_checkout_order`: Cryptographically validates offer HMAC against persisted snapshot, verifies live basket contents match, asserts buyer account spend ceilings and rolling 15-minute velocity, transitions offer to `ACCEPTED`, creates Razorpay provider checkout order (`mso_<orderId>`), and records immutable audit log entry.
+- Standardized **JSON-RPC 2.0 MCP interface** exposing 5 production-grade merchant tools (supported via `shoppilot_*` and backward-compatible `merchantos_*` names):
+  1. `shoppilot_catalog_search`: Semantic and keyword product lookup with inventory and pricing.
+  2. `shoppilot_create_basket`: Initializes an isolated customer cart session (guarded by M2M API key authorization).
+  3. `shoppilot_add_item`: Adds product units into the cart with inventory verification.
+  4. `shoppilot_request_signed_offer`: Generates HMAC-SHA256 sealed price-guaranteed offer and persists cryptographic hash snapshot.
+  5. `shoppilot_checkout_order`: Cryptographically validates offer HMAC against persisted snapshot, verifies live basket contents match, asserts buyer account spend ceilings and rolling 15-minute velocity, transitions offer to `ACCEPTED`, creates Razorpay provider checkout order (`mso_<orderId>`), and records immutable audit log entry.
 - Enables external autonomous buyer agents (Claude Desktop, Cursor, enterprise procurement agents) to transact over standardized machine-to-machine protocols with strict financial guardrails.
 
 ---
@@ -169,7 +169,7 @@ LLMs are strong at multi-turn conversational reasoning and unpredictable at fina
 ### 1. Configure Environment Variables
 Place `DATABASE_URL` in `.env`:
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/merchantos"
+DATABASE_URL="postgresql://user:password@localhost:5432/shoppilot"
 ```
 
 Configure application secrets in `.env.local`:
@@ -212,7 +212,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## 🌐 Production Deployment on Vercel
 
-MerchantOS is fully optimized for one-click deployment on **Vercel** paired with serverless PostgreSQL (e.g., [Neon](https://neon.tech) or [Supabase](https://supabase.com)).
+Shop-Pilot is fully optimized for one-click deployment on **Vercel** paired with serverless PostgreSQL (e.g., [Neon](https://neon.tech) or [Supabase](https://supabase.com)).
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvatsal-mittal-7904%2FrazorPay_Project)
 
@@ -229,7 +229,7 @@ For complete instructions, environment variables configuration, and webhook setu
 
 ## 🛠️ Production Background Daemon & Verification Tools
 
-MerchantOS includes dedicated production runners and CLI verification utilities:
+Shop-Pilot includes dedicated production runners and CLI verification utilities:
 
 ```bash
 # 1. Run Background Scheduler Daemon (Payment reconciliation, refund outbox, cart sweep, order expiry):
@@ -261,7 +261,7 @@ tsx --env-file=.env.local --env-file=.env scripts/verify-scheduler-health.ts
 
 ## 🧪 Comprehensive Test Suite
 
-MerchantOS features a multi-tiered test matrix covering 100% of financial, authorization, and lifecycle invariants:
+Shop-Pilot features a multi-tiered test matrix covering 100% of financial, authorization, and lifecycle invariants:
 
 1. **Hermetic Unit Test Suite (`npm run test:unit`)**:
    - **234 unit tests** across **51 test files** covering Model Context Protocol (MCP) tool execution, rolling 15-minute spend velocity throttling, Abramowitz & Stegun error function p-value calculations, deterministic discount authorization, HMAC basket binding, bounded LRU rate limiting, money-safety matrices, cross-provider streaming AI failover (Gemini $\to$ Groq), multi-tier prompt shield, recommendation intelligence, external WORM sink alarming, pluggable customer DLQ email delivery, and conversation sliding windows. Executes hermetically with 100% pass rate in < 8s.

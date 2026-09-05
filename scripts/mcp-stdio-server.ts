@@ -1,10 +1,10 @@
 #!/usr/bin/env tsx
 /**
- * MerchantOS Model Context Protocol (MCP) Stdio Server
+ * Shop-Pilot Model Context Protocol (MCP) Stdio Server
  *
  * Standard JSON-RPC 2.0 stdio server enabling external AI agents
  * (Claude Desktop, Cursor, and enterprise procurement workers) to
- * interact with the MerchantOS catalog and execute policy-guarded
+ * interact with the Shop-Pilot catalog and execute policy-guarded
  * checkouts over standard process I/O.
  *
  * Usage:
@@ -14,7 +14,7 @@
  * Configure in claude_desktop_config.json:
  * {
  *   "mcpServers": {
- *     "merchantos": {
+ *     "shoppilot": {
  *       "command": "npm",
  *       "args": ["run", "mcp:stdio"],
  *       "env": {
@@ -33,9 +33,9 @@ import { sanitizeCatalogProduct } from '../src/backend/utils/untrustedToolData'
 import { assertAccountSpendLimit } from '../src/backend/actions/accountBudget'
 import { razorpay } from '../src/backend/services/razorpay'
 
-const TOOLS_MANIFEST = [
+const CORE_TOOLS = [
   {
-    name: 'merchantos_catalog_search',
+    name: 'catalog_search',
     description: 'Searches the merchant catalog for products matching a natural language query, category, or budget ceiling. Returns sanitized machine-readable product records.',
     inputSchema: {
       type: 'object',
@@ -48,7 +48,7 @@ const TOOLS_MANIFEST = [
     },
   },
   {
-    name: 'merchantos_create_basket',
+    name: 'create_basket',
     description: 'Creates or retrieves an active shopping cart for an authenticated customer and merchant.',
     inputSchema: {
       type: 'object',
@@ -60,7 +60,7 @@ const TOOLS_MANIFEST = [
     },
   },
   {
-    name: 'merchantos_add_item',
+    name: 'add_item',
     description: 'Adds an in-stock product to a customer basket with inventory pre-validation.',
     inputSchema: {
       type: 'object',
@@ -73,7 +73,7 @@ const TOOLS_MANIFEST = [
     },
   },
   {
-    name: 'merchantos_request_signed_offer',
+    name: 'request_signed_offer',
     description: 'Generates an immutable HMAC-SHA256 sealed checkout offer from the current basket. Tamper-evident and time-bounded.',
     inputSchema: {
       type: 'object',
@@ -86,7 +86,7 @@ const TOOLS_MANIFEST = [
     },
   },
   {
-    name: 'merchantos_checkout_order',
+    name: 'checkout_order',
     description: 'Verifies the cryptographic HMAC basket binding in constant time, asserts account spend velocity and limits, and generates an authentic Razorpay checkout order.',
     inputSchema: {
       type: 'object',
@@ -97,6 +97,11 @@ const TOOLS_MANIFEST = [
       required: ['customerId', 'offerId'],
     },
   },
+]
+
+const TOOLS_MANIFEST = [
+  ...CORE_TOOLS.map((t) => ({ ...t, name: `shoppilot_${t.name}` })),
+  ...CORE_TOOLS.map((t) => ({ ...t, name: `merchantos_${t.name}` })),
 ]
 
 function sendJsonRpc(response: Record<string, unknown>) {
@@ -112,7 +117,9 @@ async function handleToolCall(toolName: string, args: Record<string, unknown>) {
     isDbAvailable = false
   }
 
-  if (toolName === 'merchantos_catalog_search') {
+  const normalizedTool = toolName.replace(/^(merchantos_|shoppilot_)/, '')
+
+  if (normalizedTool === 'catalog_search') {
     const query = typeof args.query === 'string' ? args.query.trim() : undefined
     const category = typeof args.category === 'string' ? args.category.trim() : undefined
     const maxPrice = typeof args.maxPricePaise === 'number' ? args.maxPricePaise : undefined
@@ -180,7 +187,7 @@ async function handleToolCall(toolName: string, args: Record<string, unknown>) {
     }
   }
 
-  if (toolName === 'merchantos_create_basket') {
+  if (normalizedTool === 'create_basket') {
     const customerId = (args.customerId as string) || 'demo-customer-uuid'
     const merchantId = (args.merchantId as string) || 'demo-merchant-uuid'
 
@@ -213,7 +220,7 @@ async function handleToolCall(toolName: string, args: Record<string, unknown>) {
     }
   }
 
-  if (toolName === 'merchantos_add_item') {
+  if (normalizedTool === 'add_item') {
     const cartId = args.cartId as string
     const productId = args.productId as string
     const quantity = typeof args.quantity === 'number' && args.quantity > 0 ? args.quantity : 1
@@ -251,7 +258,7 @@ async function handleToolCall(toolName: string, args: Record<string, unknown>) {
     }
   }
 
-  if (toolName === 'merchantos_request_signed_offer') {
+  if (normalizedTool === 'request_signed_offer') {
     const customerId = (args.customerId as string) || 'demo-customer-uuid'
     const merchantId = (args.merchantId as string) || 'demo-merchant-uuid'
     const cartId = args.cartId as string
@@ -333,7 +340,7 @@ async function handleToolCall(toolName: string, args: Record<string, unknown>) {
     }
   }
 
-  if (toolName === 'merchantos_checkout_order') {
+  if (normalizedTool === 'checkout_order') {
     const customerId = args.customerId as string
     const offerId = args.offerId as string
 
@@ -516,7 +523,7 @@ async function startServer() {
         result: {
           protocolVersion: '2024-11-05',
           serverInfo: {
-            name: 'MerchantOS Agent Commerce MCP Server (stdio)',
+            name: 'Shop-Pilot Agent Commerce MCP Server (stdio)',
             version: '1.0.0',
           },
           capabilities: {

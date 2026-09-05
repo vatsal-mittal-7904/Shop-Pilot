@@ -177,13 +177,13 @@ export default function MerchantDashboard() {
     }
   }
 
-  if (loading || !data) return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Loading MerchantOS AI...</div>
+  if (loading || !data) return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Loading Shop-Pilot AI...</div>
 
   return (
     <div className="min-h-screen bg-transparent pt-16 transition-colors text-slate-800 dark:text-slate-200 font-sans">
       <header className="bg-indigo-900/90 dark:bg-[#0B1221]/90 backdrop-blur-md text-white px-8 py-5 border-b border-indigo-800 dark:border-gray-800 flex items-center justify-between sticky top-0 z-10 shadow-md">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">MerchantOS AI <span className="font-light text-indigo-300">| Growth Dashboard</span></h1>
+          <h1 className="text-2xl font-bold tracking-tight">Shop-Pilot AI <span className="font-light text-indigo-300">| Growth Dashboard</span></h1>
         </div>
         <div className="flex items-center gap-4">
           <Link href="/merchant/analytics" className="text-sm font-medium text-indigo-200 hover:text-white">Analytics</Link>

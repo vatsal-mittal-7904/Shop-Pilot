@@ -7,7 +7,7 @@ import { RefundStatus } from '@prisma/client'
 
 async function runSystemRepair() {
   console.log('\n' + '='.repeat(80))
-  console.log(' 🩺 MerchantOS Self-Healing System Diagnostic & State Repair Tool')
+  console.log(' 🩺 Shop-Pilot Self-Healing System Diagnostic & State Repair Tool')
   console.log('='.repeat(80) + '\n')
 
   const stats = {

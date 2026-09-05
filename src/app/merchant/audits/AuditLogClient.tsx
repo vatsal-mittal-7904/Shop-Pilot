@@ -130,7 +130,7 @@ export default function AuditLogClient({
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `merchantos-audit-signed-${Date.now()}.json`
+      a.download = `shop-pilot-audit-signed-${Date.now()}.json`
       document.body.appendChild(a)
       a.click()
       a.remove()

@@ -24,7 +24,7 @@ const c = {
 }
 
 export async function verifySchedulerHealth() {
-  console.log(`${c.bold}${c.cyan}=== MerchantOS Background Recovery & Scheduler Health Probe ===${c.reset}\n`)
+  console.log(`${c.bold}${c.cyan}=== Shop-Pilot Background Recovery & Scheduler Health Probe ===${c.reset}\n`)
 
   let isDbAvailable = false
   try {

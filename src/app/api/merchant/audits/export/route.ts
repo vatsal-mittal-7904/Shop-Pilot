@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       return new Response(csv, {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="merchantos-audit-${Date.now()}.csv"`,
+          'Content-Disposition': `attachment; filename="shop-pilot-audit-${Date.now()}.csv"`,
         },
       })
     }
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     return Response.json(auditExport, {
       headers: {
         'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="merchantos-audit-${auditExport.id}.json"`,
+        'Content-Disposition': `attachment; filename="shop-pilot-audit-${auditExport.id}.json"`,
       },
     })
   } catch (error) {
@@ -52,7 +52,7 @@ export async function POST() {
     return Response.json(auditExport, {
       headers: {
         'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="merchantos-audit-${auditExport.id}.json"`,
+        'Content-Disposition': `attachment; filename="shop-pilot-audit-${auditExport.id}.json"`,
       },
     })
   } catch (error) {

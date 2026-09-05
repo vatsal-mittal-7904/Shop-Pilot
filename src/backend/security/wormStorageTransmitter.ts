@@ -1,5 +1,5 @@
 /**
- * MerchantOS Pluggable External Audit Sink Interface
+ * Shop-Pilot Pluggable External Audit Sink Interface
  *
  * Transmits cryptographic audit signatures and entry hashes to an off-database
  * append-only sink immediately after database commits.

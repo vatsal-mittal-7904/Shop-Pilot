@@ -1,4 +1,4 @@
-name: MerchantOS CI Pipeline
+name: Shop-Pilot CI Pipeline
 
 on:
   push:

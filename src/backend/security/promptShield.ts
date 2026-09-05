@@ -1,5 +1,5 @@
 /**
- * MerchantOS Multi-Tier Anti-Malware, Prompt Injection & Payload Defense Shield
+ * Shop-Pilot Multi-Tier Anti-Malware, Prompt Injection & Payload Defense Shield
  *
  * Tier 1: Deterministic Heuristic & Pattern Pre-Filter (<1ms, zero token cost).
  *         Catches overt jailbreaks, script injection (XSS), and financial bypass commands.
@@ -90,7 +90,7 @@ export async function inspectThreat(message: string): Promise<ThreatInspectionRe
       isBlocked: true,
       threatType: 'PROMPT_INJECTION',
       reason: 'Deterministic system instruction override attempt detected.',
-      deflectionResponse: 'I am MerchantOS Commerce Advisor. I can only assist with exploring our catalog and finding the best eligible bundle offers according to store policy.',
+      deflectionResponse: 'I am Shop-Pilot Commerce Advisor. I can only assist with exploring our catalog and finding the best eligible bundle offers according to store policy.',
     }
   }
 
@@ -110,7 +110,7 @@ export async function inspectThreat(message: string): Promise<ThreatInspectionRe
     }))
 
     if (object.isBlocked) {
-      let deflectionResponse = 'I am MerchantOS Commerce Advisor. I can only assist with exploring our catalog and finding the best eligible bundle offers according to store policy.'
+      let deflectionResponse = 'I am Shop-Pilot Commerce Advisor. I can only assist with exploring our catalog and finding the best eligible bundle offers according to store policy.'
       if (object.threatType === 'FINANCIAL_EXPLOIT') {
         deflectionResponse = 'All discounts and prices are deterministically bounded by store policy. I cannot manually override pricing or apply unauthorized discounts.'
       } else if (object.threatType === 'MALWARE_OR_SCRIPT_PAYLOAD') {

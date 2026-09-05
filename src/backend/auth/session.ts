@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { cookies, headers } from 'next/headers'
 import { prisma } from '@/backend/db/prisma'
 
-const SESSION_COOKIE = 'merchantos_session'
+const SESSION_COOKIE = 'shoppilot_session'
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7
 
 export async function createSession(userId: string) {
@@ -21,14 +21,15 @@ export async function createSession(userId: string) {
 
 export async function destroySession() {
   const store = await cookies()
-  const token = store.get(SESSION_COOKIE)?.value
+  const token = store.get(SESSION_COOKIE)?.value || store.get('merchantos_session')?.value
   if (token) await prisma.session.deleteMany({ where: { token } })
   store.delete(SESSION_COOKIE)
+  store.delete('merchantos_session')
 }
 
 export async function getCurrentSession() {
   const store = await cookies()
-  let token = store.get(SESSION_COOKIE)?.value
+  let token = store.get(SESSION_COOKIE)?.value || store.get('merchantos_session')?.value
 
   if (!token) {
     const headersList = await headers()

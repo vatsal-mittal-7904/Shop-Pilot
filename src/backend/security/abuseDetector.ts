@@ -1,5 +1,5 @@
 /**
- * MerchantOS Abuse & Spam Defense Detector
+ * Shop-Pilot Abuse & Spam Defense Detector
  *
  * Implements progressive abuse scoring, rapid-fire spam detection, and
  * quarantine cooldowns for offending client IPs or customer sessions.

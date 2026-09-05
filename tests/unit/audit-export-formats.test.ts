@@ -91,7 +91,7 @@ describe('Multi-Format Audit Export & Regulatory Compliance Suite', () => {
 
     expect(snapshot.id).toBe('export_id_123')
     expect(snapshot.signature).toMatch(/^[a-f0-9]{64}$/)
-    expect(snapshot.payload.format).toBe('merchantos.audit-export.v2')
+    expect(snapshot.payload.format).toBe('shop-pilot.audit-export.v2')
     expect(snapshot.payload.totalEntries).toBe(2)
     expect(snapshot.payload.verificationScorecard).toBeDefined()
     expect(snapshot.payload.entries).toHaveLength(2)

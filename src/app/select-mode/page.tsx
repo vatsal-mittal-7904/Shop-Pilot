@@ -29,7 +29,7 @@ export default async function SelectModePage() {
               R
             </div>
             <div>
-              <span className="font-bold tracking-tight text-base sm:text-lg">MerchantOS</span>
+              <span className="font-bold tracking-tight text-base sm:text-lg">Shop-Pilot</span>
               <span className="ml-2 text-[11px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60">
                 Track 01 • Agentic Commerce
               </span>
@@ -196,7 +196,7 @@ export default async function SelectModePage() {
 
         {/* Informative Footer Banner */}
         <div className="mt-12 text-center text-xs text-slate-500 dark:text-slate-400">
-          <span>Both experiences are secured by Razorpay MerchantOS and backed by real-time cryptographic audit logging.</span>
+          <span>Both experiences are secured by Razorpay Shop-Pilot and backed by real-time cryptographic audit logging.</span>
         </div>
       </main>
     </div>

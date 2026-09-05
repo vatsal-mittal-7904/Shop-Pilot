@@ -65,5 +65,7 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 merchantos-audit-export-*.json
+shop-pilot-audit-export-*.json
+shop-pilot-audit-trail-*.csv
 *.log
 .pgdata/

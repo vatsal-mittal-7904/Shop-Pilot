@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * MerchantOS Cryptographic Audit Export & Verification CLI
+ * Shop-Pilot Cryptographic Audit Export & Verification CLI
  *
  * Verifies the append-only AuditLog hash chain from GENESIS to chainHead,
  * exports signed snapshot artifacts, and proves non-repudiation via HMAC signatures.
@@ -44,7 +44,7 @@ async function runAuditCli() {
   const targetFile = args.find((a) => a.endsWith('.json'))
 
   console.log(`\n${c.bold}${c.cyan}================================================================================${c.reset}`)
-  console.log(`${c.bold}${c.cyan} 🔐 MerchantOS Cryptographic Audit Ledger & Non-Repudiation Verifier${c.reset}`)
+  console.log(`${c.bold}${c.cyan} 🔐 Shop-Pilot Cryptographic Audit Ledger & Non-Repudiation Verifier${c.reset}`)
   console.log(`${c.bold}${c.cyan}================================================================================${c.reset}\n`)
 
   const secret =
@@ -240,13 +240,13 @@ async function runAuditCli() {
   if (isCsvExport) {
     console.log(`\n  ${c.dim}[Generating RFC-4180 CSV Audit Trail...]${c.reset}`)
     const csvContent = await exportAuditLedgerCSV({ merchantId: merchant.id })
-    const csvPath = path.join(process.cwd(), `merchantos-audit-trail-${merchant.id.slice(0, 8)}-${Date.now()}.csv`)
+    const csvPath = path.join(process.cwd(), `shop-pilot-audit-trail-${merchant.id.slice(0, 8)}-${Date.now()}.csv`)
     fs.writeFileSync(csvPath, csvContent, 'utf-8')
     console.log(`  ${c.green}✔ Exported RFC-4180 CSV audit trail to:${c.reset} ${csvPath}`)
   } else if (!isVerifyOnly) {
     console.log(`\n  ${c.dim}[Generating immutable signed AuditExport snapshot...]${c.reset}`)
     const payload = {
-      format: 'merchantos.audit-export.v1',
+      format: 'shop-pilot.audit-export.v1',
       merchantId: merchant.id,
       exportedAt: new Date().toISOString(),
       entries: activeLogs.map((log) => ({ ...log, createdAt: log.createdAt.toISOString() })),
@@ -264,7 +264,7 @@ async function runAuditCli() {
       },
     })
 
-    const exportPath = path.join(process.cwd(), `merchantos-audit-export-${exportRecord.id.slice(0, 8)}.json`)
+    const exportPath = path.join(process.cwd(), `shop-pilot-audit-export-${exportRecord.id.slice(0, 8)}.json`)
     fs.writeFileSync(
       exportPath,
       JSON.stringify(

@@ -28,7 +28,7 @@ function computeHmac(rawBody: string, secret: string): string {
 
 async function runWebhookTest() {
   console.log(`\n${c.bold}${c.blue}================================================================================${c.reset}`)
-  console.log(`${c.bold}${c.blue} 🛡️  MerchantOS Razorpay Webhook Live Security & Settlement Verifier${c.reset}`)
+  console.log(`${c.bold}${c.blue} 🛡️  Shop-Pilot Razorpay Webhook Live Security & Settlement Verifier${c.reset}`)
   console.log(`${c.bold}${c.blue}================================================================================${c.reset}\n`)
 
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'vatsal07muskan08radhika10gaurav11'

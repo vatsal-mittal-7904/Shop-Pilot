@@ -1,6 +1,6 @@
 # AI Authority Boundary
 
-This document explicitly defines the boundaries between Generative AI (stochastic) and Core Commerce (deterministic) within MerchantOS. By isolating these domains, we guarantee that the platform remains financially secure even under adversarial conditions (e.g., prompt injection, model hallucinations).
+This document explicitly defines the boundaries between Generative AI (stochastic) and Core Commerce (deterministic) within Shop-Pilot. By isolating these domains, we guarantee that the platform remains financially secure even under adversarial conditions (e.g., prompt injection, model hallucinations).
 
 ## 1. Legitimate Scope of AI (Allowed Actions)
 The AI Agent operates strictly as an advisor, router, and explainer. Its authority is limited to:

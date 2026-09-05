@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * MerchantOS Interactive End-to-End Commerce & Guardrails Demo Runner
+ * Shop-Pilot Interactive End-to-End Commerce & Guardrails Demo Runner
  *
  * Demonstrates the full lifecycle:
  * 1. AI Product Search & Conversational Basket Addition
@@ -703,7 +703,7 @@ ${c.dim}  Razorpay Agentic Commerce Hackathon — Live Interactive Journey${c.re
   await pause()
 
   // --- STAGE 7: Summary & Platform Verification Scorecard ---
-  printHeader('🏆 MerchantOS Platform Verification Scorecard', 'All 7 Commerce & Financial Invariants Successfully Proven')
+  printHeader('🏆 Shop-Pilot Platform Verification Scorecard', 'All 7 Commerce & Financial Invariants Successfully Proven')
 
   const scorecard = [
     { Invariant: '1. Deterministic Discount Engine', Verdict: 'PASSED', Guarantee: 'LLM cannot invent discounts; checked against MerchantPolicy rows.' },

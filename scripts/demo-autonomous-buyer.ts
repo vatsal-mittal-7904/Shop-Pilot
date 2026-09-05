@@ -2,7 +2,7 @@
 /**
  * Autonomous Buyer Agent CLI Runner
  *
- * Demonstrates Agent-to-Agent (A2A) commerce against MerchantOS:
+ * Demonstrates Agent-to-Agent (A2A) commerce against Shop-Pilot:
  * 1. Autonomous Agent Initialization & Spend Ceiling Assertion
  * 2. Catalog Discovery & Multi-Attribute Semantic Filtering
  * 3. Autonomous Basket Composition

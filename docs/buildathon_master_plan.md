@@ -1,6 +1,6 @@
 # Razorpay Buildathon: Master Execution Plan
 
-This document synthesizes the complete, 4-goal strategic plan to elevate MerchantOS from a hackathon prototype to a production-grade, winner-caliber platform.
+This document synthesizes the complete, 4-goal strategic plan to elevate Shop-Pilot from a hackathon prototype to a production-grade, winner-caliber platform.
 
 ---
 
@@ -62,7 +62,7 @@ Rename the ledger feature to **"append-only, tamper-evident Postgres audit ledge
 **Goal:** Make judges see proof, not architecture slides or security vocabulary.
 
 ### Phase 1 — Narrow the narrative
-Use one crisp claim: *"MerchantOS converts conversational product discovery into a safe Razorpay checkout, where AI can recommend but cannot move money."*
+Use one crisp claim: *"Shop-Pilot converts conversational product discovery into a safe Razorpay checkout, where AI can recommend but cannot move money."*
 
 ### Phase 2 — Prepare a six-minute evidence-led demo
 - **0:00–0:40:** State merchant problem & measurable target.

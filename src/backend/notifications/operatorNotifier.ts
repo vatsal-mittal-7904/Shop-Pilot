@@ -34,7 +34,7 @@ export function formatSlackPayload(payload: OperatorAlertPayload) {
               type: 'header',
               text: {
                 type: 'plain_text',
-                text: `🚨 MerchantOS Audit Ledger Replication Failure [CRITICAL]`,
+                text: `🚨 Shop-Pilot Audit Ledger Replication Failure [CRITICAL]`,
                 emoji: true,
               },
             },
@@ -91,7 +91,7 @@ export function formatSlackPayload(payload: OperatorAlertPayload) {
             type: 'header',
             text: {
               type: 'plain_text',
-              text: `${emoji} MerchantOS Queue Alert [${payload.severity}]`,
+              text: `${emoji} Shop-Pilot Queue Alert [${payload.severity}]`,
               emoji: true,
             },
           },
@@ -129,7 +129,7 @@ export function formatDiscordPayload(payload: OperatorAlertPayload) {
     return {
       embeds: [
         {
-          title: `🚨 MerchantOS Audit Ledger Replication Failure [CRITICAL]`,
+          title: `🚨 Shop-Pilot Audit Ledger Replication Failure [CRITICAL]`,
           color: 0xff0000,
           timestamp: payload.timestamp,
           fields: [
@@ -165,7 +165,7 @@ export function formatDiscordPayload(payload: OperatorAlertPayload) {
   return {
     embeds: [
       {
-        title: `${isCritical ? '🚨' : '⚠️'} MerchantOS Queue Alert [${payload.severity}]`,
+        title: `${isCritical ? '🚨' : '⚠️'} Shop-Pilot Queue Alert [${payload.severity}]`,
         color,
         timestamp: payload.timestamp,
         fields: (payload.alerts || []).map((a) => ({

@@ -104,7 +104,7 @@ describe('Cryptographic Audit Chain & Hash Content Verifier', () => {
 
   it('cryptographically verifies HMAC-SHA256 non-repudiation signature for audit snapshots', () => {
     const payload = {
-      format: 'merchantos.audit-export.v1',
+      format: 'shop-pilot.audit-export.v1',
       merchantId: 'merchant-test-1',
       entries: createValidChain(3),
     }
@@ -118,7 +118,7 @@ describe('Cryptographic Audit Chain & Hash Content Verifier', () => {
 
   it('rejects tampered snapshot payloads with signature mismatch', () => {
     const payload = {
-      format: 'merchantos.audit-export.v1',
+      format: 'shop-pilot.audit-export.v1',
       merchantId: 'merchant-test-1',
       entries: createValidChain(2),
     }

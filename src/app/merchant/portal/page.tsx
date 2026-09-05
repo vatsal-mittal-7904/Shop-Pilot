@@ -8,7 +8,7 @@ export default function MerchantPortalSelector() {
 
       <div className="text-center mb-12 relative z-10">
         <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-4">
-          Merchant<span className="text-indigo-600 dark:text-blue-400">OS</span> Hub
+          Shop-<span className="text-indigo-600 dark:text-blue-400">Pilot</span> Hub
         </h1>
         <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto font-medium">
           Welcome back, Admin. Where would you like to go today?

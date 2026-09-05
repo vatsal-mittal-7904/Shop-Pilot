@@ -51,14 +51,14 @@ test.describe('Merchant dashboard: growth queue and ROI', () => {
     await expect(page, 'expected to stay on /merchant -- a redirect to / means the merchant session was not accepted')
       .toHaveURL(/\/merchant$/)
 
-    // page.tsx renders "Loading MerchantOS AI..." in place of the whole
+    // page.tsx renders "Loading Shop-Pilot AI..." in place of the whole
     // dashboard until its mount-time fetch resolves and setLoading(false) runs.
     // Waiting for a real control to appear is the correct readiness signal --
     // no sleep, and no networkidle (which a streamed RSC payload can defeat).
     const sweeperButton = sweeper(page)
     const generateButton = generator(page)
     await expect(sweeperButton).toBeVisible()
-    await expect(page.getByText(/Loading MerchantOS AI/i)).toHaveCount(0)
+    await expect(page.getByText(/Loading Shop-Pilot AI/i)).toHaveCount(0)
 
     // --- 1. Run Cart Sweeper (Day 10) ------------------------------------
     await clickAndSettle(page, sweeperButton, 'Run Cart Sweeper', SWEEPER_TIMEOUT)
