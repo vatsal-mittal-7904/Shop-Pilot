@@ -83,13 +83,12 @@ LLMs are strong at multi-turn conversational reasoning and unpredictable at fina
 - **HMAC Basket Binding**: Active selections are sealed with HMAC SHA-256 ([`cartSelectionBinding.ts`](src/backend/utils/cartSelectionBinding.ts)) to prevent client/parameter tampering between offer creation and checkout.
 - **Explicit Buyer Consent**: Order creation requires an authenticated customer acceptance state transition (`acceptedAt`, `acceptedByUserId`).
 
-### 2. Empirical Uplift & A/B Experimentation Engine ([`upliftExperiment.ts`](src/backend/actions/upliftExperiment.ts))
-- **Counterfactual Baseline Methodology**: Instead of presenting raw synthetic totals as growth, MerchantOS partitions traffic into Control (organic checkout) and Treatment (AI conversational offers & recovery campaigns).
-- **Rigorous Uplift Metrics**:
-  - **Relative & Absolute Conversion Uplift**: Quantifies true conversion rate acceleration over organic baseline.
-  - **AOV Expansion**: Measures basket size growth from dynamic cross-sells and upsells.
-  - **Net Incremental Revenue**: Calculated as `Treatment Revenue - Counterfactual Baseline - Campaign Discounts`.
-  - **Two-Sample Z-Testing**: Calculates z-scores, p-values, and 95% statistical confidence intervals displayed directly in the merchant analytics dashboard.
+### 2. Empirical A/B Uplift Engine & Counterfactual Economics ([`upliftExperiment.ts`](src/backend/actions/upliftExperiment.ts))
+- **Counterfactual Economics**: Measures exact incremental conversion vs an organic control baseline without AI intervention.
+- **AOV Expansion**: Measures basket size growth from dynamic cross-sells and upsells.
+- **Net Incremental Revenue**: Calculated as `Treatment Revenue - Counterfactual Baseline - Campaign Discounts`.
+- **Two-Sample Z-Testing with Abramowitz & Stegun Error Function Approximation**: Evaluates two-sample pooled proportion z-scores using the standard normal cumulative distribution function $\Phi(z)$ via Abramowitz & Stegun formula 7.1.26 ($< 1.5 \times 10^{-7}$ max error), generating authentic two-tailed p-values.
+- **Wilson Score 95% Confidence Intervals & Cold-Start Calibration**: Computes asymmetric Wilson score confidence intervals for binomial conversion proportions on both treatment and control cohorts without synthetic sample smoothing. When cohort sample sizes are below statistical power thresholds ($N < 5$), explicitly classifies experiment state as `CALIBRATING_BASELINE` rather than misattributing premature statistical significance.
 
 ### 3. Model-Derived Growth Strategy & Sanitized Prompt Boundaries ([`campaignStrategyAgent.ts`](src/backend/ai/campaignStrategyAgent.ts))
 - **Substantive AI Strategy**: Synthesizes price elasticity models, urgency-based time-decay discount ladders, and capital clearance cohorts.
@@ -135,16 +134,26 @@ LLMs are strong at multi-turn conversational reasoning and unpredictable at fina
 - **Operator Channels**: Dispatches queue age alerts, critical backlogs, and audit replication alarms to Slack (Block Kit), Discord (rich embeds), and generic HMAC-signed webhooks.
 - **Customer DLQ Delivery**: Multi-channel delivery when background operations enter DLQ (Resend email, signed webhooks, in-app system messages).
 
-### 12. Razorpay Route Marketplace Architecture ([`payment.ts`](src/backend/actions/payment.ts))
-- Supports multi-merchant commerce via Razorpay Route. When a merchant configures a linked `razorpayAccountId`, the order creation payload attaches Route transfer directives to deterministically route settlement funds to the merchant's subaccount.
+### 12. Razorpay Route Marketplace Architecture & Reversal Defense ([`payment.ts`](src/backend/actions/payment.ts), [`refundProcessor.ts`](src/backend/actions/refundProcessor.ts))
+- **Multi-Merchant Transfers**: Supports split payments and transfers via Razorpay Route. When a merchant links a `razorpayAccountId`, order creation automatically transfers the merchant share to their linked account.
+- **Route Settlement Refund Reversal (`reverse_all: 1`)**: When refunding a Route-settled marketplace order, [`refundProcessor.ts`](src/backend/actions/refundProcessor.ts) automatically passes `reverse_all: 1` in the Razorpay refund payload, ensuring subaccount transfers are cleanly reversed from the merchant's account rather than draining the platform's central funds.
 
-### 13. Model Context Protocol (MCP) Server Endpoint ([`route.ts`](src/app/api/mcp/route.ts))
+### 13. Pre-Authorized Autonomous Agent Checkout Mode ([`order.ts`](src/backend/actions/order.ts), [`intent.ts`](src/backend/actions/intent.ts), [`route.ts`](src/app/api/chat/route.ts))
+- **Autonomous Agent-to-Agent (A2A) Checkout**: When an authenticated buyer agent has pre-authorized autonomous purchases (`autonomousCheckoutEnabled: true` in `deliveryProfile` or active intent `autonomousPurchase: true`), conversational tools can directly transition valid offers to `ACCEPTED` and generate Razorpay checkout orders without manual click bottlenecks.
+- **Spend Boundary Invariant**: Pre-authorization is bounded by customer-configured spend ceilings (`autonomousSpendCeiling`, `maxOrderSpendLimit`, and `dailySpendLimit`). Any offer exceeding the pre-authorized ceiling automatically triggers graceful fallback requiring explicit manual confirmation (`CUSTOMER_CLICK_ACCEPT`).
+- **Cryptographic Audit Ledger**: Pre-authorized acceptance is recorded in the append-only audit trail as `CUSTOMER_PREAUTHORIZED_AUTONOMOUS_ACCEPTANCE`.
+
+### 14. Dynamic Taxonomy & Category-Agnostic Recommendation Intelligence ([`dynamicTaxonomy.ts`](src/backend/utils/dynamicTaxonomy.ts), [`recommendationIntelligence.ts`](src/backend/ai/recommendationIntelligence.ts))
+- **Dynamic Catalog Routing**: Replaces static regex with intent-based catalog query routing and dynamic category introspection from the merchant's live database, functioning across any merchant product category.
+- **Universal Cross-Sell & Upsell Discovery**: Identifies complementary add-ons and tier upgrades across all product categories using margin health, inventory depth, and optimal price ratios (10%–40% for cross-sells, 1.1x–2.2x for upsells) with fallback to natural price-bracket discovery.
+
+### 15. Model Context Protocol (MCP) Server Endpoint ([`route.ts`](src/app/api/mcp/route.ts))
 - Standardized **JSON-RPC 2.0 MCP interface** exposing 5 production-grade merchant tools:
-  1. `merchantos_catalog_search`: Semantic and keyword product lookup.
-  2. `merchantos_create_basket`: Initializes an isolated customer cart session.
+  1. `merchantos_catalog_search`: Semantic and keyword product lookup with inventory and pricing.
+  2. `merchantos_create_basket`: Initializes an isolated customer cart session (guarded by M2M API key authorization).
   3. `merchantos_add_item`: Adds product units into the cart with inventory verification.
-  4. `merchantos_request_signed_offer`: Generates HMAC-SHA256 sealed price-guaranteed offer.
-  5. `merchantos_checkout_order`: Transitions offer to acceptance and creates Razorpay provider order.
+  4. `merchantos_request_signed_offer`: Generates HMAC-SHA256 sealed price-guaranteed offer and persists cryptographic hash snapshot.
+  5. `merchantos_checkout_order`: Cryptographically validates offer HMAC against persisted snapshot, verifies live basket contents match, asserts buyer account spend ceilings and rolling 15-minute velocity, transitions offer to `ACCEPTED`, creates Razorpay provider checkout order (`mso_<orderId>`), and records immutable audit log entry.
 - Enables external autonomous buyer agents (Claude Desktop, Cursor, enterprise procurement agents) to transact over standardized machine-to-machine protocols with strict financial guardrails.
 
 ---
@@ -201,6 +210,23 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
+## 🌐 Production Deployment on Vercel
+
+MerchantOS is fully optimized for one-click deployment on **Vercel** paired with serverless PostgreSQL (e.g., [Neon](https://neon.tech) or [Supabase](https://supabase.com)).
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvatsal-mittal-7904%2FrazorPay_Project)
+
+For complete instructions, environment variables configuration, and webhook setup, see the **[Vercel Deployment Guide](docs/vercel_deployment_guide.md)**.
+
+### Quick Deploy Summary:
+1. **Push to GitHub & Import in Vercel**: Connect your repository to Vercel.
+2. **Configure Environment Variables**: Set `DATABASE_URL`, `APP_ENV=demo`, `GOOGLE_GENERATIVE_AI_API_KEY`, Razorpay credentials, and cryptographic secrets in Vercel settings.
+3. **Run Migrations & Seed**: Run `DATABASE_URL="<cloud-url>" npx prisma migrate deploy` and `npm run db:seed:demo`.
+4. **Configure Razorpay Webhook**: Point to `https://<your-domain>.vercel.app/api/webhooks/razorpay`.
+5. **Verify Health**: Query `https://<your-domain>.vercel.app/api/health`.
+
+---
+
 ## 🛠️ Production Background Daemon & Verification Tools
 
 MerchantOS includes dedicated production runners and CLI verification utilities:
@@ -238,7 +264,7 @@ tsx --env-file=.env.local --env-file=.env scripts/verify-scheduler-health.ts
 MerchantOS features a multi-tiered test matrix covering 100% of financial, authorization, and lifecycle invariants:
 
 1. **Hermetic Unit Test Suite (`npm run test:unit`)**:
-   - **226 unit tests** across **50 test files** covering Model Context Protocol (MCP) tool execution, rolling 15-minute spend velocity throttling, empirical A/B testing uplift significance, deterministic discount authorization, HMAC basket binding, bounded LRU rate limiting, money-safety matrices, cross-provider streaming AI failover (Gemini $\to$ Groq), multi-tier prompt shield, recommendation intelligence, external WORM sink alarming, pluggable customer DLQ email delivery, and conversation sliding windows. Executes hermetically with 100% pass rate in < 8s.
+   - **234 unit tests** across **51 test files** covering Model Context Protocol (MCP) tool execution, rolling 15-minute spend velocity throttling, Abramowitz & Stegun error function p-value calculations, deterministic discount authorization, HMAC basket binding, bounded LRU rate limiting, money-safety matrices, cross-provider streaming AI failover (Gemini $\to$ Groq), multi-tier prompt shield, recommendation intelligence, external WORM sink alarming, pluggable customer DLQ email delivery, and conversation sliding windows. Executes hermetically with 100% pass rate in < 8s.
 
 2. **Database Integration & State Transitions (`npm run test:integration` / `npm run test:state-transitions`)**:
    - **21 integration tests** across **7 test files** executing against PostgreSQL with pre-flight connection validation, migration synchronization, statement-level `TRUNCATE` rejection testing, and multi-instance concurrency testing.
@@ -247,7 +273,7 @@ MerchantOS features a multi-tiered test matrix covering 100% of financial, autho
    - Real test-mode checkout creation, webhook HMAC-SHA256 signature verification, tamper rejection, duplicate replay defense, and live captured payment settlement verification (`pay_TW18gkYUhOpBw1`).
 
 ```bash
-# Run unit tests (226 tests, 50 files)
+# Run unit tests (234 tests, 51 files)
 npm run test:unit
 
 # Run autonomous buyer agent demo

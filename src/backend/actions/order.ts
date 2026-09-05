@@ -27,7 +27,11 @@ function selectionsMatch(left: SelectionLine[], right: SelectionLine[]) {
  * an LLM can produce an offer ID, but it cannot transition that offer into the
  * accepted state. Only an authenticated customer action can do that.
  */
-export async function acceptOfferForCheckout(offerId: string) {
+export interface AcceptOfferOptions {
+  isPreAuthorizedAutonomous?: boolean
+}
+
+export async function acceptOfferForCheckout(offerId: string, options?: AcceptOfferOptions) {
   const { user, customer } = await requireCustomer()
 
   const rateLimit = await checkDistributedRateLimit(`customer:offer-accept:${customer.id}`, {
@@ -54,6 +58,13 @@ export async function acceptOfferForCheckout(offerId: string) {
         cartId: true,
         campaignId: true,
         cartSnapshotHash: true,
+        buyerIntentId: true,
+        buyerIntent: {
+          select: {
+            autonomousPurchase: true,
+            maximumAmount: true,
+          },
+        },
         items: { include: { product: { select: { inventory: true } } } },
       },
     })
@@ -133,6 +144,50 @@ export async function acceptOfferForCheckout(offerId: string) {
       }
     }
 
+    const isAutonomous = Boolean(options?.isPreAuthorizedAutonomous)
+    if (isAutonomous) {
+      let isProfileEnabled = false
+      let autonomousCeiling: number | null = null
+      let maxOrderSpendLimit: number | null = null
+
+      // Check customer delivery profile
+      const rawProfile = (customer as { deliveryProfile?: unknown }).deliveryProfile
+      let profile = rawProfile as Record<string, unknown> | null
+      if (!profile && (tx as unknown as { customer?: { findUnique?: unknown } }).customer?.findUnique) {
+        const freshCustomer = await tx.customer.findUnique({
+          where: { id: customer.id },
+          select: { dailySpendLimit: true, monthlySpendLimit: true, deliveryProfile: true },
+        })
+        profile = (freshCustomer?.deliveryProfile as Record<string, unknown> | null) ?? null
+      }
+
+      if (profile?.autonomousCheckoutEnabled === true) {
+        isProfileEnabled = true
+        if (typeof profile.autonomousSpendCeiling === 'number') {
+          autonomousCeiling = profile.autonomousSpendCeiling
+        }
+        if (typeof profile.maxOrderSpendLimit === 'number') {
+          maxOrderSpendLimit = profile.maxOrderSpendLimit
+        }
+      }
+
+      const isIntentEnabled = offer.buyerIntent?.autonomousPurchase === true
+      if (!isProfileEnabled && !isIntentEnabled) {
+        throw new Error('Autonomous checkout not authorized for this customer. Manual customer confirmation is required.')
+      }
+
+      const effectiveCeiling = autonomousCeiling
+        ?? (offer.buyerIntent?.maximumAmount ?? (customer as { dailySpendLimit?: number }).dailySpendLimit ?? 5000000)
+
+      if (offer.total > effectiveCeiling) {
+        throw new Error(`Offer total of ₹${(offer.total / 100).toLocaleString('en-IN')} exceeds authorized autonomous spend ceiling of ₹${(effectiveCeiling / 100).toLocaleString('en-IN')}. Manual customer confirmation is required.`)
+      }
+
+      if (maxOrderSpendLimit != null && offer.total > maxOrderSpendLimit) {
+        throw new Error(`Offer total exceeds customer-configured per-order limit of ₹${(maxOrderSpendLimit / 100).toLocaleString('en-IN')}. Manual customer confirmation is required.`)
+      }
+    }
+
     const acceptedAt = new Date()
     await tx.offer.update({
       where: { id: offer.id },
@@ -151,10 +206,18 @@ export async function acceptOfferForCheckout(offerId: string) {
       data: {
         merchantId: offer.merchantId,
         actorUserId: user.id,
-        action: 'OFFER_ACCEPTED_BY_CUSTOMER',
+        action: isAutonomous ? 'CUSTOMER_PREAUTHORIZED_AUTONOMOUS_ACCEPTANCE' : 'OFFER_ACCEPTED_BY_CUSTOMER',
         status: 'APPROVED',
-        reason: 'Customer explicitly accepted the exact offer before checkout.',
-        details: { offerId: offer.id, total: offer.total, currency: 'INR', acceptedAt: acceptedAt.toISOString() },
+        reason: isAutonomous
+          ? 'Customer pre-authorized autonomous agent checkout within configured spend boundaries.'
+          : 'Customer explicitly accepted the exact offer before checkout.',
+        details: {
+          offerId: offer.id,
+          total: offer.total,
+          currency: 'INR',
+          acceptedAt: acceptedAt.toISOString(),
+          isPreAuthorizedAutonomous: isAutonomous,
+        },
       },
     })
 

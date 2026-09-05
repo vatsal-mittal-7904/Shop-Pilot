@@ -2,10 +2,18 @@
 
 import { createContext, useContext, type ReactNode } from 'react'
 
+export type CustomerAutonomousSettings = {
+  enabled: boolean
+  autonomousSpendCeilingPaise: number | null
+  maxOrderSpendLimitPaise: number | null
+  dailySpendLimitPaise: number
+}
+
 type AgentSession = {
   customerId: string
   merchantId: string
   campaignOffers: CampaignOffer[]
+  autonomousSettings: CustomerAutonomousSettings
 }
 
 export type CampaignOffer = {
@@ -34,10 +42,11 @@ export function AgentSessionProvider({
   customerId,
   merchantId,
   campaignOffers,
+  autonomousSettings,
   children,
 }: AgentSession & { children: ReactNode }) {
   return (
-    <AgentSessionContext.Provider value={{ customerId, merchantId, campaignOffers }}>
+    <AgentSessionContext.Provider value={{ customerId, merchantId, campaignOffers, autonomousSettings }}>
       {children}
     </AgentSessionContext.Provider>
   )

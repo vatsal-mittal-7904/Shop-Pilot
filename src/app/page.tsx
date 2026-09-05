@@ -21,7 +21,7 @@ export default function Home() {
     setPending(true)
     try {
       const result = await authenticate({ email, password, name: mode === 'sign-up' ? name : undefined, mode })
-      router.push(result.role === 'merchant' ? '/merchant/portal' : '/agent')
+      router.push(result.role === 'merchant' ? '/merchant/portal' : '/select-mode')
       router.refresh()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to continue')
@@ -123,18 +123,60 @@ export default function Home() {
             
             <input aria-label="Password" required type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#161D2B] text-slate-900 dark:text-white px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2B64F5] transition-all" placeholder="Enter password" />
             
-            {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>}
+            {error && (
+              <div role="alert" className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-xs text-red-600 dark:text-red-400 font-medium leading-relaxed">
+                {error}
+                {error.includes('sign up') && mode === 'sign-in' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('sign-up')
+                      setError(null)
+                    }}
+                    className="block mt-1.5 text-[#2B64F5] dark:text-blue-400 font-bold hover:underline"
+                  >
+                    → Click here to register with {email}
+                  </button>
+                )}
+              </div>
+            )}
             
             <button disabled={pending} className="w-full rounded-md bg-[#2B64F5] hover:bg-[#1E52D8] py-3.5 mt-2 font-medium text-white text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-sm">
               {pending ? 'Please wait…' : 'Continue'}
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="flex items-center my-6">
-            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
-            <span className="px-3 text-xs text-slate-400 dark:text-slate-500 font-medium uppercase">or</span>
-            <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+          {/* Quick Demo Credentials */}
+          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+              Quick Demo Logins
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('demo.customer@technest.com')
+                  setPassword('technest-customer-demo')
+                  setMode('sign-in')
+                  setError(null)
+                }}
+                className="text-xs px-2.5 py-1.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+              >
+                👤 Customer Demo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('admin@technest.com')
+                  setPassword('technest-demo-2026')
+                  setMode('sign-in')
+                  setError(null)
+                }}
+                className="text-xs px-2.5 py-1.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+              >
+                🏢 Merchant Hub
+              </button>
+            </div>
           </div>
 
           <p className="mt-6 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
@@ -149,7 +191,10 @@ export default function Home() {
               </p>
               <button 
                 type="button" 
-                onClick={() => setMode((current) => current === 'sign-in' ? 'sign-up' : 'sign-in')} 
+                onClick={() => {
+                  setMode((current) => current === 'sign-in' ? 'sign-up' : 'sign-in')
+                  setError(null)
+                }} 
                 className="text-sm font-semibold text-[#2B64F5] hover:text-[#1E52D8] text-left inline-flex items-center gap-1 transition-colors"
               >
                 {mode === 'sign-in' ? 'Create customer account' : 'Log in'} 

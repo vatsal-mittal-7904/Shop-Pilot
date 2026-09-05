@@ -4,7 +4,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createGroq } from '@ai-sdk/groq'
 import { LanguageModel } from 'ai';
 
-export const AI_MODEL = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+export const AI_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-20b'
 
 // A global counter to alternate between API keys
 let requestCounter = 0;
@@ -41,12 +41,12 @@ export function aiModel(): LanguageModel {
 
 export function googleModel(): LanguageModel {
   const google = getLoadBalancedGoogleClient();
-  return google('gemini-2.5-flash') as unknown as LanguageModel;
+  return google('gemini-3.6-flash') as unknown as LanguageModel;
 }
 
 export function googleLiteModel(): LanguageModel {
   const google = getLoadBalancedGoogleClient();
-  return google('gemini-2.5-flash-lite') as unknown as LanguageModel;
+  return google('gemini-3.5-flash-lite') as unknown as LanguageModel;
 }
 
 export function groqModel(): LanguageModel {
@@ -65,6 +65,7 @@ export function getFallbackModelChain(): LanguageModel[] {
   const hasGroq = Boolean(process.env.GROQ_API_KEY)
 
   if (hasGoogle) {
+    models.push(googleModel())
     models.push(googleLiteModel())
   }
   if (hasGroq) {
@@ -73,7 +74,7 @@ export function getFallbackModelChain(): LanguageModel[] {
 
   // If only one provider is configured, guarantee at least 2 attempts for resilience
   if (models.length === 1) {
-    models.push(hasGoogle ? googleModel() : groqModel())
+    models.push(hasGoogle ? googleLiteModel() : groqModel())
   }
 
   return models

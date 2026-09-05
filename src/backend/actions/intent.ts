@@ -259,3 +259,88 @@ export async function authorizeCustomerBudgetUpdate({
     return { success: true, maximumAmount: updatedIntent.maximumAmount }
   })
 }
+
+/**
+ * Authoritatively updates a customer's pre-authorized autonomous checkout settings.
+ * Must be invoked by an authenticated customer action with explicit boundary constraints.
+ */
+export async function authorizeCustomerAutonomousMode({
+  customerId,
+  actorUserId,
+  enabled,
+  spendCeilingPaise,
+}: {
+  customerId: string
+  actorUserId: string
+  enabled: boolean
+  spendCeilingPaise?: number | null
+}) {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT 1 FROM "Customer" WHERE id = ${customerId} FOR UPDATE`
+
+    const customer = await tx.customer.findUnique({
+      where: { id: customerId },
+      select: { dailySpendLimit: true, deliveryProfile: true },
+    })
+    if (!customer) throw new Error('Customer account not found')
+
+    if (spendCeilingPaise !== undefined && spendCeilingPaise !== null) {
+      if (spendCeilingPaise <= 0 || !Number.isInteger(spendCeilingPaise)) {
+        throw new Error('Autonomous spend ceiling must be a positive integer in paise.')
+      }
+      if (spendCeilingPaise > customer.dailySpendLimit) {
+        throw new Error(`Autonomous spend ceiling cannot exceed account daily limit of ₹${(customer.dailySpendLimit / 100).toLocaleString('en-IN')}.`)
+      }
+    }
+
+    const currentProfile = (customer.deliveryProfile as Record<string, unknown> | null) ?? {}
+    const newProfile = {
+      ...currentProfile,
+      autonomousCheckoutEnabled: enabled,
+      ...(spendCeilingPaise !== undefined ? { autonomousSpendCeiling: spendCeilingPaise } : {}),
+    }
+
+    await tx.customer.update({
+      where: { id: customerId },
+      data: {
+        deliveryProfile: newProfile as Prisma.InputJsonValue,
+      },
+    })
+
+    const recent = await tx.buyerIntent.findFirst({
+      where: { customerId },
+      orderBy: { updatedAt: 'desc' },
+    })
+    if (recent) {
+      await tx.buyerIntent.update({
+        where: { id: recent.id },
+        data: {
+          autonomousPurchase: enabled,
+          requiresConfirmation: !enabled,
+        },
+      })
+    }
+
+    await tx.auditLog.create({
+      data: {
+        actorUserId,
+        action: 'CUSTOMER_AUTONOMOUS_MODE_UPDATED',
+        status: 'APPROVED',
+        reason: enabled
+          ? `Customer explicitly authorized autonomous agent checkout with ceiling of ₹${(((spendCeilingPaise ?? customer.dailySpendLimit)) / 100).toLocaleString('en-IN')}`
+          : 'Customer explicitly disabled autonomous agent checkout',
+        details: {
+          customerId,
+          enabled,
+          spendCeilingPaise: spendCeilingPaise ?? null,
+        } as Prisma.InputJsonValue,
+      },
+    })
+
+    return {
+      success: true,
+      autonomousCheckoutEnabled: enabled,
+      autonomousSpendCeiling: spendCeilingPaise ?? (newProfile.autonomousSpendCeiling as number | undefined) ?? null,
+    }
+  })
+}

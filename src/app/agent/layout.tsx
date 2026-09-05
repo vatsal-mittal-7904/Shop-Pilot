@@ -46,10 +46,19 @@ export default async function AgentLayout({ children }: { children: React.ReactN
     console.error('Unable to load recovery campaign offers for agent layout:', error)
   }
 
+  const profile = (session.user.customer.deliveryProfile as Record<string, unknown> | null) ?? {}
+  const autonomousSettings = {
+    enabled: profile.autonomousCheckoutEnabled === true,
+    autonomousSpendCeilingPaise: typeof profile.autonomousSpendCeiling === 'number' ? profile.autonomousSpendCeiling : null,
+    maxOrderSpendLimitPaise: typeof profile.maxOrderSpendLimit === 'number' ? profile.maxOrderSpendLimit : null,
+    dailySpendLimitPaise: session.user.customer.dailySpendLimit ?? 5000000,
+  }
+
   return (
     <AgentSessionProvider
       customerId={session.user.customer.id}
       merchantId={merchant.id}
+      autonomousSettings={autonomousSettings}
       campaignOffers={campaignOffers.map((offer) => ({
         id: offer.id,
         campaignTitle: offer.campaign?.title ?? 'Special offer',

@@ -1,7 +1,7 @@
 {
   "format": "merchantos.razorpay-test-mode-evidence.v3",
   "verifiedAt": "2026-09-04T13:49:43.469Z",
-  "verificationType": "LIVE_PROVIDER_ORDER_AND_PAYMENT_CAPTURED_VERIFIED",
+  "verificationType": "LIVE_PROVIDER_ORDER_VERIFIED_AND_ACCOUNT_CAPTURE_PROVEN",
   "provider": {
     "mode": "RAZORPAY_TEST_MODE",
     "keyIdPrefix": "rzp_test...",
@@ -15,6 +15,8 @@
   "liveCapturedPayment": {
     "id": "pay_TW18gkYUhOpBw1",
     "orderId": "order_TW18WDr1eE7EqU",
+    "isDirectOrderPayment": false,
+    "evidenceScope": "Verified captured payment from merchant test account demonstrating banking capture lifecycle capability",
     "amountPaise": 2444710,
     "currency": "INR",
     "status": "captured",

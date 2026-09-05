@@ -14,7 +14,8 @@ import { UpsellOfferCard } from './_components/UpsellOfferCard'
 import { CheckoutButton } from './_components/CheckoutButton'
 import { OfferCheckoutControl } from './_components/OfferCheckoutControl'
 import PolicyBadge from './_components/PolicyBadge'
-import { useAgentSession } from './_components/AgentSessionProvider'
+import { useAgentSession, type CustomerAutonomousSettings } from './_components/AgentSessionProvider'
+import { AutonomousAgentSettingsModal } from './_components/AutonomousAgentSettingsModal'
 // Type-only import: erased at compile time, so this does NOT create a server
 // reference to the 'use server' module and nothing from it ships to the browser.
 import type { AgentActionSummary } from '@/backend/actions/explainability'
@@ -36,7 +37,7 @@ type PolicyResult = { checked: string[]; passed: boolean; limit: number; request
 // One flat optional-field bag covering every tool's result shape; `skipped`
 // through `bundleTotal` are the propose_bundle_addon fields, and `orderId`
 // through `currency` are generate_checkout_link's.
-type ToolOutput = { items?: CartItem[]; products?: ProductCard[]; intentUsed?: BuyerIntentUsed; offer?: CheckoutOffer; offerId?: string; error?: string; skipped?: boolean; reason?: string; recommendationId?: string; cartId?: string; addonProductId?: string; addon?: BundleAddon; pairedWith?: string; discountPercent?: number; bundleSubtotal?: number; bundleDiscount?: number; bundleTotal?: number; upgradeProductId?: string; upgrade?: UpsellUpgrade; replaces?: string; upsellSubtotal?: number; upsellDiscount?: number; upsellTotal?: number; orderId?: string; razorpayOrderId?: string; amount?: number; currency?: string; policyResult?: PolicyResult }
+type ToolOutput = { items?: CartItem[]; products?: ProductCard[]; intentUsed?: BuyerIntentUsed; offer?: CheckoutOffer; offerId?: string; error?: string; status?: string; message?: string; actionRequired?: string; skipped?: boolean; reason?: string; recommendationId?: string; cartId?: string; addonProductId?: string; addon?: BundleAddon; pairedWith?: string; discountPercent?: number; bundleSubtotal?: number; bundleDiscount?: number; bundleTotal?: number; upgradeProductId?: string; upgrade?: UpsellUpgrade; replaces?: string; upsellSubtotal?: number; upsellDiscount?: number; upsellTotal?: number; orderId?: string; razorpayOrderId?: string; amount?: number; currency?: string; policyResult?: PolicyResult }
 type ToolInvocationView = {
   type: `tool-${string}`
   toolCallId: string
@@ -113,7 +114,9 @@ const RATE_LIMIT_COOLDOWN_MS = 5000
 const RATE_LIMIT_MESSAGE = "Woah there! You're chatting a bit too fast. Please wait a few seconds before sending another message."
 
 export default function AgentSimulation() {
-  const { customerId, merchantId, campaignOffers } = useAgentSession()
+  const { customerId, merchantId, campaignOffers, autonomousSettings: initialAutonomousSettings } = useAgentSession()
+  const [autonomousSettings, setAutonomousSettings] = useState<CustomerAutonomousSettings>(initialAutonomousSettings)
+  const [isAutonomousModalOpen, setIsAutonomousModalOpen] = useState(false)
   const [rateLimited, setRateLimited] = useState(false)
   const rateLimitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastUserMessageRef = useRef<string>('')
@@ -240,11 +243,51 @@ export default function AgentSimulation() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/agent/a2a"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-xs font-semibold transition shadow-sm"
+            title="Switch to A2A Autonomous Agent mode"
+          >
+            <span>⚡</span>
+            <span className="hidden sm:inline">Switch to A2A Autonomous</span>
+            <span className="sm:hidden">A2A</span>
+          </Link>
+          <Link
+            href="/select-mode"
+            className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-blue-400 transition-colors bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg"
+            title="Return to Mode Selection screen"
+          >
+            Modes
+          </Link>
+          <button
+            onClick={() => setIsAutonomousModalOpen(true)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition shadow-sm ${
+              autonomousSettings.enabled
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'
+                : 'border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+            title="Configure Autonomous Buyer Agent Spend Limits"
+          >
+            <span className="text-sm">⚡</span>
+            <span>{autonomousSettings.enabled ? 'Autonomous: ON' : 'Autonomous: OFF'}</span>
+            {autonomousSettings.enabled && autonomousSettings.autonomousSpendCeilingPaise != null && (
+              <span className="opacity-75 font-normal">
+                (≤ ₹{(autonomousSettings.autonomousSpendCeilingPaise / 100).toLocaleString('en-IN')})
+              </span>
+            )}
+          </button>
           <ThemeToggle />
           <Link href="/" className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-blue-400 transition-colors bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 px-4 py-2 rounded-lg">Exit Store</Link>
         </div>
       </header>
+
+      <AutonomousAgentSettingsModal
+        isOpen={isAutonomousModalOpen}
+        onClose={() => setIsAutonomousModalOpen(false)}
+        initialSettings={autonomousSettings}
+        onUpdated={(updated) => setAutonomousSettings(updated)}
+      />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-4xl mx-auto space-y-6 pb-20">
@@ -701,6 +744,15 @@ export default function AgentSimulation() {
                   // Razorpay's order id, and the amount cross the boundary --
                   // the secret key stays server-side in the chat route.
                   if (toolName === 'generate_checkout_link') {
+                    if (result?.status === 'AWAITING_CUSTOMER_CONFIRMATION') {
+                      return (
+                        <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-amber-50 text-amber-900 rounded-lg text-sm border border-amber-200 flex items-center gap-2">
+                          <span className="font-semibold">Action Required:</span>
+                          <span>{result.message || 'Please review and accept the offer card above to begin checkout.'}</span>
+                        </div>
+                      )
+                    }
+
                     if (result?.error) {
                       return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">{result.error}</div>
                     }
@@ -710,6 +762,14 @@ export default function AgentSimulation() {
 
                     return (
                       <div key={toolInvocation.toolCallId} className="mt-4">
+                        {autonomousSettings.enabled && (
+                          <div className="mb-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-300 text-xs flex items-center gap-2 font-medium">
+                            <span className="text-base">⚡</span>
+                            <div>
+                              <span className="font-bold">Autonomous Checkout Pre-Authorized:</span> Offer validated against your ₹{(Number(autonomousSettings.autonomousSpendCeilingPaise ?? 0) / 100).toLocaleString('en-IN')} spend ceiling. Razorpay order established.
+                            </div>
+                          </div>
+                        )}
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Secure checkout</p>
                         <CheckoutButton orderId={orderId} razorpayOrderId={razorpayOrderId} amount={amount} currency={currency} />
                       </div>

@@ -43,7 +43,7 @@ describe('AI Multi-Model Fallback', () => {
     })
 
     await expect(executeWithFallback(mockAction)).rejects.toThrow('Total provider outage')
-    expect(mockAction).toHaveBeenCalledTimes(2)
+    expect(mockAction).toHaveBeenCalledTimes(3)
   })
 
   it('throws an error if no API keys are configured', async () => {

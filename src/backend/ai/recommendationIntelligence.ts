@@ -1,5 +1,5 @@
 import { prisma } from '@/backend/db/prisma'
-import { Product } from '@prisma/client'
+import { Prisma, Product } from '@prisma/client'
 import { generateObject } from 'ai'
 import { z } from 'zod'
 import { executeWithFallback } from '@/backend/ai/model'
@@ -141,17 +141,33 @@ export async function findIntelligentCrossSellCandidate(
   // 2. Dynamic category affinity candidates (for cold-start or low co-purchase depth)
   for (const item of cartItems) {
     const sourceCat = item.product.category.toLowerCase().trim()
-    const targetCats = COMPLEMENTARY_CATEGORY_MAP[sourceCat] || ['accessories']
-    const dyn = await prisma.product.findMany({
+    const mappedCats = COMPLEMENTARY_CATEGORY_MAP[sourceCat] || []
+    const targetCats = Array.from(new Set([...mappedCats, 'accessories', 'accessory', 'add-on', 'addon']))
+
+    const orConditions: Prisma.ProductWhereInput[] = [
+      { category: { in: targetCats, mode: 'insensitive' } },
+      { tags: { hasSome: [sourceCat, 'accessory', 'bundle', 'addon', 'add-on', ...(item.product.tags ?? [])] } },
+    ]
+
+    if (item.product.price > 0) {
+      orConditions.push({
+        price: {
+          gte: Math.round(item.product.price * 0.05),
+          lte: Math.round(item.product.price * 0.45),
+        },
+      })
+    }
+
+    const dyn = (await prisma.product.findMany({
       where: {
         merchantId,
         id: { notIn: Array.from(new Set([...cartProductIds, ...excludedProductIds])) },
         inventory: { gt: 0 },
-        OR: [{ category: { in: targetCats, mode: 'insensitive' } }, { tags: { hasSome: [sourceCat, 'accessory', 'bundle'] } }],
+        OR: orConditions,
       },
       orderBy: [{ inventory: 'desc' }, { price: 'asc' }],
-      take: 10,
-    }) || []
+      take: 12,
+    })) || []
     
     for (const dynCandidate of dyn) {
       if (!candidatePool.some(c => c.candidate.id === dynCandidate.id)) {
@@ -251,9 +267,12 @@ export async function findIntelligentUpsellCandidate(
       where: {
         merchantId,
         id: { notIn: Array.from(new Set([...cartProductIds, ...excludedProductIds])) },
-        category: { equals: item.product.category, mode: 'insensitive' },
         inventory: { gt: 0 },
         price: { gt: item.product.price, lte: Math.round(item.product.price * 2.2) },
+        OR: [
+          { category: { equals: item.product.category, mode: 'insensitive' } },
+          ...(item.product.tags?.length ? [{ tags: { hasSome: item.product.tags } }] : []),
+        ],
       },
       orderBy: { price: 'asc' },
       take: 6,

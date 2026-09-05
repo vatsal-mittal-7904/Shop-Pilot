@@ -19,14 +19,28 @@ async function createRazorpayRefund({
   paymentId,
   amount,
   refundId,
+  reverseAll,
 }: {
   paymentId: string
   amount: number
   refundId: string
+  reverseAll?: boolean
 }): Promise<{ providerRefundId: string }> {
   const keyId = process.env.RAZORPAY_KEY_ID
   const keySecret = process.env.RAZORPAY_KEY_SECRET
   if (!keyId || !keySecret) throw new Error('Razorpay refund credentials are not configured')
+
+  const requestPayload: Record<string, unknown> = {
+    amount,
+    receipt: `mso_refund_${refundId}`,
+    notes: { reason: 'inventory_unavailable', internalRefundId: refundId },
+  }
+  if (reverseAll) {
+    // Razorpay Route Marketplace Architecture:
+    // When a merchant subaccount received split settlement via Route, reverse_all claws back
+    // the transfer directly from the subaccount balance rather than platform funds.
+    requestPayload.reverse_all = 1
+  }
 
   const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}/refund`, {
     method: 'POST',
@@ -35,11 +49,7 @@ async function createRazorpayRefund({
       'Content-Type': 'application/json',
       'X-Refund-Idempotency': refundId,
     },
-    body: JSON.stringify({
-      amount,
-      receipt: `mso_refund_${refundId}`,
-      notes: { reason: 'inventory_unavailable', internalRefundId: refundId },
-    }),
+    body: JSON.stringify(requestPayload),
   })
 
   const body = await response.json().catch(() => null) as RazorpayRefund | { error?: { description?: unknown } } | null
@@ -127,12 +137,33 @@ async function processOneRefund(refundId: string, now: Date, staleBefore: Date):
   })
   if (claimed.count !== 1) return 'skipped'
 
-  const refund = await prisma.refund.findUniqueOrThrow({ where: { id: refundId } })
+  const refund = await prisma.refund.findUniqueOrThrow({
+    where: { id: refundId },
+    include: {
+      order: {
+        select: {
+          merchantId: true,
+          merchant: {
+            select: { razorpayAccountId: true },
+          },
+        },
+      },
+    },
+  })
+  type RefundOrderMerchant = {
+    order?: {
+      merchantId?: string
+      merchant?: { razorpayAccountId?: string | null } | null
+    } | null
+  }
+  const refundWithOrder = refund as unknown as RefundOrderMerchant
+  const reverseAll = Boolean(refundWithOrder.order?.merchant?.razorpayAccountId)
   try {
     const result = await createRazorpayRefund({
       paymentId: refund.razorpayPaymentId,
       amount: refund.amount,
       refundId: refund.id,
+      reverseAll,
     })
     await prisma.$transaction(async (tx) => {
       const settled = await tx.refund.updateMany({
@@ -146,14 +177,17 @@ async function processOneRefund(refundId: string, now: Date, staleBefore: Date):
         },
       })
       if (settled.count !== 1) return
+      const orderMerchantId =
+        refundWithOrder.order?.merchantId ||
+        (await tx.order.findUniqueOrThrow({ where: { id: refund.orderId }, select: { merchantId: true } })).merchantId
       await tx.auditLog.create({
         data: {
-          merchantId: (await tx.order.findUniqueOrThrow({ where: { id: refund.orderId }, select: { merchantId: true } })).merchantId,
+          merchantId: orderMerchantId,
           orderId: refund.orderId,
           action: 'REFUND_COMPLETED',
           status: 'EXECUTED',
           reason: 'Razorpay confirmed the inventory-failure refund.',
-          details: { refundId: refund.id, providerRefundId: result.providerRefundId, razorpayPaymentId: refund.razorpayPaymentId },
+          details: { refundId: refund.id, providerRefundId: result.providerRefundId, razorpayPaymentId: refund.razorpayPaymentId, reverseAllApplied: reverseAll },
         },
       })
     })

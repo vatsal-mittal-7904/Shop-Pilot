@@ -21,22 +21,21 @@ const globalForPrisma = globalThis as unknown as {
 let basePrisma: PrismaClient
 
 if (typeof window === 'undefined') {
-  if (process.env.NODE_ENV === 'production' || process.env.VITEST) {
+  if (!globalForPrisma.prisma) {
     const connectionString =
       process.env.VITEST && process.env.TEST_DATABASE_URL
         ? process.env.TEST_DATABASE_URL
         : process.env.DATABASE_URL
-    const pool = new pg.Pool({ connectionString })
+    const pool = new pg.Pool({
+      connectionString,
+      max: process.env.PG_POOL_MAX ? parseInt(process.env.PG_POOL_MAX, 10) : 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+    })
     const adapter = new PrismaPg(pool)
-    basePrisma = new PrismaClient({ adapter })
-  } else {
-    if (!globalForPrisma.prisma) {
-      const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
-      const adapter = new PrismaPg(pool)
-      globalForPrisma.prisma = new PrismaClient({ adapter })
-    }
-    basePrisma = globalForPrisma.prisma
+    globalForPrisma.prisma = new PrismaClient({ adapter })
   }
+  basePrisma = globalForPrisma.prisma
 } else {
   basePrisma = new PrismaClient()
 }
