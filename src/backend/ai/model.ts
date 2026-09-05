@@ -36,6 +36,12 @@ function getLoadBalancedGoogleClient() {
 }
 
 export function aiModel(): LanguageModel {
+  if (process.env.AI_PROVIDER === 'google') {
+    return googleModel()
+  }
+  if (process.env.GROQ_API_KEY) {
+    return groqModel()
+  }
   return googleModel()
 }
 
@@ -64,17 +70,27 @@ export function getFallbackModelChain(): LanguageModel[] {
   )
   const hasGroq = Boolean(process.env.GROQ_API_KEY)
 
-  if (hasGoogle) {
-    models.push(googleModel())
-    models.push(googleLiteModel())
-  }
-  if (hasGroq) {
-    models.push(groqModel())
+  if (process.env.AI_PROVIDER === 'google') {
+    if (hasGoogle) {
+      models.push(googleModel())
+      models.push(googleLiteModel())
+    }
+    if (hasGroq) {
+      models.push(groqModel())
+    }
+  } else {
+    if (hasGroq) {
+      models.push(groqModel())
+    }
+    if (hasGoogle) {
+      models.push(googleModel())
+      models.push(googleLiteModel())
+    }
   }
 
   // If only one provider is configured, guarantee at least 2 attempts for resilience
   if (models.length === 1) {
-    models.push(hasGoogle ? googleLiteModel() : groqModel())
+    models.push(hasGroq ? groqModel() : googleLiteModel())
   }
 
   return models
