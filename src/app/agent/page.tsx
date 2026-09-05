@@ -601,12 +601,7 @@ export default function AgentSimulation() {
                   // Render the interactive cross-sell card for propose_bundle_addon.
                   if (toolName === 'propose_bundle_addon') {
                     if (result?.skipped) {
-                      return (
-                        <div key={toolKey} className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2">
-                          <span>🎁</span>
-                          <span>{result.reason || 'All eligible bundle discounts have already been applied to your current items.'}</span>
-                        </div>
-                      )
+                      return null
                     }
 
                     const badgeAction = toPolicyBadgeAction(toolInvocation.toolCallId, toolName, result?.policyResult)
