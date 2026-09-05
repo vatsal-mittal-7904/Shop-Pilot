@@ -79,30 +79,97 @@ async function main() {
       attributes: { wireless: true, battery_hours: 30, noise_cancelling: true },
       imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80',
     },
+    {
+      name: 'Ergonomic Memory Foam Wrist Rest', category: 'accessories', price: 149900, cost: 59900, inventory: 40,
+      warrantyYears: 1, deliveryDays: 2, tags: ['keyboard', 'ergonomic', 'accessories', 'bundle', 'addon'],
+      attributes: { material: 'Cooling memory foam', base: 'Non-slip rubber', width: 'Full size (44cm)' },
+      imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Custom Coiled Aviator Cable', category: 'accessories', price: 129900, cost: 49900, inventory: 35,
+      warrantyYears: 1, deliveryDays: 2, tags: ['keyboard', 'cables', 'accessories', 'bundle', 'addon'],
+      attributes: { connector: 'GX16 Aviator + USB-C', length: '1.5m', shielding: 'Double braided PET' },
+      imageUrl: 'https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Extended Non-Slip Desk Mat XXL', category: 'accessories', price: 119900, cost: 44900, inventory: 50,
+      warrantyYears: 1, deliveryDays: 2, tags: ['desk mats', 'accessories', 'mouse', 'keyboard', 'bundle', 'addon'],
+      attributes: { dimensions: '900x400x4mm', surface: 'Micro-weave cloth', edge: 'Anti-fray stitched' },
+      imageUrl: 'https://images.unsplash.com/photo-1616440347437-b1c73416efc2?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Aluminum Headphone Stand', category: 'accessories', price: 169900, cost: 69900, inventory: 30,
+      warrantyYears: 2, deliveryDays: 2, tags: ['headphones', 'stands', 'accessories', 'audio', 'bundle', 'addon'],
+      attributes: { material: 'Aerospace aluminum', cradle: 'Curved TPU silicone', base: 'Weighted non-slip' },
+      imageUrl: 'https://images.unsplash.com/photo-1584679109597-c656b19974c9?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Velour Cooling Ear Cushions', category: 'accessories', price: 89900, cost: 34900, inventory: 25,
+      warrantyYears: 1, deliveryDays: 2, tags: ['headphones', 'accessories', 'audio', 'bundle', 'addon'],
+      attributes: { fabric: 'Breathable velour + cooling gel', fit: 'Universal oval 100mm' },
+      imageUrl: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Braided 100W USB-C PD Cable', category: 'accessories', price: 69900, cost: 24900, inventory: 60,
+      warrantyYears: 2, deliveryDays: 2, tags: ['cables', 'accessories', 'mouse', 'chargers', 'bundle', 'addon'],
+      attributes: { wattage: '100W Power Delivery', length: '2m' },
+      imageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Aluminum Ventilated Laptop Riser Stand', category: 'accessories', price: 219900, cost: 89900, inventory: 30,
+      warrantyYears: 2, deliveryDays: 2, tags: ['laptops', 'workstation', 'accessories', 'bundle', 'addon'],
+      attributes: { angle: '6-level adjustable ergonomic tilt', material: 'Sandblasted aluminum' },
+      imageUrl: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=900&q=80',
+    },
   ]
 
   for (const product of catalog) {
     const existing = await prisma.product.findFirst({ where: { merchantId: merchant.id, name: product.name } })
-    if (!existing) await prisma.product.create({ data: { merchantId: merchant.id, ...product } })
+    if (!existing) {
+      await prisma.product.create({ data: { merchantId: merchant.id, ...product } })
+    } else {
+      await prisma.product.update({ where: { id: existing.id }, data: product })
+    }
   } 
 
   const keyboard = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Wireless Mechanical Keyboard' } })
   const proKeyboard = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Pro Wireless Mechanical Keyboard' } })
-  const mouse = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, category: 'mouse' } })
+  const mouse = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Ergonomic Wireless Mouse' } })
+  const headphones = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Noise Cancelling Headphones' } })
+  const wristRest = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Ergonomic Memory Foam Wrist Rest' } })
+  const aviatorCable = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Custom Coiled Aviator Cable' } })
+  const deskMat = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Extended Non-Slip Desk Mat XXL' } })
+  const headphoneStand = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Aluminum Headphone Stand' } })
+  const earCushions = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Velour Cooling Ear Cushions' } })
+  const usbCable = await prisma.product.findFirstOrThrow({ where: { merchantId: merchant.id, name: 'Braided 100W USB-C PD Cable' } })
+
+  // Link bundle options
   await prisma.product.update({ 
     where: { id: keyboard.id }, 
     data: { 
       relatedProducts: [mouse.id],
-      complementaryProducts: [mouse.id],
+      complementaryProducts: [wristRest.id, deskMat.id, aviatorCable.id, mouse.id],
       upgradeProducts: [proKeyboard.id] 
+    } 
+  })
+  await prisma.product.update({ 
+    where: { id: proKeyboard.id }, 
+    data: { 
+      complementaryProducts: [wristRest.id, aviatorCable.id, deskMat.id],
     } 
   })
   await prisma.product.update({ 
     where: { id: mouse.id }, 
     data: { 
       relatedProducts: [keyboard.id],
-      complementaryProducts: [keyboard.id]
+      complementaryProducts: [deskMat.id, usbCable.id]
     } 
+  })
+  await prisma.product.update({
+    where: { id: headphones.id },
+    data: {
+      complementaryProducts: [headphoneStand.id, earCushions.id]
+    }
   })
 
   console.log(`Seeded TechNest. Merchant login: ${adminEmail}`)

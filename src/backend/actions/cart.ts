@@ -102,6 +102,12 @@ async function addOneUnitToCart({
         orderBy: { updatedAt: 'desc' },
       })) ?? (await tx.cart.create({ data: { customerId: customer.id, merchantId } }))
 
+    // As requested: "update the cart by adding new options and removing the single previous option"
+    // Delete all existing items in the cart before adding the new selection from ProductCards.
+    await tx.cartItem.deleteMany({
+      where: { cartId: cart.id }
+    })
+
     const existingItem = await tx.cartItem.findUnique({
       where: { cartId_productId: { cartId: cart.id, productId: parsedProductId } },
     })

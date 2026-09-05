@@ -72,7 +72,7 @@ export function sanitizeToolMessagesForModel<T>(messages: T[]): T[] {
     // For assistant messages, strip out toolCalls and keep only the text content
     if (record.role === 'assistant') {
       if (Array.isArray(record.content)) {
-        const textParts = record.content.filter((p: unknown) => p && typeof p === 'object' && (p as Record<string, unknown>).type === 'text');
+        const textParts = record.content.filter((p: unknown) => p && typeof p === 'object' && ((p as Record<string, unknown>).type === 'text' || (p as Record<string, unknown>).type === 'tool-call'));
         if (textParts.length === 0) return null;
         return { ...record, content: textParts, toolCalls: undefined } as T;
       }

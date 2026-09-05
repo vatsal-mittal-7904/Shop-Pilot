@@ -115,7 +115,13 @@ async function main() {
   const existingDormantProduct = await prisma.product.findFirst({
     where: { merchantId: merchant.id, name: dormantProductName },
   })
+  const usbCable = await prisma.product.findFirst({ where: { merchantId: merchant.id, name: 'Braided 100W USB-C PD Cable' } })
+  const laptopStand = await prisma.product.findFirst({ where: { merchantId: merchant.id, name: 'Aluminum Ventilated Laptop Riser Stand' } })
+  const complementaryForHub = [usbCable?.id, laptopStand?.id].filter(Boolean) as string[]
+
+  let hubId: string
   if (existingDormantProduct) {
+    hubId = existingDormantProduct.id
     console.log(`Dormant high-inventory product already seeded: ${existingDormantProduct.id}`)
   } else {
     const dormantProduct = await prisma.product.create({
@@ -131,9 +137,18 @@ async function main() {
         tags: ['accessories', 'workstation'],
         attributes: { ports: 8, power_delivery_watts: 100 },
         imageUrl: 'https://images.unsplash.com/photo-1625948515291-69613efd103f?auto=format&fit=crop&w=900&q=80',
+        complementaryProducts: complementaryForHub,
       },
     })
+    hubId = dormantProduct.id
     console.log(`Seeded dormant high-inventory product: ${dormantProduct.id} (inventory ${dormantProduct.inventory})`)
+  }
+
+  if (complementaryForHub.length > 0) {
+    await prisma.product.update({
+      where: { id: hubId },
+      data: { complementaryProducts: complementaryForHub },
+    })
   }
 
   console.log(`Done. Demo customer login: ${customerEmail}`)

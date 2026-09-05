@@ -162,6 +162,222 @@ export async function addProduct(input: ProductInput) {
   return product
 }
 
+export async function addBundleOption(primaryProductId: string, addonProductId: string) {
+  const { user, merchant } = await requireMerchant()
+
+  if (!primaryProductId || !addonProductId) {
+    throw new Error('Both primary product and addon product are required')
+  }
+
+  if (primaryProductId === addonProductId) {
+    throw new Error('A product cannot be bundled with itself')
+  }
+
+  const [primaryProduct, addonProduct] = await Promise.all([
+    prisma.product.findUnique({ where: { id: primaryProductId, merchantId: merchant.id } }),
+    prisma.product.findUnique({ where: { id: addonProductId, merchantId: merchant.id } }),
+  ])
+
+  if (!primaryProduct) {
+    throw new Error('Primary product not found or unauthorized')
+  }
+  if (!addonProduct) {
+    throw new Error('Addon product not found or unauthorized')
+  }
+  if (addonProduct.inventory <= 0) {
+    throw new Error('Cannot bundle an out-of-stock product')
+  }
+
+  if (primaryProduct.upgradeProducts?.includes(addonProductId)) {
+    throw new Error('Upgrade products cannot be bundled as cross-sell add-ons')
+  }
+
+  const existingComplementary = primaryProduct.complementaryProducts || []
+  if (existingComplementary.includes(addonProductId)) {
+    return primaryProduct
+  }
+
+  const updated = await prisma.product.update({
+    where: { id: primaryProductId, merchantId: merchant.id },
+    data: {
+      complementaryProducts: [...existingComplementary, addonProductId],
+    },
+  })
+
+  await prisma.auditLog.create({
+    data: {
+      merchantId: merchant.id,
+      actorUserId: user.id,
+      action: 'BUNDLE_OPTION_CREATED',
+      status: 'EXECUTED',
+      reason: `Merchant paired ${addonProduct.name} as a bundle add-on for ${primaryProduct.name}`,
+      details: {
+        primaryProductId,
+        addonProductId,
+        primaryName: primaryProduct.name,
+        addonName: addonProduct.name,
+      },
+    },
+  })
+
+  return updated
+}
+
+export async function removeBundleOption(primaryProductId: string, addonProductId: string) {
+  const { user, merchant } = await requireMerchant()
+
+  const primaryProduct = await prisma.product.findUnique({
+    where: { id: primaryProductId, merchantId: merchant.id },
+  })
+  if (!primaryProduct) {
+    throw new Error('Primary product not found or unauthorized')
+  }
+
+  const existingComplementary = primaryProduct.complementaryProducts || []
+  const filtered = existingComplementary.filter((id) => id !== addonProductId)
+
+  const updated = await prisma.product.update({
+    where: { id: primaryProductId, merchantId: merchant.id },
+    data: {
+      complementaryProducts: filtered,
+    },
+  })
+
+  await prisma.auditLog.create({
+    data: {
+      merchantId: merchant.id,
+      actorUserId: user.id,
+      action: 'BUNDLE_OPTION_REMOVED',
+      status: 'EXECUTED',
+      reason: `Merchant removed bundle option ${addonProductId} from ${primaryProduct.name}`,
+      details: { primaryProductId, addonProductId },
+    },
+  })
+
+  return updated
+}
+
+export async function applyMerchantBundlePresets() {
+  const { user, merchant } = await requireMerchant()
+
+  const presetCatalog = [
+    {
+      name: 'Ergonomic Memory Foam Wrist Rest', category: 'accessories', price: 149900, cost: 59900, inventory: 40,
+      warrantyYears: 1, deliveryDays: 2, tags: ['keyboard', 'ergonomic', 'accessories', 'bundle', 'addon'],
+      attributes: { material: 'Cooling memory foam', base: 'Non-slip rubber', width: 'Full size (44cm)' },
+      imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Custom Coiled Aviator Cable', category: 'accessories', price: 129900, cost: 49900, inventory: 35,
+      warrantyYears: 1, deliveryDays: 2, tags: ['keyboard', 'cables', 'accessories', 'bundle', 'addon'],
+      attributes: { connector: 'GX16 Aviator + USB-C', length: '1.5m', shielding: 'Double braided PET' },
+      imageUrl: 'https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Extended Non-Slip Desk Mat XXL', category: 'accessories', price: 119900, cost: 44900, inventory: 50,
+      warrantyYears: 1, deliveryDays: 2, tags: ['desk mats', 'accessories', 'mouse', 'keyboard', 'bundle', 'addon'],
+      attributes: { dimensions: '900x400x4mm', surface: 'Micro-weave cloth', edge: 'Anti-fray stitched' },
+      imageUrl: 'https://images.unsplash.com/photo-1616440347437-b1c73416efc2?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Aluminum Headphone Stand', category: 'accessories', price: 169900, cost: 69900, inventory: 30,
+      warrantyYears: 2, deliveryDays: 2, tags: ['headphones', 'stands', 'accessories', 'audio', 'bundle', 'addon'],
+      attributes: { material: 'Aerospace aluminum', cradle: 'Curved TPU silicone', base: 'Weighted non-slip' },
+      imageUrl: 'https://images.unsplash.com/photo-1584679109597-c656b19974c9?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Velour Cooling Ear Cushions', category: 'accessories', price: 89900, cost: 34900, inventory: 25,
+      warrantyYears: 1, deliveryDays: 2, tags: ['headphones', 'accessories', 'audio', 'bundle', 'addon'],
+      attributes: { fabric: 'Breathable velour + cooling gel', fit: 'Universal oval 100mm' },
+      imageUrl: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Braided 100W USB-C PD Cable', category: 'accessories', price: 69900, cost: 24900, inventory: 60,
+      warrantyYears: 2, deliveryDays: 2, tags: ['cables', 'accessories', 'mouse', 'chargers', 'bundle', 'addon'],
+      attributes: { wattage: '100W Power Delivery', length: '2m' },
+      imageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+      name: 'Aluminum Ventilated Laptop Riser Stand', category: 'accessories', price: 219900, cost: 89900, inventory: 30,
+      warrantyYears: 2, deliveryDays: 2, tags: ['laptops', 'workstation', 'accessories', 'bundle', 'addon'],
+      attributes: { angle: '6-level adjustable ergonomic tilt', material: 'Sandblasted aluminum' },
+      imageUrl: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=900&q=80',
+    },
+  ]
+
+  for (const item of presetCatalog) {
+    const existing = await prisma.product.findFirst({
+      where: { merchantId: merchant.id, name: item.name },
+    })
+    if (!existing) {
+      await prisma.product.create({
+        data: { merchantId: merchant.id, ...item },
+      })
+    }
+  }
+
+  const allProducts = await prisma.product.findMany({
+    where: { merchantId: merchant.id },
+  })
+  const byName = (n: string) => allProducts.find((p) => p.name === n)
+
+  const kb = byName('Wireless Mechanical Keyboard')
+  const proKb = byName('Pro Wireless Mechanical Keyboard')
+  const mouse = byName('Ergonomic Wireless Mouse')
+  const headphones = byName('Noise Cancelling Headphones')
+  const hub = byName('Premium USB-C Docking Hub')
+  const wristRest = byName('Ergonomic Memory Foam Wrist Rest')
+  const aviatorCable = byName('Custom Coiled Aviator Cable')
+  const deskMat = byName('Extended Non-Slip Desk Mat XXL')
+  const headphoneStand = byName('Aluminum Headphone Stand')
+  const earCushions = byName('Velour Cooling Ear Cushions')
+  const usbCable = byName('Braided 100W USB-C PD Cable')
+  const laptopStand = byName('Aluminum Ventilated Laptop Riser Stand')
+
+  const updates: Array<{ id: string; complementary: string[] }> = []
+
+  if (kb) {
+    const addons = [wristRest?.id, deskMat?.id, aviatorCable?.id, mouse?.id].filter(Boolean) as string[]
+    updates.push({ id: kb.id, complementary: Array.from(new Set([...kb.complementaryProducts, ...addons])) })
+  }
+  if (proKb) {
+    const addons = [wristRest?.id, aviatorCable?.id, deskMat?.id].filter(Boolean) as string[]
+    updates.push({ id: proKb.id, complementary: Array.from(new Set([...proKb.complementaryProducts, ...addons])) })
+  }
+  if (mouse) {
+    const addons = [deskMat?.id, usbCable?.id].filter(Boolean) as string[]
+    updates.push({ id: mouse.id, complementary: Array.from(new Set([...mouse.complementaryProducts, ...addons])) })
+  }
+  if (headphones) {
+    const addons = [headphoneStand?.id, earCushions?.id].filter(Boolean) as string[]
+    updates.push({ id: headphones.id, complementary: Array.from(new Set([...headphones.complementaryProducts, ...addons])) })
+  }
+  if (hub) {
+    const addons = [laptopStand?.id, usbCable?.id].filter(Boolean) as string[]
+    updates.push({ id: hub.id, complementary: Array.from(new Set([...hub.complementaryProducts, ...addons])) })
+  }
+
+  for (const u of updates) {
+    await prisma.product.update({
+      where: { id: u.id },
+      data: { complementaryProducts: u.complementary },
+    })
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      merchantId: merchant.id,
+      actorUserId: user.id,
+      action: 'BUNDLE_PRESETS_APPLIED',
+      status: 'EXECUTED',
+      reason: `Applied merchant bundle presets across ${updates.length} catalog core products`,
+      details: { updatedProductCount: updates.length },
+    },
+  })
+
+  return { success: true, count: updates.length }
+}
+
 export async function approveOpportunity(opportunityId: Opportunity['id']) {
   const { merchant } = await requireMerchant()
   const opportunity = (await opportunitiesForMerchant(merchant.id)).find((item) => item.id === opportunityId)

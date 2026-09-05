@@ -27,13 +27,13 @@ export default function MerchantPortalSelector() {
             </svg>
           </div>
 
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Product Catalog</h2>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Catalog & Bundles</h2>
           <p className="text-slate-600 dark:text-slate-400 mb-8 flex-1">
-            Manually add products to your catalog. The AI agent will automatically detect them to create bundles and upsells.
+            Manage inventory and configure high-margin cross-sell bundle options. The AI agent automatically offers these to shoppers at checkout.
           </p>
 
           <div className="mt-auto inline-flex items-center text-indigo-600 dark:text-blue-400 font-semibold group-hover:text-indigo-700 dark:group-hover:text-blue-300">
-            Go to Product Adder
+            Go to Catalog & Bundles
             <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>

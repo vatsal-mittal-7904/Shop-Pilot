@@ -6,16 +6,33 @@ import { LanguageModel } from 'ai';
 
 export const AI_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-20b'
 
-// A global counter to alternate between API keys
+// Global counters to alternate between API keys
 let requestCounter = 0;
+let groqRequestCounter = 0;
 
 function hasConfiguredKeys(): boolean {
   return Boolean(
     process.env.GEMINI_API_KEY ||
     process.env.GEMINI_API_KEY_FALLBACK ||
     process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
-    process.env.GROQ_API_KEY
+    process.env.GROQ_API_KEY ||
+    process.env.GROQ_API_KEY_FALLBACK
   );
+}
+
+function getLoadBalancedGroqClient() {
+  const keys = [];
+  if (process.env.GROQ_API_KEY) keys.push(process.env.GROQ_API_KEY);
+  if (process.env.GROQ_API_KEY_FALLBACK) keys.push(process.env.GROQ_API_KEY_FALLBACK);
+  if (process.env.GROQ_API_KEY_SECONDARY) keys.push(process.env.GROQ_API_KEY_SECONDARY);
+
+  if (keys.length === 0) {
+    return createGroq({ apiKey: process.env.GROQ_API_KEY || 'missing-groq-key' });
+  }
+
+  const selectedKey = keys[groqRequestCounter % keys.length];
+  groqRequestCounter++;
+  return createGroq({ apiKey: selectedKey });
 }
 
 function getLoadBalancedGoogleClient() {
@@ -39,7 +56,7 @@ export function aiModel(): LanguageModel {
   if (process.env.AI_PROVIDER === 'google') {
     return googleModel()
   }
-  if (process.env.GROQ_API_KEY) {
+  if (process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_FALLBACK) {
     return groqModel()
   }
   return googleModel()
@@ -56,7 +73,7 @@ export function googleLiteModel(): LanguageModel {
 }
 
 export function groqModel(): LanguageModel {
-  const groq = createGroq({ apiKey: process.env.GROQ_API_KEY || 'missing-groq-key' });
+  const groq = getLoadBalancedGroqClient();
   return groq(AI_MODEL) as unknown as LanguageModel;
 }
 

@@ -89,7 +89,7 @@ function safeOfferForTool(offer: { id: string; subtotal: number; discount: numbe
   }
 }
 
-import { persistConversationMessages } from '@/backend/ai/conversationStorage'
+import { persistConversationMessages, getConversationHistory } from "@/backend/ai/conversationStorage"
 
 /**
  * Appends messages using the normalized ConversationMessage table
@@ -265,10 +265,35 @@ export async function POST(req: Request) {
         select: { id: true },
       })).id
 
-  // 3. Append the incoming user message to the server-side array and persist
-  //    it immediately, so it's durable even if the model call fails.
+  // 3. Sync client-injected assistant messages (like "X has been added to your basket")
+  //    that were never sent to the LLM but exist in the client's message array.
+  const history = await getConversationHistory(conversationId, 100);
+  const historyTexts = new Set(
+    history.map(m => {
+      if (typeof m.content === 'string') return m.content;
+      if (Array.isArray(m.content)) return m.content.map(p => p.text || '').join('');
+      return '';
+    })
+  );
+
+  const missingBasketMessages = (clientMessages || [])
+    .filter((m: any) => {
+      if (m.role !== 'assistant') return false;
+      const text = typeof m.content === 'string' ? m.content : Array.isArray(m.content) ? m.content.map((p: any) => p.text || '').join('') : Array.isArray(m.parts) ? m.parts.map((p: any) => p.text || '').join('') : '';
+      return m.id?.includes('-basket') || text.includes('__BASKET_ACTIONS__');
+    })
+    .filter((m: any) => {
+      const text = typeof m.content === 'string' ? m.content : Array.isArray(m.content) ? m.content.map((p: any) => p.text || '').join('') : Array.isArray(m.parts) ? m.parts.map((p: any) => p.text || '').join('') : '';
+      return !historyTexts.has(text);
+    })
+    .map((m: any) => {
+      const text = typeof m.content === 'string' ? m.content : Array.isArray(m.content) ? m.content.map((p: any) => p.text || '').join('') : Array.isArray(m.parts) ? m.parts.map((p: any) => p.text || '').join('') : '';
+      return { role: 'assistant', content: text };
+    });
+
   const cleanUserMessage = { role: "user", content: latestUserContent } as any;
-  const messagesWithNewUserTurn = await appendConversationMessages(conversationId, [cleanUserMessage])
+  const messagesToAppend = [...missingBasketMessages, cleanUserMessage];
+  const messagesWithNewUserTurn = await appendConversationMessages(conversationId, messagesToAppend)
 
   const sanitizedMessages = sanitizeToolMessagesForModel(messagesWithNewUserTurn)
     .filter((m: any) => {

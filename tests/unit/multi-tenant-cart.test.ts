@@ -26,6 +26,7 @@ const mockTransaction = vi.fn().mockImplementation(async (callback) => {
       findUnique: mockCartItemFindUnique,
       update: mockCartItemUpdate,
       create: mockCartItemCreate,
+      deleteMany: vi.fn(),
     }
   }
   return await callback(tx)
