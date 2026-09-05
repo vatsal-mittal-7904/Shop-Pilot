@@ -344,7 +344,7 @@ export default function AgentSimulation() {
             </section>
           )}
 
-          {messages.map((m) => {
+          {messages.map((m, mIdx) => {
             const text = m.parts.filter((part) => part.type === 'text').map((part) => part.text).join('')
             const toolParts = m.parts
               .filter((part) => part.type.startsWith('tool-'))
@@ -357,7 +357,7 @@ export default function AgentSimulation() {
             if (!text && !hasVisibleTool && m.role !== 'user') return null;
 
             return (
-            <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={`${m.id}-${mIdx}`} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl p-4 shadow-sm transition-colors ${
                 m.role === 'user'
                   ? 'bg-indigo-600 dark:bg-blue-600 text-white rounded-br-none'
@@ -390,12 +390,13 @@ export default function AgentSimulation() {
                 )}
 
                 {/* Render Tool Invocations inside the Chat! */}
-                {toolParts.map((toolInvocation) => {
+                {toolParts.map((toolInvocation, toolIdx) => {
                   const toolName = getToolName(toolInvocation)
+                  const toolKey = `${toolInvocation.toolCallId || 'tool'}-${toolIdx}`
                   const result = Array.isArray(toolInvocation.output) ? undefined : toolInvocation.output
                   if (toolInvocation.state !== 'output-available') {
                     return (
-                      <div key={toolInvocation.toolCallId} className="mt-2 text-xs font-mono text-slate-400 flex items-center gap-2">
+                      <div key={toolKey} className="mt-2 text-xs font-mono text-slate-400 flex items-center gap-2">
                         <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -411,13 +412,13 @@ export default function AgentSimulation() {
                   // Render inline cart for basket tools
                   if (toolName === 'show_basket') {
                     if (!result || !result.items || result.items.length === 0) {
-                      return <div key={toolInvocation.toolCallId} className="mt-4 p-4 border border-slate-200 bg-white rounded-xl text-center text-sm text-slate-500 shadow-sm">Your basket is empty.</div>
+                      return <div key={toolKey} className="mt-4 p-4 border border-slate-200 bg-white rounded-xl text-center text-sm text-slate-500 shadow-sm">Your basket is empty.</div>
                     }
 
                     const cartTotal = result.items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
 
                     return (
-                      <div key={toolInvocation.toolCallId} className="mt-4 border border-indigo-100 bg-white rounded-xl overflow-hidden shadow-sm">
+                      <div key={toolKey} className="mt-4 border border-indigo-100 bg-white rounded-xl overflow-hidden shadow-sm">
                         <div className="bg-indigo-50 px-4 py-3 flex justify-between items-center border-b border-indigo-100">
                           <span className="font-semibold text-indigo-900 flex items-center gap-2">
                             <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -430,8 +431,8 @@ export default function AgentSimulation() {
                           </span>
                         </div>
                         <div className="divide-y divide-slate-100">
-                          {result.items.map((item) => (
-                            <div key={item.id} className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
+                          {result.items.map((item, itemIdx) => (
+                            <div key={`${item.id}-${itemIdx}`} className="p-4 flex gap-4 hover:bg-slate-50 transition-colors">
                               {item.product.imageUrl ? (
                                 <Image src={item.product.imageUrl} alt={item.product.name} width={64} height={64} unoptimized className="w-16 h-16 rounded-lg object-cover border border-slate-100 shadow-sm" />
                               ) : (
@@ -465,7 +466,7 @@ export default function AgentSimulation() {
                       result?.intentUsed?.category.join(', ')
 
                     return (
-                      <div key={toolInvocation.toolCallId} className="mt-2">
+                      <div key={toolKey} className="mt-2">
                         <div className="text-xs font-mono text-emerald-600 flex items-center gap-2">
                           <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -539,11 +540,11 @@ export default function AgentSimulation() {
                   // Render Sliding Cards for propose_products tool
                   if (toolName === 'propose_products' && result?.products) {
                     return (
-                      <div key={toolInvocation.toolCallId} className="mt-4">
+                      <div key={toolKey} className="mt-4">
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Recommended Products</p>
                         <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
-                          {result.products.map((p) => (
-                            <div key={p.id} className="shrink-0 w-64 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden snap-start hover:border-indigo-300 transition-colors">
+                          {result.products.map((p, pIdx) => (
+                            <div key={`${p.id}-${pIdx}`} className="shrink-0 w-64 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden snap-start hover:border-indigo-300 transition-colors">
                               {p.imageUrl ? (
                                 <Image src={p.imageUrl} alt={p.name} width={400} height={128} unoptimized className="w-full h-32 object-cover" />
                               ) : (
@@ -556,7 +557,7 @@ export default function AgentSimulation() {
                               <div className="p-4">
                                 <h4 className="font-bold text-slate-900 truncate">{p.name}</h4>
                                 <p className="mt-1 text-xs text-slate-600">{p.warrantyYears}-year warranty · {p.deliveryDays}-day delivery</p>
-                                <div className="mt-2 flex flex-wrap gap-1">{Object.entries(p.attributes || {}).slice(0, 3).map(([key, value]) => <span key={key} className="rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-600">{key}: {String(value)}</span>)}</div>
+                                <div className="mt-2 flex flex-wrap gap-1">{Object.entries(p.attributes || {}).slice(0, 3).map(([key, value], aIdx) => <span key={`${key}-${aIdx}`} className="rounded bg-white px-1.5 py-0.5 text-[10px] text-slate-600">{key}: {String(value)}</span>)}</div>
                                 <div className="mt-2 flex items-center justify-between">
                                   <span className="font-semibold text-indigo-600">{(p.price / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
                                   <span className={`text-xs px-2 py-1 rounded-full ${p.inventory > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
@@ -574,10 +575,14 @@ export default function AgentSimulation() {
 
                   // Render the interactive cross-sell card for propose_bundle_addon.
                   if (toolName === 'propose_bundle_addon') {
-                    // Nothing eligible to pitch (empty cart, or every candidate
-                    // already proposed earlier in this conversation). Stay
-                    // silent rather than surfacing plumbing to the shopper.
-                    if (result?.skipped) return null
+                    if (result?.skipped) {
+                      return (
+                        <div key={toolKey} className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                          <span>🎁</span>
+                          <span>{result.reason || 'All eligible bundle discounts have already been applied to your current items.'}</span>
+                        </div>
+                      )
+                    }
 
                     const badgeAction = toPolicyBadgeAction(toolInvocation.toolCallId, toolName, result?.policyResult)
 
@@ -590,16 +595,16 @@ export default function AgentSimulation() {
                       // evaluation. The div stays as the fallback for an error
                       // arriving without one.
                       if (badgeAction) {
-                        return <div key={toolInvocation.toolCallId} className="mt-4"><PolicyBadge action={badgeAction} /></div>
+                        return <div key={toolKey} className="mt-4"><PolicyBadge action={badgeAction} /></div>
                       }
-                      return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-lg text-sm border border-amber-200">Bundle blocked by policy: {result.error}</div>
+                      return <div key={toolKey} className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-lg text-sm border border-amber-200">Bundle blocked by policy: {result.error}</div>
                     }
 
                     const { recommendationId, cartId, addonProductId, addon, pairedWith, discountPercent, bundleSubtotal, bundleDiscount, bundleTotal } = result ?? {}
                     if (!recommendationId || !cartId || !addonProductId || !addon || !pairedWith || discountPercent == null || bundleSubtotal == null || bundleDiscount == null || bundleTotal == null) return null
 
                     return (
-                      <div key={toolInvocation.toolCallId} className="mt-4">
+                      <div key={toolKey} className="mt-4">
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Frequently bought together</p>
                         <BundleOfferCard
                           recommendationId={recommendationId}
@@ -620,22 +625,29 @@ export default function AgentSimulation() {
                   }
 
                   if (toolName === 'propose_upsell') {
-                    if (result?.skipped) return null
+                    if (result?.skipped) {
+                      return (
+                        <div key={toolKey} className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                          <span>⚡</span>
+                          <span>{result.reason || 'No upgrade products available for this item.'}</span>
+                        </div>
+                      )
+                    }
 
                     const badgeAction = toPolicyBadgeAction(toolInvocation.toolCallId, toolName, result?.policyResult)
 
                     if (result?.error) {
                       if (badgeAction) {
-                        return <div key={toolInvocation.toolCallId} className="mt-4"><PolicyBadge action={badgeAction} /></div>
+                        return <div key={toolKey} className="mt-4"><PolicyBadge action={badgeAction} /></div>
                       }
-                      return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-lg text-sm border border-amber-200">Upsell blocked by policy: {result.error}</div>
+                      return <div key={toolKey} className="mt-4 p-3 bg-amber-50 text-amber-800 rounded-lg text-sm border border-amber-200">Upsell blocked by policy: {result.error}</div>
                     }
 
                     const { recommendationId, cartId, upgradeProductId, upgrade, replaces, discountPercent, upsellSubtotal, upsellDiscount, upsellTotal } = result ?? {}
                     if (!recommendationId || !cartId || !upgradeProductId || !upgrade || !replaces || discountPercent == null || upsellSubtotal == null || upsellDiscount == null || upsellTotal == null) return null
 
                     return (
-                      <div key={toolInvocation.toolCallId} className="mt-4">
+                      <div key={toolKey} className="mt-4">
                         <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-2">Recommended Upgrade</p>
                         <UpsellOfferCard
                           recommendationId={recommendationId}
@@ -667,9 +679,9 @@ export default function AgentSimulation() {
                       // a green "Policy Check Passed" beside a red failure would read
                       // as reassurance, so that case keeps the plain error notice.
                       if (badgeAction?.status === 'BLOCKED') {
-                        return <div key={toolInvocation.toolCallId} className="mt-4"><PolicyBadge action={badgeAction} /></div>
+                        return <div key={toolKey} className="mt-4"><PolicyBadge action={badgeAction} /></div>
                       }
-                      return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">System Error: {result.error}</div>
+                      return <div key={toolKey} className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">System Error: {result.error}</div>
                     }
 
                     const offer = result?.offer
@@ -677,7 +689,7 @@ export default function AgentSimulation() {
                     if (!offer || !offerId) return null
 
                     return (
-                      <div key={toolInvocation.toolCallId} className="mt-6">
+                      <div key={toolKey} className="mt-6">
                         <div className="border border-emerald-200 bg-emerald-50 rounded-xl p-5 shadow-sm">
                           <div className="flex items-center gap-2 text-emerald-800 font-bold mb-4">
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -686,8 +698,8 @@ export default function AgentSimulation() {
                             Final Offer Generated
                           </div>
                           <div className="space-y-2 mb-4">
-                            {offer.items.map((i) => (
-                              <div key={i.id} className="flex justify-between text-sm text-emerald-900">
+                            {offer.items.map((i, itemIdx) => (
+                              <div key={`${i.id}-${itemIdx}`} className="flex justify-between text-sm text-emerald-900">
                                 <span>{i.product.name}</span>
                                 <span>{(i.unitPrice / 100).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
                               </div>
@@ -746,7 +758,7 @@ export default function AgentSimulation() {
                   if (toolName === 'generate_checkout_link') {
                     if (result?.status === 'AWAITING_CUSTOMER_CONFIRMATION') {
                       return (
-                        <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-amber-50 text-amber-900 rounded-lg text-sm border border-amber-200 flex items-center gap-2">
+                        <div key={toolKey} className="mt-4 p-3 bg-amber-50 text-amber-900 rounded-lg text-sm border border-amber-200 flex items-center gap-2">
                           <span className="font-semibold">Action Required:</span>
                           <span>{result.message || 'Please review and accept the offer card above to begin checkout.'}</span>
                         </div>
@@ -754,14 +766,14 @@ export default function AgentSimulation() {
                     }
 
                     if (result?.error) {
-                      return <div key={toolInvocation.toolCallId} className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">{result.error}</div>
+                      return <div key={toolKey} className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">{result.error}</div>
                     }
 
                     const { orderId, razorpayOrderId, amount, currency } = result ?? {}
                     if (!orderId || !razorpayOrderId || amount == null) return null
 
                     return (
-                      <div key={toolInvocation.toolCallId} className="mt-4">
+                      <div key={toolKey} className="mt-4">
                         {autonomousSettings.enabled && (
                           <div className="mb-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-300 text-xs flex items-center gap-2 font-medium">
                             <span className="text-base">⚡</span>

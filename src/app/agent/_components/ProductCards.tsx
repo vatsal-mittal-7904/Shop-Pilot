@@ -114,14 +114,14 @@ export function ProductCards({ products, customerId, merchantId, onSelect }: Pro
         <div key={category} className="flex flex-col gap-2">
           <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{category}</h4>
           <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory">
-            {catProducts.map((product) => {
+            {catProducts.map((product, pIdx) => {
               const state = status[product.id] ?? 'idle'
               const outOfStock = product.inventory < 1
               const badges = getBadges(product)
 
               return (
                 <div
-                  key={product.id}
+                  key={`${product.id}-${pIdx}`}
                   className="flex w-64 flex-shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
                 >
                   <div className="relative h-40 w-full bg-gray-100">
@@ -140,9 +140,9 @@ export function ProductCards({ products, customerId, merchantId, onSelect }: Pro
                     <p className="text-base font-bold text-gray-900">{formatInr(product.price)}</p>
 
                     <div className="flex flex-wrap gap-1">
-                      {badges.map((badge) => (
+                      {badges.map((badge, bIdx) => (
                         <span
-                          key={badge}
+                          key={`${badge}-${bIdx}`}
                           className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
                         >
                           {badge}
