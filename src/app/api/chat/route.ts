@@ -18,7 +18,6 @@ import { sanitizeCatalogProduct, sanitizeToolMessagesForModel } from '@/backend/
 import { inspectThreat } from '@/backend/security/promptShield'
 import { checkAbuseAndSpam } from '@/backend/security/abuseDetector'
 import { createTraceContext, createAuditDetailsWithTrace } from '@/backend/security/causalityTracer'
-import { shouldTriggerCatalogSearch } from '@/backend/utils/dynamicTaxonomy'
 
 export const maxDuration = 30
 
@@ -234,8 +233,7 @@ export async function POST(req: Request) {
   // Structured intent capture. Returns null for filler or on any failure, so
   // it never blocks the conversation; customer.id comes from the authenticated
   // session, never from the request body.
-  const capturedIntent = await parseBuyerIntent(customer.id, latestUserContent)
-  const requiresCatalogSearch = await shouldTriggerCatalogSearch(merchant.id, latestUserContent, capturedIntent)
+  await parseBuyerIntent(customer.id, latestUserContent)
 
   // 2. Load the active Conversation for (merchantId, customerId), creating one
   //    if this is the first turn. Its `messages` Json array is the sole
@@ -257,11 +255,16 @@ export async function POST(req: Request) {
   const cleanUserMessage = { role: "user", content: latestUserContent } as any;
   const messagesWithNewUserTurn = await appendConversationMessages(conversationId, [cleanUserMessage])
 
-  // Conversation history can contain tool results persisted on earlier turns.
-  // Treat those values as untrusted merchant/catalog data each time they are
-  // supplied to the model, rather than allowing a product field to act as an
-  // instruction on a later turn.
-  const sanitizedMessages = sanitizeToolMessagesForModel(messagesWithNewUserTurn).filter((m: any) => m.role !== 'system')
+  const sanitizedMessages = sanitizeToolMessagesForModel(messagesWithNewUserTurn)
+    .filter((m: any) => {
+      if (m.role === 'user') return true
+      if (m.role === 'assistant') {
+        if (typeof m.content === 'string') return m.content.trim().length > 0
+        if (Array.isArray(m.content)) return m.content.some((p: any) => p && (p.type === 'text' || typeof p === 'string'))
+        return false
+      }
+      return false
+    })
 
   // Close the Growth Queue loop: fetch approved campaigns and explicitly authorize the agent
   const approvedCampaigns = await prisma.campaign.findMany({
@@ -272,18 +275,15 @@ export async function POST(req: Request) {
   
   const recoveryCampaigns = approvedCampaigns.filter(c => c.type === 'RECOVERY')
   if (recoveryCampaigns.length > 0) {
-    const abandonedCart = await prisma.cart.findFirst({
-      where: { customerId: customer.id, merchantId: merchant.id, status: 'ABANDONED' },
-      orderBy: { updatedAt: 'desc' }
-    })
-    if (abandonedCart) {
+    const currentCart = await getActiveCart(merchant.id)
+    if (currentCart) {
       const applicableCampaign = recoveryCampaigns.find(c => {
         const config = c.configuration as any;
-        return config && Array.isArray(config.cartIds) && config.cartIds.includes(abandonedCart.id)
+        return config && Array.isArray(config.cartIds) && config.cartIds.includes(currentCart.id)
       })
       if (applicableCampaign) {
         const discountPercent = (applicableCampaign.configuration as any).discountPercent || 0
-        campaignPromptAdditions += `\\nACTIVE CAMPAIGN (RECOVERY): The customer has an abandoned cart. You are AUTHORIZED to offer a ${discountPercent}% discount to recover it. You must pass campaignId: "${applicableCampaign.id}" when you call generate_checkout_offer.`
+        campaignPromptAdditions += `\nACTIVE CAMPAIGN (RECOVERY): The customer's basket qualifies for a recovery discount. You are AUTHORIZED to offer a ${discountPercent}% discount. You must pass campaignId: "${applicableCampaign.id}" when you call generate_checkout_offer.`
       }
     }
   }
@@ -309,17 +309,9 @@ export async function POST(req: Request) {
       // to turn their result into a buyer-facing response. Bound the loop so
       // a faulty model cannot continue invoking tools indefinitely.
       stopWhen: stepCountIs(5),
-      // Tool choice applies to every model step unless prepareStep overrides
-      // it. Restrict only the initial step so the model must create the
-      // structured catalog result (and its photo card) before replying.
-      prepareStep: ({ stepNumber }) => (
-        requiresCatalogSearch && stepNumber === 0
-          ? {
-              activeTools: ['search_catalog'],
-              toolChoice: { type: 'tool', toolName: 'search_catalog' },
-            }
-          : undefined
-      ),
+      // Tool choice applies to every model step unless prepareStep overrides it.
+      // Leave auto so the provider can execute tools without forced tool mismatch errors.
+      prepareStep: () => undefined,
       system: finalSystemPrompt,
       messages: sanitizedMessages,
       tools: {
@@ -612,15 +604,16 @@ export async function POST(req: Request) {
       // BOUNDARY: AI requests an offer with an optional campaign ID. Server independently verifies eligibility, recalculates cart, and applies valid discounts.
       generate_checkout_offer: (tool as any)({
         description: 'Create a short-lived, policy-checked offer after explicit customer agreement. If an active authorized campaign applies, pass campaignId. Discounts are derived deterministically from authorized campaigns; never pass an arbitrary discount percentage.',
-        inputSchema: z.object({ campaignId: z.string().uuid().optional() }),
+        inputSchema: z.object({ campaignId: z.string().optional() }),
         execute: async ({ campaignId }: any) => {
           const cart = await getActiveCart(merchant.id)
           if (!cart?.items.length) return { error: 'Your basket is empty. Select a product with Add to basket before requesting checkout.' }
 
+          const cleanCampaignId = typeof campaignId === 'string' && campaignId.trim().length > 0 ? campaignId.trim() : undefined
           let authorizedDiscount = 0
-          if (campaignId) {
+          if (cleanCampaignId) {
             const campaign = await prisma.campaign.findFirst({
-              where: { id: campaignId, merchantId: merchant.id, status: 'APPROVED' },
+              where: { id: cleanCampaignId, merchantId: merchant.id, status: 'APPROVED' },
             })
             if (!campaign) {
               const policyResult = {
@@ -634,10 +627,10 @@ export async function POST(req: Request) {
                 data: {
                   merchantId: merchant.id,
                   conversationId,
-                  campaignId,
+                  campaignId: cleanCampaignId,
                   type: 'DISCOUNT_OFFER',
                   reason: policyResult.reason,
-                  input: { cartId: cart.id, campaignId } as Prisma.InputJsonValue,
+                  input: { cartId: cart.id, campaignId: cleanCampaignId } as Prisma.InputJsonValue,
                   policyResult: policyResult as Prisma.InputJsonValue,
                   status: 'BLOCKED',
                 },
@@ -655,7 +648,7 @@ export async function POST(req: Request) {
             data: {
               merchantId: merchant.id,
               conversationId,
-              campaignId,
+              campaignId: cleanCampaignId,
               type: 'DISCOUNT_OFFER',
               reason: policyResult.reason,
               input: { cartId: cart.id, itemCount: cart.items.length, authorizedPercent: authorizedDiscount } as Prisma.InputJsonValue,
@@ -672,9 +665,17 @@ export async function POST(req: Request) {
           }
 
           try {
-            const offer = await createOfferFromActiveCart({ discountPercentage: authorizedDiscount, campaignId, merchantId: merchant.id })
+            const offer = await createOfferFromActiveCart({ discountPercentage: authorizedDiscount, campaignId: cleanCampaignId, merchantId: merchant.id })
             return { status: 'READY_FOR_CHECKOUT', offerId: offer.id, offer: safeOfferForTool(offer), policyResult }
           } catch (error) {
+            if (cleanCampaignId) {
+              try {
+                const fallbackOffer = await createOfferFromActiveCart({ discountPercentage: 0, merchantId: merchant.id })
+                return { status: 'READY_FOR_CHECKOUT', offerId: fallbackOffer.id, offer: safeOfferForTool(fallbackOffer), policyResult }
+              } catch (fallbackError) {
+                return { error: fallbackError instanceof Error ? fallbackError.message : 'Offer could not be created', policyResult }
+              }
+            }
             return { error: error instanceof Error ? error.message : 'Offer could not be created', policyResult }
           }
         },

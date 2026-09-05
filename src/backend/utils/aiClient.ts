@@ -1,3 +1,5 @@
+import dotenv from 'dotenv'
+dotenv.config({ path: '.env.local' })
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
@@ -62,7 +64,13 @@ export async function safeStreamText(params: SafeStreamTextParams) {
       // transient Groq/network failure does not break the buyer conversation.
       const stream = result.toUIMessageStream({
         onError: (error) => {
-          const message = error instanceof Error ? error.message : String(error)
+          let errorDetails = ''
+          try {
+            errorDetails = JSON.stringify(error, Object.getOwnPropertyNames(error))
+          } catch {
+            errorDetails = String(error)
+          }
+          const message = error instanceof Error ? error.message : errorDetails
           const sanitizedMessage = message.replace(/(gsk_[A-Za-z0-9_-]+)/g, '[REDACTED_API_KEY]')
           console.error('AI_STREAM_ERROR:', sanitizedMessage)
           return unavailableMessage
