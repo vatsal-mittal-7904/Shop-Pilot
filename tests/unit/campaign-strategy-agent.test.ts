@@ -32,6 +32,7 @@ import { generateModelDerivedCampaignProposals } from '@/backend/ai/campaignStra
 describe('Model-Derived AI Growth Strategy Engine', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    process.env.GEMINI_API_KEY = 'mock_gemini_key'
   })
 
   it('formulates data-grounded growth campaign proposals from live merchant telemetry', async () => {

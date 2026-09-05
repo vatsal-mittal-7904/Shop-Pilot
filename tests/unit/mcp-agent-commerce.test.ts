@@ -71,6 +71,7 @@ describe('Model Context Protocol (MCP) Agent-to-Agent Commerce Endpoint', () => 
     mocks.auditLogCreate.mockResolvedValue({ id: 'log-1' })
     mocks.assertSpendLimit.mockResolvedValue({ dailyCommitted: 0, monthlyCommitted: 0 })
     mocks.merchantFindUnique.mockResolvedValue({ id: 'm-1', razorpayAccountId: null })
+    mocks.razorpayOrdersCreate.mockResolvedValue({ id: 'order_rzp_mock_123' })
   })
 
   it('serves MCP server manifest and tools list via GET request', async () => {

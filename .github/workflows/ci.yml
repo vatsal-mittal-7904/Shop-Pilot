@@ -14,9 +14,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:51214/razorpay_integration_test
       OFFER_BINDING_SECRET: ci_test_offer_binding_secret_12345
       AUDIT_HMAC_SECRET: ci_test_audit_hmac_secret_123456789
-      RAZORPAY_KEY_ID: rzp_test_mockkey123456789
-      RAZORPAY_KEY_SECRET: mocksecret123456789
-      RAZORPAY_WEBHOOK_SECRET: mockwebhooksecret123456789
+      GEMINI_API_KEY: test_mock_gemini_key
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
